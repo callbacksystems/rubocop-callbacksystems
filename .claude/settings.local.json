@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/test:*)",
+      "Bash(mise exec:*)",
+      "Bash(bin/rubocop:*)"
+    ]
+  }
+}
