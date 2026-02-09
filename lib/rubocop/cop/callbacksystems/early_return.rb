@@ -105,7 +105,7 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Base
       end
 
       def find_all(node = self.node)
-        return [] unless node && !IGNORE_TYPES.include?(node.type)
+        return [] unless node && IGNORE_TYPES.exclude?(node.type)
 
         FINDERS.fetch(node.type, ->(_, _) { [] }).call(node, method(:find_all))
       end

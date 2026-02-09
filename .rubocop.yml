@@ -5,22 +5,10 @@ inherit_from: rubocop.yml
 require:
   - ./lib/rubocop-callbacksystems.rb
 
-AllCops:
-  Exclude:
-    - "tmp/**/*"
-    - "Gemfile"
-
-Callbacksystems/TestMethodDefinition:
-  Include:
-    - "test/**/*"
-
 Naming/FileName:
   Exclude:
     - "lib/rubocop-callbacksystems.rb"
 
-# Disable cops that conflict with pure Ruby (no ActiveSupport extensions on Array/Set)
-Rails/NegateInclude:
-  Enabled: false
-
-Style/InvertibleUnlessCondition:
+# Disable for this project - helper classes are tested indirectly through cops
+Callbacksystems/PublicMethodsMustHaveTests:
   Enabled: false

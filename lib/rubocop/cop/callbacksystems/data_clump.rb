@@ -70,8 +70,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
           common = pair.first.last & pair.last.last
           if common.size >= min_params
             key = common.sort
-            result[key] << pair.first.first unless result[key].include?(pair.first.first)
-            result[key] << pair.last.first unless result[key].include?(pair.last.first)
+            result[key] << pair.first.first if result[key].exclude?(pair.first.first)
+            result[key] << pair.last.first if result[key].exclude?(pair.last.first)
           end
         end
 

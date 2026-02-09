@@ -33,25 +33,33 @@ Callbacksystems/ApplicationControllerMethodDefinition:
   Include:
     - "app/controllers/application_controller.rb"
 
-Callbacksystems/DataClump:
+Callbacksystems/BuilderMethodParentheses:
   Enabled: true
-  MinParams: 3
-  MinMethods: 3
+  Exclude:
+    - "app/helpers/**/*"
 
-Callbacksystems/PrivateMethodArgumentClump:
+Callbacksystems/CollapseMultilineExpression:
   Enabled: true
-  MinParams: 2
-  MinMethods: 3
+  MaxLineLength: 120
 
 Callbacksystems/ComplexConditional:
   Enabled: true
   MaxOperators: 1
 
-Callbacksystems/NoSingletonClassInModules:
+Callbacksystems/ControllerTestResponseAssertion:
   Enabled: true
+  Include:
+    - "test/controllers/**/*"
 
-Callbacksystems/NoNestedModulesInClasses:
+Callbacksystems/ControllerTestResponseFirstAssertion:
   Enabled: true
+  Include:
+    - "test/controllers/**/*"
+
+Callbacksystems/DataClump:
+  Enabled: true
+  MinParams: 3
+  MinMethods: 3
 
 Callbacksystems/EagerLoadingScopeNaming:
   Enabled: true
@@ -59,6 +67,12 @@ Callbacksystems/EagerLoadingScopeNaming:
     - "app/models/**/*"
 
 Callbacksystems/EarlyReturn:
+  Enabled: true
+
+Callbacksystems/EmptyLineBeforeMethod:
+  Enabled: true
+
+Callbacksystems/InlineMemoizedComputation:
   Enabled: true
 
 Callbacksystems/JobEnqueueMethods:
@@ -71,10 +85,13 @@ Callbacksystems/MethodInvocationOrder:
   Include:
     - "app/models/**/*"
 
+Callbacksystems/NestedClassesAtEndOfPrivateSection:
+  Enabled: true
+
 Callbacksystems/NoAbbreviations:
   Enabled: true
 
-Callbacksystems/NoCallMethod:
+Callbacksystems/NoAnemicDelegationMethod:
   Enabled: true
 
 Callbacksystems/NoAssertSelect:
@@ -82,24 +99,70 @@ Callbacksystems/NoAssertSelect:
   Include:
     - "test/**/*"
 
-Callbacksystems/NoNilAtEndOfMethod:
+Callbacksystems/NoBangMethodWithoutCounterpart:
   Enabled: true
+
+Callbacksystems/NoCallMethod:
+  Enabled: true
+
+Callbacksystems/NoCommentsInTestClassBody:
+  Enabled: true
+  Include:
+    - "test/**/*"
 
 Callbacksystems/NoDirectEagerLoading:
   Enabled: true
   Include:
     - "app/controllers/**/*"
 
-Callbacksystems/NoServiceObjects:
+Callbacksystems/NoEachWithEarlyReturn:
+  Enabled: true
+
+Callbacksystems/NoExplicitPublicModifier:
+  Enabled: true
+
+Callbacksystems/NoExtractMethodNaming:
   Enabled: true
 
 Callbacksystems/NoLocalVariableReturn:
   Enabled: true
 
-Callbacksystems/NoBangMethodWithoutCounterpart:
+Callbacksystems/NoManualAccumulation:
+  Enabled: true
+
+Callbacksystems/NoMixedMemoization:
+  Enabled: true
+
+Callbacksystems/NoNestedModulesInClasses:
+  Enabled: true
+
+Callbacksystems/NoNilAtEndOfMethod:
+  Enabled: true
+
+Callbacksystems/NoRedundantWrapperMethod:
+  Enabled: true
+
+Callbacksystems/NoServiceObjects:
+  Enabled: true
+
+Callbacksystems/NoSingletonClassInModules:
+  Enabled: true
+
+Callbacksystems/NoTapCollectionBuilding:
   Enabled: true
 
 Callbacksystems/OrderedMixinArguments:
+  Enabled: true
+
+Callbacksystems/PluralControllerNames:
+  Enabled: true
+  IgnoredNames:
+    - Application
+    - Base
+  Include:
+    - "app/controllers/**/*"
+
+Callbacksystems/PreferAttrReaderOverInstanceVariable:
   Enabled: true
 
 Callbacksystems/PreferBackslashContinuation:
@@ -108,34 +171,16 @@ Callbacksystems/PreferBackslashContinuation:
 Callbacksystems/PreferDeclarativeCollections:
   Enabled: true
 
-Callbacksystems/PreferMethodOverVariable:
-  Enabled: true
-  Exclude:
-    - "test/**/*"
-
-Callbacksystems/RedundantConcernExtend:
-  Enabled: true
-
-Callbacksystems/InlineMemoizedComputation:
-  Enabled: true
-
-Callbacksystems/NoMixedMemoization:
-  Enabled: true
-
-Callbacksystems/NoTapCollectionBuilding:
-  Enabled: true
-
-Callbacksystems/NoManualAccumulation:
-  Enabled: true
-
-Callbacksystems/NoEachWithEarlyReturn:
-  Enabled: true
-
 Callbacksystems/PreferExcluding:
   Enabled: true
 
 Callbacksystems/PreferMany:
   Enabled: true
+
+Callbacksystems/PreferMethodOverVariable:
+  Enabled: true
+  Exclude:
+    - "test/**/*"
 
 Callbacksystems/PreferOrdinalArrayAccess:
   Enabled: true
@@ -149,16 +194,25 @@ Callbacksystems/PreferStringifyKeys:
 Callbacksystems/PreferSymbolizeKeys:
   Enabled: true
 
+Callbacksystems/PrivateMethodArgumentClump:
+  Enabled: true
+  MinParams: 2
+  MinMethods: 3
+
 Callbacksystems/PrivateNestedClasses:
   Enabled: true
 
-Callbacksystems/PluralControllerNames:
+Callbacksystems/PrivateNestedClassMethodVisibility:
   Enabled: true
-  IgnoredNames:
-    - Application
-    - Base
+
+Callbacksystems/PublicMethodsMustHaveTests:
+  Enabled: true
   Include:
-    - "app/controllers/**/*"
+    - "app/**/*"
+    - "lib/**/*"
+
+Callbacksystems/RedundantConcernExtend:
+  Enabled: true
 
 Callbacksystems/RepeatedFixtureInTests:
   Enabled: true
@@ -212,27 +266,7 @@ Callbacksystems/TooManyLocalVariables:
   Enabled: true
   MaxAssignments: 3
 
-Callbacksystems/NestedClassesAtEndOfPrivateSection:
-  Enabled: true
-
-Callbacksystems/NoAnemicDelegationMethod:
-  Enabled: true
-
-Callbacksystems/NoCommentsInTestClassBody:
-  Enabled: true
-  Include:
-    - "test/**/*"
-
-Callbacksystems/NoExtractMethodNaming:
-  Enabled: true
-
-Callbacksystems/NoRedundantWrapperMethod:
-  Enabled: true
-
-Callbacksystems/PreferAttrReaderOverInstanceVariable:
-  Enabled: true
-
-Callbacksystems/PrivateNestedClassMethodVisibility:
+Callbacksystems/UnusedPrivateMethodInNestedClass:
   Enabled: true
 
 

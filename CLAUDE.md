@@ -8,7 +8,7 @@ Custom RuboCop cops implementing the Callbacksystems Ruby style guide.
 
 ## What
 
-47 custom cops covering:
+Custom cops covering:
 - Naming conventions (no abbreviations, plural controllers, etc.)
 - Method patterns (early returns, no bang methods without counterpart)
 - Testing (single-line setup, no assert_select, fixture helpers)

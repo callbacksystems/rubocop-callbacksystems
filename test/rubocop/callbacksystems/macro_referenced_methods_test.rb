@@ -1,6 +1,17 @@
 require "test_helper"
 
 class MacroReferencedMethodsTest < ActiveSupport::TestCase
+  test "collect returns a Set of method names referenced in macros" do
+    body = parse_body <<~RUBY
+      after_commit :notify
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).collect
+
+    assert_kind_of Set, result
+    assert_includes result, :notify
+  end
+
   test "collects symbol argument" do
     body = parse_body <<~RUBY
       after_commit :notify_later

@@ -47,7 +47,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
       return [] unless processed_source.ast
 
       processed_source.ast.each_node(:send).filter_map do |node|
-        next unless ROUTE_METHODS.include?(node.method_name)
+        next if ROUTE_METHODS.exclude?(node.method_name)
 
         module_value = RouteNode.new(node).module_value
         { node: node, module_value: module_value } if module_value

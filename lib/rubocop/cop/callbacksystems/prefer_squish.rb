@@ -22,7 +22,7 @@ class RuboCop::Cop::Callbacksystems::PreferSquish < RuboCop::Cop::Base
 
   def on_send(node)
     strip_gsub_pattern(node) do |receiver, pattern|
-      next unless WHITESPACE_PATTERNS.include?(pattern)
+      next if WHITESPACE_PATTERNS.exclude?(pattern)
 
       add_offense(node, message: MESSAGE) do |corrector|
         corrector.replace(node.source_range, "#{receiver.source}.squish")

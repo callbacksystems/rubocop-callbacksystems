@@ -82,7 +82,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
       def unused_public_methods
         external = ExternalCallCollector.new(parent_node, nested_class, class_name).collect
         public_methods.filter_map do |method_node|
-          [ method_node, class_name ] unless external.include?(method_node.method_name)
+          [ method_node, class_name ] if external.exclude?(method_node.method_name)
         end
       end
 

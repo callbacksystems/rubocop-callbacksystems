@@ -50,11 +50,17 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
     end
 
     def source_path
-      @source_path ||= begin
-        path = processed_source.file_path
-        result = path.sub("/test/", "/app/").sub("_test.rb", ".rb")
-        result if result != path
-      end
+      @source_path ||= candidate_source_paths.find { |p| File.exist?(p) }
+    end
+
+    def candidate_source_paths
+      path = processed_source.file_path
+
+      [
+        path.sub(%r{/test/lib/(.+)_test\.rb$}, '/lib/\1.rb'),
+        path.sub(%r{/test/(.+)_test\.rb$}, '/app/\1.rb'),
+        path.sub(%r{/test/(.+)_test\.rb$}, '/lib/\1.rb')
+      ].uniq.reject { |p| p == path }
     end
 
     def source_methods
@@ -111,15 +117,15 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
       end
 
       def collect
-        traverse(ast, top_level: true, public_section: true)
+        traverse(ast, root: true, public_section: true)
         methods
       end
 
       private
-        def traverse(node, top_level:, public_section:)
+        def traverse(node, root:, public_section:)
           return unless node
 
-          add_method_name(node, public_section) || traverse_children(node, top_level: top_level, public_section: public_section)
+          add_method_name(node, public_section) || traverse_children(node, root: root, public_section: public_section)
         end
 
         def add_method_name(node, public_section)
@@ -144,22 +150,23 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
           node.type == :send && node.method_name == :scope && node.first_argument&.sym_type?
         end
 
-        def traverse_children(node, top_level:, public_section:)
+        def traverse_children(node, root:, public_section:)
           case node.type
           when :class, :module
-            traverse(node.body, top_level: true, public_section: true) if top_level
+            traverse(node.body, root: false, public_section: true) if root
           when :begin
-            traverse_begin(node, top_level: top_level, public_section: public_section)
+            traverse_begin(node, root: root, public_section: public_section)
           when :sclass, :block
-            traverse(node.body, top_level: false, public_section: true)
+            traverse(node.body, root: false, public_section: true)
           end
         end
 
-        def traverse_begin(node, top_level:, public_section:)
+        def traverse_begin(node, root:, public_section:)
           current_public = public_section
           node.children.each do |child|
             current_public = false if visibility_modifier?(child)
-            traverse(child, top_level: false, public_section: current_public)
+            child_is_class_or_module = %i[class module].include?(child.type)
+            traverse(child, root: root && child_is_class_or_module, public_section: current_public)
           end
         end
 
@@ -191,7 +198,7 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
           if seen.key?(method_name)
             violations << [ test_node, "Tests for `#{method_name}` should be grouped together." ] unless consecutive?(method_name, test_node)
           elsif method_positions[method_name] < last_position
-            violations << [ test_node, "Test for `#{method_name}` should come after test for `#{last_name}` to match source method order." ]
+            violations << [ test_node, "Test for `#{method_name}` appears after `#{last_name}`, but `#{method_name}` is defined first in source." ]
           else
             self.last_position = method_positions[method_name]
             self.last_name = method_name

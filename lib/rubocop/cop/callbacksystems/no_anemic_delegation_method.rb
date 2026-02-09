@@ -56,11 +56,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Ba
       end
 
       def offense_message
-        format \
-          MESSAGE,
-          method: node.method_name,
-          class: body.receiver.receiver.short_name,
-          target: body.method_name
+        format MESSAGE, method: node.method_name, class: body.receiver.receiver.short_name, target: body.method_name
       end
 
       private
