@@ -45,10 +45,14 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
       end
 
       def offense?
-        node.parenthesized? && multiline_call? && !block_call? && !nested_in_call? && !argument_has_block? && !contains_multiline_call? && !inside_backslash_continuation?
+        node.parenthesized? && multiline_call? && !allowed?
       end
 
       private
+        def allowed?
+          block_call? || nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver?
+        end
+
         def multiline_call?
           node.arguments? && node.loc.begin && node.loc.end && node.loc.begin.line != node.loc.end.line
         end
@@ -91,6 +95,10 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
           source = node.source_range.source_buffer.source
           line_number = node.loc.begin.line - 1
           line_number.positive? && source.lines[line_number - 1]&.rstrip&.end_with?("\\")
+        end
+
+        def chained_method_receiver?
+          (node.parent&.send_type? || node.parent&.csend_type?) && node.parent.receiver == node
         end
     end
 end

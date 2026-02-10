@@ -94,6 +94,26 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
     RUBY
   end
 
+  test "allows multiline call when result is chained with another method" do
+    assert_no_offense <<~RUBY
+      Pay::Mercadopago::Subscription.sync(
+        preapproval.id,
+        object: preapproval,
+        pay_customer: self,
+        name: name
+      ).tap { it.update! }
+    RUBY
+  end
+
+  test "allows multiline call with safe navigation chaining" do
+    assert_no_offense <<~RUBY
+      find_record(
+        id: id,
+        type: type
+      )&.process
+    RUBY
+  end
+
   test "allows deeply nested calls" do
     assert_no_offense <<~RUBY
       outer(
