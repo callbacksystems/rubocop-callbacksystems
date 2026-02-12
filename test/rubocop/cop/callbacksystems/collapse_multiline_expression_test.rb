@@ -323,6 +323,26 @@ class CollapseMultilineExpressionTest < CopTestCase
     )
   end
 
+  test "allows multiline kwsplat hash when suffix pushes line over limit" do
+    assert_no_offense <<~RUBY
+      class Foo
+        def method
+          tap do
+            unless something
+              if condition
+                update! **{
+                  status: "canceled",
+                  ends_at: Time.current,
+                  trial_ends_at: (Time.current if trial_ends_at?)
+                }.compact
+              end
+            end
+          end
+        end
+      end
+    RUBY
+  end
+
   test "allows multiline hash when suffix would exceed max length" do
     assert_no_offense <<~RUBY
       x = {
