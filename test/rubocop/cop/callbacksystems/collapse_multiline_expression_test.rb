@@ -309,6 +309,29 @@ class CollapseMultilineExpressionTest < CopTestCase
     )
   end
 
+  test "corrects multiline hash inside kwsplat without clobbering" do
+    assert_correction(
+      <<~RUBY,
+        update! **{
+          status: "canceled",
+          ends_at: Time.current
+        }.compact
+      RUBY
+      <<~RUBY
+        update! **{ status: "canceled", ends_at: Time.current }.compact
+      RUBY
+    )
+  end
+
+  test "allows multiline hash when suffix would exceed max length" do
+    assert_no_offense <<~RUBY
+      x = {
+        very_long_key: "a value that is long enough to fill",
+        another_key: "another value that is moderately long to exceed the limit"
+      }.merge(extra).freeze
+    RUBY
+  end
+
   test "allows nested multiline hash where inner hash exceeds max length" do
     assert_no_offense <<~RUBY
       x = {

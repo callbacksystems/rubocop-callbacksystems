@@ -107,7 +107,12 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def fits_on_one_line?
-          node.loc.column + collapsed.length <= max_line_length
+          node.loc.column + collapsed.length + suffix_length <= max_line_length
+        end
+
+        def suffix_length
+          last_line = node.loc.end.source_line
+          last_line.length - node.loc.end.column - 1
         end
 
         def pairs_source
@@ -145,7 +150,12 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def fits_on_one_line?
-          node.loc.column + collapsed.length <= max_line_length
+          node.loc.column + collapsed.length + suffix_length <= max_line_length
+        end
+
+        def suffix_length
+          last_line = node.loc.end.source_line
+          last_line.length - node.loc.end.column - 1
         end
 
         def elements_source
@@ -222,7 +232,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def argument_single_line?(arg)
-          return arg.pairs.none? { |pair| pair.first_line != pair.last_line } if implicit_hash?(arg)
+          return arg.children.none? { |child| child.first_line != child.last_line } if implicit_hash?(arg)
 
           arg.first_line == arg.last_line
         end
@@ -258,7 +268,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def argument_sources(arg)
-          return arg.pairs.map { |pair| pair.source.strip } if implicit_hash?(arg)
+          return arg.children.map { |child| child.source.strip } if implicit_hash?(arg)
 
           [ arg.source.strip ]
         end
