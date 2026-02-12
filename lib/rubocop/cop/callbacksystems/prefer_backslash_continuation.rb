@@ -50,7 +50,7 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
 
       private
         def allowed?
-          block_call? || nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver?
+          block_call? || nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
         end
 
         def multiline_call?
@@ -99,6 +99,10 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
 
         def chained_method_receiver?
           (node.parent&.send_type? || node.parent&.csend_type?) && node.parent.receiver == node
+        end
+
+        def inside_collection_literal?
+          node.each_ancestor(:hash, :array).any?
         end
     end
 end

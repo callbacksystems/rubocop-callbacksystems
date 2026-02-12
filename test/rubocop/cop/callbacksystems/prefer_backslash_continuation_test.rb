@@ -114,6 +114,36 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
     RUBY
   end
 
+  test "allows multiline call inside hash literal" do
+    assert_no_offense <<~RUBY
+      def attributes
+        {
+          payment_method_type: "card",
+          default: default,
+          data: card_data.merge(
+            brand: object.payment_method&.dig("id") || object.payment_method&.dig("name")&.downcase,
+            last4: object.last_four_digits,
+            exp_month: object.expiration_month,
+            exp_year: object.expiration_year
+          )
+        }
+      end
+    RUBY
+  end
+
+  test "allows multiline call inside array literal" do
+    assert_no_offense <<~RUBY
+      def items
+        [
+          build_item(
+            name: "test",
+            value: 42
+          )
+        ]
+      end
+    RUBY
+  end
+
   test "allows deeply nested calls" do
     assert_no_offense <<~RUBY
       outer(
