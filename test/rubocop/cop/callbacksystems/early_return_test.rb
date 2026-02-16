@@ -93,6 +93,54 @@ class EarlyReturnTest < CopTestCase
     RUBY
   end
 
+  test "allows guard clause on first line in method with rescue" do
+    assert_no_offense(<<~RUBY)
+      def update_api_record(**attributes)
+        return unless processor_id?
+
+        find_record.tap { |r| r.update(**attributes) }
+      rescue ActiveRecord::RecordNotFound
+        update! processor_id: nil
+      end
+    RUBY
+  end
+
+  test "allows guard clause on first line in method with ensure" do
+    assert_no_offense(<<~RUBY)
+      def process(user)
+        return unless user
+        do_something(user)
+      ensure
+        cleanup
+      end
+    RUBY
+  end
+
+  test "allows guard clause on first line in method with rescue and ensure" do
+    assert_no_offense(<<~RUBY)
+      def process(user)
+        return unless user
+        do_something(user)
+      rescue StandardError
+        handle_error
+      ensure
+        cleanup
+      end
+    RUBY
+  end
+
+  test "registers offense for non-first-line return in method with rescue" do
+    assert_offense(<<~RUBY)
+      def process(data)
+        log_call
+        return if data.empty?
+        process_data(data)
+      rescue StandardError
+        handle_error
+      end
+    RUBY
+  end
+
   test "does not check returns inside blocks" do
     assert_no_offense(<<~RUBY)
       def process(items)

@@ -11,7 +11,12 @@ module RuboCop::Callbacksystems::Helpers
   #   first_statement(def_node.body)  # => first statement node
   #
   def first_statement(body)
-    body.begin_type? || body.kwbegin_type? ? body.children.first : body
+    case body.type
+    when :begin, :kwbegin then body.children.first
+    when :rescue then first_statement(body.body)
+    when :ensure then first_statement(body.children.first)
+    else body
+    end
   end
 
   # Returns the last statement from a method body.
@@ -21,7 +26,12 @@ module RuboCop::Callbacksystems::Helpers
   #   last_statement(def_node.body)  # => last statement node
   #
   def last_statement(body)
-    body.begin_type? || body.kwbegin_type? ? body.children.last : body
+    case body.type
+    when :begin, :kwbegin then body.children.last
+    when :rescue then last_statement(body.body)
+    when :ensure then last_statement(body.children.first)
+    else body
+    end
   end
 
   # Counts unique variable assignments of the given type in a body.
