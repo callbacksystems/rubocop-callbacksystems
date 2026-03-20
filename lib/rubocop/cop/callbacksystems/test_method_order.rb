@@ -41,40 +41,21 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
 
   private
     def checkable?
-      test_file? && source_path && File.exist?(source_path)
+      path_mapping.test_file? && path_mapping.source_path && File.exist?(path_mapping.source_path)
     end
 
-    def test_file?
-      path = processed_source.file_path
-      path.include?("/test/") && path.end_with?("_test.rb")
-    end
-
-    def source_path
-      @source_path ||= candidate_source_paths.find { |p| File.exist?(p) }
-    end
-
-    def candidate_source_paths
-      path = processed_source.file_path
-
-      [
-        path.sub(%r{/test/lib/(.+)_test\.rb$}, '/lib/\1.rb'),
-        path.sub(%r{/test/(.+)_test\.rb$}, '/app/\1.rb'),
-        path.sub(%r{/test/(.+)_test\.rb$}, '/lib/\1.rb')
-      ].uniq.reject { |p| p == path }
+    def path_mapping
+      @path_mapping ||= RuboCop::Callbacksystems::TestPathMapping.new(processed_source.file_path)
     end
 
     def source_methods
       @source_methods ||= begin
-        source = File.read(source_path)
-        processed = RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f, source_path)
-        processed.ast ? collect_method_names(processed.ast) : []
+        source = File.read(path_mapping.source_path)
+        processed = RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f, path_mapping.source_path)
+        processed.ast ? RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect : []
       rescue
         []
       end
-    end
-
-    def collect_method_names(ast)
-      ast ? MethodCollector.new(ast).collect : []
     end
 
     def order_violations
@@ -106,73 +87,6 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
       return [ first_word.to_sym ] if second_word == "scope"
 
       [ first_word.to_sym, :"#{first_word}?", :"#{first_word}!" ]
-    end
-
-    class MethodCollector
-      attr_reader :ast, :methods
-
-      def initialize(ast)
-        @ast = ast
-        @methods = []
-      end
-
-      def collect
-        traverse(ast, root: true, public_section: true)
-        methods
-      end
-
-      private
-        def traverse(node, root:, public_section:)
-          return unless node
-
-          add_method_name(node, public_section) || traverse_children(node, root: root, public_section: public_section)
-        end
-
-        def add_method_name(node, public_section)
-          return unless public_method?(node, public_section)
-
-          methods << method_name_for(node)
-        end
-
-        def public_method?(node, public_section)
-          public_section && (method_definition?(node) || scope_definition?(node))
-        end
-
-        def method_name_for(node)
-          scope_definition?(node) ? node.first_argument.value : node.method_name
-        end
-
-        def method_definition?(node)
-          %i[def defs].include?(node.type)
-        end
-
-        def scope_definition?(node)
-          node.type == :send && node.method_name == :scope && node.first_argument&.sym_type?
-        end
-
-        def traverse_children(node, root:, public_section:)
-          case node.type
-          when :class, :module
-            traverse(node.body, root: false, public_section: true) if root
-          when :begin
-            traverse_begin(node, root: root, public_section: public_section)
-          when :sclass, :block
-            traverse(node.body, root: false, public_section: true)
-          end
-        end
-
-        def traverse_begin(node, root:, public_section:)
-          current_public = public_section
-          node.children.each do |child|
-            current_public = false if visibility_modifier?(child)
-            child_is_class_or_module = %i[class module].include?(child.type)
-            traverse(child, root: root && child_is_class_or_module, public_section: current_public)
-          end
-        end
-
-        def visibility_modifier?(node)
-          node.type == :send && node.receiver.nil? && %i[private protected].include?(node.method_name) && node.arguments.empty?
-        end
     end
 
     class Ordering

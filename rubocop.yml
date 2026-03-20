@@ -238,6 +238,11 @@ Callbacksystems/SingleLineSetupBlock:
 Callbacksystems/SingleTopLevelClassOrModule:
   Enabled: true
 
+Callbacksystems/SingleUseSetupVariable:
+  Enabled: true
+  Include:
+    - "test/**/*"
+
 Callbacksystems/SingleUseFixtureVariable:
   Enabled: true
   Include:
@@ -257,6 +262,12 @@ Callbacksystems/TestMethodOrder:
   Enabled: true
   Include:
     - "test/**/*"
+
+Callbacksystems/PublicMethodsMustHaveTests:
+  Enabled: true
+  Include:
+    - "app/**/*"
+    - "lib/**/*"
 
 Callbacksystems/TooManyInstanceVariables:
   Enabled: true
@@ -306,6 +317,61 @@ Layout/ClassStructure:
     - private_attribute_macros
     - private_delegate
     - private_methods
+  Categories:
+    module_inclusion:
+      - include
+      - prepend
+      - extend
+    association:
+      - belongs_to
+      - has_many
+      - has_one
+      - has_and_belongs_to_many
+      - accepts_nested_attributes_for
+    macros:
+      - normalizes
+      - scope
+      - positioned
+      - encrypts
+      - enum
+      - serialize
+      - store
+      - store_accessor
+      - validates
+      - validate
+      - validates_with
+      - after_initialize
+      - after_find
+      - before_validation
+      - after_validation
+      - before_save
+      - around_save
+      - after_save
+      - before_create
+      - around_create
+      - after_create
+      - before_update
+      - around_update
+      - after_update
+      - before_destroy
+      - around_destroy
+      - after_destroy
+      - after_commit
+      - after_create_commit
+      - after_update_commit
+      - after_destroy_commit
+      - after_save_commit
+      - after_rollback
+      - before_action
+      - around_action
+      - after_action
+      - skip_before_action
+      - skip_after_action
+      - skip_around_action
+      - helper_method
+      - layout
+      - rescue_from
+      - allow_browser
 
 Layout/ClosingParenthesisIndentation:
   Enabled: false

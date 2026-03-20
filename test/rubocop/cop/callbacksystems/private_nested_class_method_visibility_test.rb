@@ -243,4 +243,50 @@ class PrivateNestedClassMethodVisibilityTest < CopTestCase
       end
     RUBY
   end
+
+  test "no offense for method called via block-pass" do
+    assert_no_offense <<~RUBY
+      class Foo
+        def process
+          items.each(&:run)
+        end
+
+        private
+          class Bar
+            def run; end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense for method called via block-pass on collection of nested class instances" do
+    assert_no_offense <<~RUBY
+      class Page::Offer::Revision
+        def revise
+          valid? && commit
+        end
+
+        private
+          def commit_listings
+            listing_entries.each(&:commit)
+          end
+
+          def listing_entries
+            @listing_entries || []
+          end
+
+          class ListingEntry
+            attr_reader :listing, :rules
+
+            def initialize(listing, entry, position:)
+              @listing = listing
+            end
+
+            def commit
+              listing.save!
+            end
+          end
+      end
+    RUBY
+  end
 end

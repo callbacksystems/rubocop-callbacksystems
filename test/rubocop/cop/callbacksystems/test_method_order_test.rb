@@ -652,6 +652,58 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrderTest < CopTestCase
     RUBY
   end
 
+  test "handles methods inside class_methods block in concern" do
+    create_source_file "app/models/concerns/publishable.rb", <<~RUBY
+      module Publishable
+        extend ActiveSupport::Concern
+
+        class_methods do
+          def build_with_listing(attributes)
+          end
+        end
+
+        def some_method
+        end
+      end
+    RUBY
+
+    assert_no_offense <<~RUBY, file: "#{@temp_dir}/test/models/concerns/publishable_test.rb"
+      class PublishableTest < ActiveSupport::TestCase
+        test "build_with_listing creates record" do
+        end
+
+        test "some_method does something" do
+        end
+      end
+    RUBY
+  end
+
+  test "registers offense when class_methods block tests are out of order" do
+    create_source_file "app/models/concerns/publishable.rb", <<~RUBY
+      module Publishable
+        extend ActiveSupport::Concern
+
+        class_methods do
+          def build_with_listing(attributes)
+          end
+        end
+
+        def some_method
+        end
+      end
+    RUBY
+
+    assert_offense <<~RUBY, file: "#{@temp_dir}/test/models/concerns/publishable_test.rb"
+      class PublishableTest < ActiveSupport::TestCase
+        test "some_method does something" do
+        end
+
+        test "build_with_listing creates record" do
+        end
+      end
+    RUBY
+  end
+
   private
     def create_source_file(relative_path, content)
       full_path = "#{@temp_dir}/#{relative_path}"

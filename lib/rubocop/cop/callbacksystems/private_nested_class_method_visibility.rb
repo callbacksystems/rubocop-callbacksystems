@@ -112,7 +112,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
       end
 
       def collect
-        Set.new([ :initialize ] + direct_calls + variable_calls + macro_referenced_methods)
+        Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
       end
 
       private
@@ -127,6 +127,14 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
         def variable_calls
           parent_node.body.each_node(:lvasgn).flat_map do |assignment|
             VariableTracker.new(assignment, class_name, nested_class, parent_node).calls_on_variable
+          end
+        end
+
+        def block_pass_calls
+          parent_node.body.each_node(:block_pass).filter_map do |node|
+            next if node.each_ancestor(:class).any?(nested_class)
+
+            node.children.first.value if node.children.first&.sym_type?
           end
         end
 
