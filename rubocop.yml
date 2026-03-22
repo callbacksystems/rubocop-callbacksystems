@@ -238,12 +238,12 @@ Callbacksystems/SingleLineSetupBlock:
 Callbacksystems/SingleTopLevelClassOrModule:
   Enabled: true
 
-Callbacksystems/SingleUseSetupVariable:
+Callbacksystems/SingleUseFixtureVariable:
   Enabled: true
   Include:
     - "test/**/*"
 
-Callbacksystems/SingleUseFixtureVariable:
+Callbacksystems/SingleUseSetupVariable:
   Enabled: true
   Include:
     - "test/**/*"
@@ -262,12 +262,6 @@ Callbacksystems/TestMethodOrder:
   Enabled: true
   Include:
     - "test/**/*"
-
-Callbacksystems/PublicMethodsMustHaveTests:
-  Enabled: true
-  Include:
-    - "app/**/*"
-    - "lib/**/*"
 
 Callbacksystems/TooManyInstanceVariables:
   Enabled: true

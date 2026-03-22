@@ -25,13 +25,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    offenses = assert_offense(<<~RUBY, file: source_file)
-      class User
-        def full_name
-          first_name
-        end
-      end
-    RUBY
+    offenses = assert_offense_in(source_file)
 
     assert_equal 1, offenses.count
     assert_includes offenses.first.message, "full_name"
@@ -54,13 +48,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def full_name
-          first_name
-        end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
   test "no offense for private methods" do
@@ -85,18 +73,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def public_method
-          private_method
-        end
-
-        private
-          def private_method
-            "private"
-          end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
   test "no offense for methods in private nested classes" do
@@ -127,27 +104,10 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def process
-          Helper.new.run
-        end
-
-        private
-          class Helper
-            def run
-              "running"
-            end
-
-            def untested_public_in_nested
-              "no test needed"
-            end
-          end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
-  test "no offense when test file does not exist" do
+  test "registers offense when test file does not exist for app file" do
     source_file = create_file("app/models/user.rb", <<~RUBY)
       class User
         def untested_method
@@ -156,13 +116,10 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def untested_method
-          "no test file"
-        end
-      end
-    RUBY
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "untested_method"
   end
 
   test "no offense for test files themselves" do
@@ -174,13 +131,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class UserTest < ActiveSupport::TestCase
-        def helper_method
-          "helper"
-        end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
   test "works with lib files" do
@@ -202,15 +153,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    offenses = assert_offense(<<~RUBY, file: source_file)
-      module Utils
-        class StringHelper
-          def capitalize_words
-            "words"
-          end
-        end
-      end
-    RUBY
+    offenses = assert_offense_in(source_file)
 
     assert_equal 1, offenses.count
     assert_includes offenses.first.message, "capitalize_words"
@@ -234,17 +177,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    offenses = assert_offense(<<~RUBY, file: source_file)
-      class User
-        def method_one
-          1
-        end
-
-        def method_two
-          2
-        end
-      end
-    RUBY
+    offenses = assert_offense_in(source_file)
 
     assert_equal 2, offenses.count
   end
@@ -266,13 +199,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class Helper
-        def process
-          "done"
-        end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
   test "detects test for method ending with question mark" do
@@ -292,13 +219,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def valid?
-          true
-        end
-      end
-    RUBY
+    assert_no_offense_in(source_file)
   end
 
   test "detects test for method ending with bang" do
@@ -318,13 +239,161 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     RUBY
 
-    assert_no_offense(<<~RUBY, file: source_file)
-      class User
-        def save!
-          true
+    assert_no_offense_in(source_file)
+  end
+
+  test "detects test for setter method" do
+    source_file = create_file("app/models/appointment.rb", <<~RUBY)
+      class Appointment
+        def duration=(value)
+          @duration = value.to_i.minutes
         end
       end
     RUBY
+
+    create_file("test/models/appointment_test.rb", <<~RUBY)
+      class AppointmentTest < ActiveSupport::TestCase
+        test "duration= converts integer to minutes" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "detects test for equality operator" do
+    source_file = create_file("app/models/plan.rb", <<~RUBY)
+      class Plan
+        def ==(other)
+          key == other.key
+        end
+      end
+    RUBY
+
+    create_file("test/models/plan_test.rb", <<~RUBY)
+      class PlanTest < ActiveSupport::TestCase
+        test "== returns true for same key" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "detects test for spaceship operator" do
+    source_file = create_file("app/models/slot.rb", <<~RUBY)
+      class Slot
+        def <=>(other)
+          starts_at <=> other.starts_at
+        end
+      end
+    RUBY
+
+    create_file("test/models/slot_test.rb", <<~RUBY)
+      class SlotTest < ActiveSupport::TestCase
+        test "<=> compares by start time" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "requires tests for scopes" do
+    source_file = create_file("app/models/article.rb", <<~RUBY)
+      class Article
+        scope :published, -> { where(published: true) }
+
+        def title
+          name
+        end
+      end
+    RUBY
+
+    create_file("test/models/article_test.rb", <<~RUBY)
+      class ArticleTest < ActiveSupport::TestCase
+        test "title returns the title" do
+          assert true
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "published"
+  end
+
+  test "requires tests for methods in class_methods block" do
+    source_file = create_file("app/models/concerns/publishable.rb", <<~RUBY)
+      module Publishable
+        extend ActiveSupport::Concern
+
+        class_methods do
+          def build_with_listing(attributes)
+          end
+        end
+
+        def some_method
+        end
+      end
+    RUBY
+
+    create_file("test/models/concerns/publishable_test.rb", <<~RUBY)
+      class PublishableTest < ActiveSupport::TestCase
+        test "some_method does something" do
+          assert true
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "build_with_listing"
+  end
+
+  test "does not require tests for methods referenced by macros" do
+    source_file = create_file("app/models/order.rb", <<~RUBY)
+      class Order
+        after_commit :notify_later
+
+        def total
+          items.sum(:amount)
+        end
+
+        def notify_later
+          NotifyJob.perform_later(self)
+        end
+      end
+    RUBY
+
+    create_file("test/models/order_test.rb", <<~RUBY)
+      class OrderTest < ActiveSupport::TestCase
+        test "total calculates sum" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "registers offense when test file does not exist" do
+    source_file = create_file("app/controllers/checkouts_controller.rb", <<~RUBY)
+      class CheckoutsController
+        def index
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "index"
   end
 
   test "TestFilePathResolver resolves relative lib path to test/lib" do
@@ -399,89 +468,19 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     assert_includes collector.collect, "<=>"
   end
 
-  test "detects test for setter method" do
-    source_file = create_file("app/models/appointment.rb", <<~RUBY)
-      class Appointment
-        def duration=(value)
-          @duration = value.to_i.minutes
-        end
-      end
-    RUBY
-
-    create_file("test/models/appointment_test.rb", <<~RUBY)
-      class AppointmentTest < ActiveSupport::TestCase
-        test "duration= converts integer to minutes" do
-          assert true
-        end
-      end
-    RUBY
-
-    assert_no_offense(<<~RUBY, file: source_file)
-      class Appointment
-        def duration=(value)
-          @duration = value.to_i.minutes
-        end
-      end
-    RUBY
-  end
-
-  test "detects test for equality operator" do
-    source_file = create_file("app/models/plan.rb", <<~RUBY)
-      class Plan
-        def ==(other)
-          key == other.key
-        end
-      end
-    RUBY
-
-    create_file("test/models/plan_test.rb", <<~RUBY)
-      class PlanTest < ActiveSupport::TestCase
-        test "== returns true for same key" do
-          assert true
-        end
-      end
-    RUBY
-
-    assert_no_offense(<<~RUBY, file: source_file)
-      class Plan
-        def ==(other)
-          key == other.key
-        end
-      end
-    RUBY
-  end
-
-  test "detects test for spaceship operator" do
-    source_file = create_file("app/models/slot.rb", <<~RUBY)
-      class Slot
-        def <=>(other)
-          starts_at <=> other.starts_at
-        end
-      end
-    RUBY
-
-    create_file("test/models/slot_test.rb", <<~RUBY)
-      class SlotTest < ActiveSupport::TestCase
-        test "<=> compares by start time" do
-          assert true
-        end
-      end
-    RUBY
-
-    assert_no_offense(<<~RUBY, file: source_file)
-      class Slot
-        def <=>(other)
-          starts_at <=> other.starts_at
-        end
-      end
-    RUBY
-  end
-
   private
     def create_file(relative_path, content)
       File.join(@temp_dir, relative_path).tap do |full_path|
         FileUtils.mkdir_p(File.dirname(full_path))
         File.write(full_path, content)
       end
+    end
+
+    def assert_offense_in(source_file)
+      assert_offense(File.read(source_file), file: source_file)
+    end
+
+    def assert_no_offense_in(source_file)
+      assert_no_offense(File.read(source_file), file: source_file)
     end
 end

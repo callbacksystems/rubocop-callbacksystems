@@ -1,31 +1,29 @@
 # Ensures all public methods in classes and modules have corresponding tests.
 # Private nested class methods are excluded since they are implementation details.
+# Methods referenced by macros (callbacks, delegates) are excluded.
+# Scopes and methods in class_methods blocks are included.
 #
 # Test files are located based on the source file path:
-# - lib/foo/bar.rb -> test/lib/foo/bar_test.rb
+# - lib/foo/bar.rb -> test/lib/foo/bar_test.rb or test/foo/bar_test.rb
 # - app/models/user.rb -> test/models/user_test.rb
-# - app/controllers/users_controller.rb -> test/controllers/users_controller_test.rb
 #
 # Tests must follow the naming convention: test "method_name ..." do
 #
 # @example
 #   # bad - public method without test
-#   # In app/models/user.rb:
 #   class User
 #     def full_name
 #       "#{first_name} #{last_name}"
 #     end
 #   end
-#   # And test/models/user_test.rb has no test "full_name ..." block
+#   # And test file has no test "full_name ..." block
 #
 #   # good - public method has test
-#   # In app/models/user.rb:
 #   class User
 #     def full_name
 #       "#{first_name} #{last_name}"
 #     end
 #   end
-#   # And test/models/user_test.rb has:
 #   # test "full_name returns concatenated names" do ... end
 #
 class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::Base
@@ -36,8 +34,8 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
   def on_class(node)
     return if private_nested_class?(node)
 
-    Analysis.new(node, processed_source.file_path).public_methods_without_tests.each do |method_node|
-      add_offense(method_node, message: format(MESSAGE, method: method_node.method_name))
+    Analysis.new(node, processed_source.file_path).public_methods_without_tests.each do |method_node, method_name|
+      add_offense(method_node, message: format(MESSAGE, method: method_name))
     end
   end
 
@@ -83,39 +81,43 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
     end
 
     class Analysis
+      EXCLUDED_METHODS = %i[initialize].to_set.freeze
+
       def initialize(node, file_path)
         @node = node
         @file_path = file_path
         @test_file_path = TestFilePathResolver.new(file_path).resolve
       end
 
-      EXCLUDED_METHODS = %i[initialize].to_set.freeze
-
       def public_methods_without_tests
-        return [] if should_skip?
+        return [] if file_path.include?("/test/")
 
-        tested_methods = TestedMethodsCollector.new(test_file_path).collect
-        testable_public_methods.reject { |method_node| tested_methods.include?(method_node.method_name.to_s) }
+        tested = test_file_path ? TestedMethodsCollector.new(test_file_path).collect : Set.new
+        macro_referenced = collect_macro_referenced_methods
+
+        testable_public_methods.filter_map do |method_node, method_name|
+          next if tested.include?(method_name.to_s)
+          next if macro_referenced.include?(method_name) && !scope_node?(method_node)
+
+          [ method_node, method_name ]
+        end
       end
 
       private
         attr_reader :node, :file_path, :test_file_path
 
-        def should_skip?
-          file_path.include?("/test/") || test_file_path.nil?
-        end
-
         def testable_public_methods
-          public_methods.reject { |method_node| excluded_method?(method_node) }
+          PublicMethodCollector.new(node).collect.reject { |_, name| EXCLUDED_METHODS.include?(name) }
         end
 
-        def public_methods
-          PublicMethodCollector.new(node).collect
+        def scope_node?(method_node)
+          method_node.send_type? && method_node.method_name == :scope
         end
 
-        def excluded_method?(method_node)
-          name = method_node.method_name
-          EXCLUDED_METHODS.include?(name) || name.start_with?("on_")
+        def collect_macro_referenced_methods
+          node.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body).collect : Set.new
+        rescue
+          Set.new
         end
     end
 
@@ -166,44 +168,58 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
     end
 
     class PublicMethodCollector
+      attr_reader :node, :results
+
       def initialize(node)
         @node = node
-        @in_private = false
-        @private_class_depth = 0
+        @results = []
       end
 
       def collect
-        return [] unless node.body
-
-        body_children.select { |child| public_method?(child) }
+        traverse(node.body, public_section: true)
+        results
       end
 
       private
-        attr_reader :node
+        def traverse(body, public_section:)
+          return unless body
 
-        def body_children
-          return [ node.body ] if node.body.def_type?
-
-          node.body.each_child_node.to_a
-        end
-        attr_accessor :in_private, :private_class_depth
-
-        def public_method?(child)
-          track_visibility(child)
-          public_instance_method?(child)
+          add_public_method(body, public_section) || traverse_children(body, public_section: public_section)
         end
 
-        def track_visibility(child)
-          self.in_private = true if visibility_modifier?(child)
-          self.private_class_depth += 1 if child.class_type? && in_private
+        def add_public_method(body, public_section)
+          return unless public_section
+
+          if %i[def defs].include?(body.type)
+            results << [ body, body.method_name ]
+          elsif scope_definition?(body)
+            results << [ body, body.first_argument.value ]
+          end
         end
 
-        def public_instance_method?(child)
-          child.def_type? && !in_private && private_class_depth.zero?
+        def traverse_children(body, public_section:)
+          case body.type
+          when :begin
+            traverse_begin(body, public_section: public_section)
+          when :sclass, :block
+            traverse(body.body, public_section: true)
+          end
+        end
+
+        def traverse_begin(body, public_section:)
+          current_public = public_section
+          body.each_child_node do |child|
+            current_public = false if visibility_modifier?(child)
+            traverse(child, public_section: current_public)
+          end
+        end
+
+        def scope_definition?(node)
+          node.send_type? && node.method_name == :scope && node.first_argument&.sym_type?
         end
 
         def visibility_modifier?(child)
-          child.send_type? && [ :private, :protected ].include?(child.method_name) && child.arguments.empty?
+          child.send_type? && %i[private protected].include?(child.method_name) && child.arguments.empty?
         end
     end
 
