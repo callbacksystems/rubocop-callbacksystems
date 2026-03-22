@@ -763,6 +763,9 @@ Style/DocumentationMethod:
 Style/EmptyCaseCondition:
   Enabled: false
 
+Style/EmptyClassDefinition:
+  Enabled: false
+
 Style/EmptyElse:
   Enabled: false
 
