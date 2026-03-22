@@ -14,6 +14,8 @@
 #   scope :with_comments, -> { preload(:comments) }
 #
 class RuboCop::Cop::Callbacksystems::SingularScopeNames < RuboCop::Cop::Base
+  MESSAGE = "Scope names should be singular. Use `%<singular>s` instead of `%<name>s`."
+
   # Matches: scope :name, -> { ... }
   def_node_matcher :scope_with_symbol_name?, <<~PATTERN
     (send nil? :scope (sym $_name) ...)
@@ -25,7 +27,7 @@ class RuboCop::Cop::Callbacksystems::SingularScopeNames < RuboCop::Cop::Base
       next if name_string.start_with?("with_")
       next if name_string == name_string.singularize
 
-      add_offense(node.arguments.first, message: "Scope names should be singular. Use `#{name_string.singularize}` instead of `#{name_string}`.")
+      add_offense(node.arguments.first, message: format(MESSAGE, singular: name_string.singularize, name: name_string))
     end
   end
 end

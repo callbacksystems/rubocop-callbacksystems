@@ -33,15 +33,16 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::TestMethodDefinition < RuboCop::Cop::Base
+  TEST_MESSAGE = "Use `test \"description\" do` instead of `def %<method>s`."
+  BLOCK_MESSAGE = "Use `%<method>s do` block instead of `def %<method>s`."
+
   def on_def(node)
     method_name = node.method_name.to_s
 
     message = if method_name.start_with?("test_")
-      "Use `test \"description\" do` instead of `def #{method_name}`."
-    elsif method_name == "setup"
-      "Use `setup do` block instead of `def setup`."
-    elsif method_name == "teardown"
-      "Use `teardown do` block instead of `def teardown`."
+      format(TEST_MESSAGE, method: method_name)
+    elsif %w[setup teardown].include?(method_name)
+      format(BLOCK_MESSAGE, method: method_name)
     end
 
     add_offense(node, message: message) if message

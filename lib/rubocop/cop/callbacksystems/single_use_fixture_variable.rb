@@ -21,14 +21,11 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::SingleUseFixtureVariable < RuboCop::Cop::Base
+  include RuboCop::Callbacksystems::TestCopHelpers
   extend RuboCop::Cop::AutoCorrector
 
+  MESSAGE = "Fixture `%<fixture>s(:%<argument>s)` is assigned to `%<variable>s` but only used once. Inline it instead."
   ITERATOR_TYPES = %i[block numblock].freeze
-
-  # Matches: test "description" do ... end
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str _)) ...)
-  PATTERN
 
   # Matches: variable = fixture_call, captures variable_name and fixture_call
   def_node_matcher :fixture_assignment, <<~PATTERN
@@ -44,9 +41,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseFixtureVariable < RuboCop::Cop::Ba
     return unless test_block?(node)
 
     each_single_use_fixture(node.body) do |assignment, variable_name, fixture_call, usage_node|
-      message = "Fixture `#{fixture_call.method_name}(:#{fixture_call.arguments.first.value})` is assigned to `#{variable_name}` but only used once. Inline it instead."
-
-      add_offense(assignment, message: message) do |corrector|
+      add_offense(assignment, message: format(MESSAGE, fixture: fixture_call.method_name, argument: fixture_call.arguments.first.value, variable: variable_name)) do |corrector|
         corrector.remove(removal_range(assignment))
         corrector.replace(usage_node, fixture_call.source)
       end

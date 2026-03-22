@@ -43,41 +43,8 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
 
   private
     def private_nested_class?(node)
-      PrivateNestedClassChecker.new(node).private?
-    end
-
-    class PrivateNestedClassChecker
-      def initialize(node)
-        @node = node
-      end
-
-      def private?
-        return false unless parent_class_or_module
-
-        in_private_section_of_parent?
-      end
-
-      private
-        attr_reader :node
-
-        def parent_class_or_module
-          @parent_class_or_module ||= node.each_ancestor(:class, :module).first
-        end
-
-        def in_private_section_of_parent?
-          return false unless parent_class_or_module.body
-
-          in_private = false
-          parent_class_or_module.body.each_child_node do |child|
-            in_private = true if private_declaration?(child)
-            return true if child == node && in_private
-          end
-          false
-        end
-
-        def private_declaration?(child)
-          child.send_type? && child.method_name == :private && child.arguments.empty?
-        end
+      parent = node.each_ancestor(:class, :module).first
+      parent && RuboCop::Callbacksystems::Helpers.private_nested_classes(parent).include?(node)
     end
 
     class Analysis

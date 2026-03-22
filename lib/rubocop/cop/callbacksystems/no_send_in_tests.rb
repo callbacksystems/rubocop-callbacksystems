@@ -21,14 +21,11 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::NoSendInTests < RuboCop::Cop::Base
+  include RuboCop::Callbacksystems::TestCopHelpers
+
   MESSAGE = "Don't use `%<method>s` to test private methods. Test behavior through the public interface instead."
 
   RESTRICTED_METHODS = %i[send __send__].freeze
-
-  # @!method test_block?(node)
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str _)) ...)
-  PATTERN
 
   def on_block(node)
     return unless test_block?(node)

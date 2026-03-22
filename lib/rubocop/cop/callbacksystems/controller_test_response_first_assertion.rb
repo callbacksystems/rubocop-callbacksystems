@@ -43,19 +43,16 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::ControllerTestResponseFirstAssertion < RuboCop::Cop::Base
+  include RuboCop::Callbacksystems::TestCopHelpers
+
   MESSAGE = "The first assertion after an HTTP request must be `assert_response` or `assert_redirected_to`, not `%<method>s`."
-  HTTP_METHODS = %i[get post put patch delete].freeze
+  HTTP_METHODS = RuboCop::Callbacksystems::TestCopHelpers::HTTP_METHODS
   RESPONSE_ASSERTIONS = %i[assert_response assert_redirected_to].freeze
   SIDE_EFFECT_ASSERTIONS = %i[
     assert_enqueued_jobs assert_no_enqueued_jobs assert_performed_jobs assert_no_performed_jobs
     assert_enqueued_with assert_performed_with
     assert_emails assert_no_emails assert_enqueued_emails assert_no_enqueued_emails assert_enqueued_email_with
   ].freeze
-
-  # Matches: test "description" do ... end
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str $_)) ...)
-  PATTERN
 
   def on_block(node)
     return unless test_block?(node)

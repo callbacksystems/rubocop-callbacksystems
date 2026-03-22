@@ -30,6 +30,8 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::JobEnqueueMethods < RuboCop::Cop::Base
+  include RuboCop::Callbacksystems::Helpers
+
   MESSAGE = "Rename `%<name>s` to `%<expected>s` to follow the _later convention."
 
   def on_new_investigation
@@ -40,9 +42,7 @@ class RuboCop::Cop::Callbacksystems::JobEnqueueMethods < RuboCop::Cop::Base
     @class_methods = collect_class_methods(node)
   end
 
-  def on_module(node)
-    @class_methods = collect_class_methods(node)
-  end
+  alias on_module on_class
 
   def on_def(node)
     return if node.method_name.to_s.end_with?("_later")
@@ -58,10 +58,6 @@ class RuboCop::Cop::Callbacksystems::JobEnqueueMethods < RuboCop::Cop::Base
       class_or_module_node.each_descendant(:def).select do |def_node|
         direct_child_of_class?(def_node, class_or_module_node)
       end.to_set(&:method_name)
-    end
-
-    def direct_child_of_class?(method_node, class_node)
-      method_node.each_ancestor(:class, :module).first == class_node
     end
 
     class EnqueueMethod

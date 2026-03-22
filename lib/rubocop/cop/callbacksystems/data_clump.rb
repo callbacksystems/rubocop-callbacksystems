@@ -34,12 +34,7 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
     end
   end
 
-  def on_module(node)
-    ParameterClumps.new(node, cop_config).detect.each do |param_set, method_nodes|
-      message = format(MESSAGE, params: param_set.join(", "), count: method_nodes.size)
-      add_offense(method_nodes.first.loc.name, message: message)
-    end
-  end
+  alias on_module on_class
 
   private
     class ParameterClumps

@@ -33,7 +33,7 @@
 class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop::Base
   MESSAGE = "Only standard Rails actions (index, show, new, create, edit, update, destroy) are allowed in controllers. Extract `%<method>s` to a new controller."
   ALLOWED_ACTIONS = %i[index show new create edit update destroy].freeze
-  CONTROLLER_SUPERCLASSES = %w[ApplicationController ActionController::Base ActionController::API].freeze
+  CONTROLLER_SUPERCLASSES = RuboCop::Callbacksystems::Helpers::CONTROLLER_SUPERCLASSES
 
   def on_def(node)
     return unless Action.new(node).offense?
@@ -85,21 +85,7 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
             end
 
             def public_method?
-              visibility_at(class_node.body) == :public
-            end
-
-            def visibility_at(body)
-              current_visibility = :public
-              body&.each_child_node do |child|
-                modifier = visibility_modifier(child)
-                current_visibility = modifier if modifier
-                return current_visibility if child.equal?(method_node)
-              end
-              :public
-            end
-
-            def visibility_modifier(child)
-              child.send_type? && %i[private protected public].include?(child.method_name) && child.arguments.empty? && child.method_name
+              RuboCop::Callbacksystems::Helpers.method_visibility(method_node) == :public
             end
         end
     end

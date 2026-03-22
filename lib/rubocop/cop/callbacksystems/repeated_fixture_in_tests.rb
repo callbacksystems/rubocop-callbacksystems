@@ -27,10 +27,9 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Base
-  # Matches: test "description" do ... end
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str _)) ...)
-  PATTERN
+  include RuboCop::Callbacksystems::TestCopHelpers
+
+  MESSAGE = "Fixture `%<fixture>s` is used in multiple tests. Move it to `setup`."
 
   def on_new_investigation
     return unless processed_source.ast
@@ -39,7 +38,7 @@ class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Base
       next unless calls.many?
 
       calls.drop(1).each do |call|
-        add_offense(call, message: "Fixture `#{fixture_key}` is used in multiple tests. Move it to `setup`.")
+        add_offense(call, message: format(MESSAGE, fixture: fixture_key))
       end
     end
   end

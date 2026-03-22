@@ -43,10 +43,6 @@ class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Ba
       private_non_predicate?(node)
     end
 
-    def private_non_predicate?(node)
-      method_visibility(node) != :public && !node.method_name.to_s.end_with?("?")
-    end
-
     class WrapperMethod
       def initialize(node)
         @node = node

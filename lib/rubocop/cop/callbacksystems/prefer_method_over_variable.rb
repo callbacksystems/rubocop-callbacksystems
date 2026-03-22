@@ -48,24 +48,24 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
   FINDER_MESSAGE = "Variable `%<var>s` assigned from finder. Consider extracting a `%<var>s` method."
 
   def on_lvasgn(node)
-    Assignment.new(node, self).check
+    offense = Assignment.new(node).offense
+    add_offense(node, message: offense) if offense
   end
 
   private
     class Assignment
-      attr_reader :node, :cop
+      attr_reader :node
 
-      def initialize(node, cop)
+      def initialize(node)
         @node = node
-        @cop = cop
       end
 
-      def check
+      def offense
         return if skip_assignment?
 
         variable_name = node.children.first
         value_node = node.children.second
-        Value.new(node, variable_name, value_node, cop).check
+        Value.new(node, variable_name, value_node).offense
       end
 
       private
@@ -79,21 +79,20 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
     end
 
     class Value
-      attr_reader :node, :variable_name, :value_node, :cop
+      attr_reader :node, :variable_name, :value_node
 
-      def initialize(node, variable_name, value_node, cop)
+      def initialize(node, variable_name, value_node)
         @node = node
         @variable_name = variable_name
         @value_node = value_node
-        @cop = cop
       end
 
-      def check
+      def offense
         if same_name_with_simple_receiver?
           receiver_name = Receiver.new(value_node).name_for
-          cop.send(:add_offense, node, message: format(DELEGATE_MESSAGE, var: variable_name, receiver: receiver_name))
+          format(DELEGATE_MESSAGE, var: variable_name, receiver: receiver_name)
         elsif FinderPattern.new(variable_name, value_node).matches?
-          cop.send(:add_offense, node, message: format(FINDER_MESSAGE, var: variable_name))
+          format(FINDER_MESSAGE, var: variable_name)
         end
       end
 

@@ -39,6 +39,8 @@ class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCo
 
   private
     class PrivateSectionAnalysis
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(node)
         @node = node
         @private_children = find_private_children
@@ -69,10 +71,6 @@ class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCo
             in_private = true if private_declaration?(child)
             in_private && (child.def_type? || child.class_type?)
           end
-        end
-
-        def private_declaration?(child)
-          child.send_type? && child.method_name == :private && child.arguments.empty?
         end
     end
 end

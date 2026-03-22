@@ -4,6 +4,9 @@
 module RuboCop::Callbacksystems::Helpers
   extend self
 
+  EAGER_LOADING_METHODS = %i[preload eager_load includes].freeze
+  CONTROLLER_SUPERCLASSES = %w[ApplicationController ActionController::Base ActionController::API].freeze
+
   # Returns the first statement from a method body.
   # Handles both single statements and begin/kwbegin blocks.
   #
@@ -94,5 +97,35 @@ module RuboCop::Callbacksystems::Helpers
       current = visibility_modifier(child) || current
       break current if child.equal?(method_node)
     end
+  end
+
+  # Checks if a node is a bare `private` declaration (no arguments).
+  #
+  def private_declaration?(node)
+    node.send_type? && node.method_name == :private && node.arguments.empty?
+  end
+
+  # Returns private nested classes within a class/module node.
+  #
+  def private_nested_classes(class_node)
+    return [] unless class_node.body
+
+    in_private = false
+    class_node.body.each_child_node.select do |child|
+      in_private = true if private_declaration?(child)
+      in_private && child.class_type?
+    end
+  end
+
+  # Checks if a method is a direct child of the given class/module (not nested deeper).
+  #
+  def direct_child_of_class?(method_node, class_node)
+    method_node.each_ancestor(:class, :module).first == class_node
+  end
+
+  # Checks if a method is non-public and not a predicate.
+  #
+  def private_non_predicate?(method_node)
+    method_visibility(method_node) != :public && !method_node.method_name.to_s.end_with?("?")
   end
 end

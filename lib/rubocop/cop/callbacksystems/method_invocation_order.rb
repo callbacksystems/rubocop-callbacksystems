@@ -56,7 +56,6 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Base
-  BLOCK_TYPES = %i[block numblock].freeze
   MESSAGE = "Method `%<callee>s` should be defined after `%<caller>s` which calls it."
 
   def on_class(node)
@@ -71,7 +70,7 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Base
   private
     def report_order_violations(body, methods)
       positions = methods.each_with_index.to_h { |method, index| [ method.method_name, index ] }
-      macro_referenced = MacroReferences.new(body).collect
+      macro_referenced = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).collect
 
       order_violations(methods, positions, macro_referenced).each do |callee_name, caller_name|
         add_offense(methods[positions[callee_name]], message: format(MESSAGE, callee: callee_name, caller: caller_name))
@@ -113,94 +112,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Base
         .select { |send_node| send_node.receiver.nil? && known_methods_set.include?(send_node.method_name) }
         .map(&:method_name)
         .uniq
-    end
-
-    class MacroReferences
-      attr_reader :body, :results
-
-      def initialize(body)
-        @body = body
-        @results = Set.new
-      end
-
-      def collect
-        traverse(body)
-        results
-      end
-
-      private
-        def traverse(target_node)
-          return unless target_node
-
-          NodeCollector.new(target_node, results).collect
-          target_node.children.each { |child| traverse(child) if child.is_a?(RuboCop::AST::Node) }
-        end
-
-        class NodeCollector
-          CALLBACK_OPTIONS = %i[if unless].freeze
-          attr_reader :node, :results
-
-          def initialize(node, results)
-            @node = node
-            @results = results
-          end
-
-          def collect
-            collect_from_send if node.send_type?
-            collect_from_block if BLOCK_TYPES.include?(node.type)
-          end
-
-          private
-            def collect_from_send
-              collect_symbol_arguments
-              collect_lambda_arguments
-              collect_hash_options
-            end
-
-            def collect_symbol_arguments
-              results << node.arguments.find(&:sym_type?)&.value
-            end
-
-            def collect_lambda_arguments
-              node.arguments.select(&:block_type?).each do |block_arg|
-                collect_method_calls_from(block_arg.body)
-              end
-            end
-
-            def collect_hash_options
-              node.arguments.select(&:hash_type?).each do |hash_arg|
-                hash_arg.each_pair { |key, value| collect_from_option(key, value) }
-              end
-            end
-
-            def collect_from_option(key, value)
-              return unless key.sym_type?
-
-              case key.value
-              when :to
-                results << value.value if value.sym_type?
-              when *CALLBACK_OPTIONS
-                collect_callback_condition(value)
-              end
-            end
-
-            def collect_callback_condition(value)
-              case value.type
-              when :sym
-                results << value.value
-              when :block
-                collect_method_calls_from(value.body)
-              end
-            end
-
-            def collect_from_block
-              collect_method_calls_from(node.body)
-            end
-
-            def collect_method_calls_from(body)
-              body&.each_node(:send) { |s| results << s.method_name if s.receiver.nil? }
-            end
-        end
     end
 
     class MethodDefinitions

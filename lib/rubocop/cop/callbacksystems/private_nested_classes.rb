@@ -49,38 +49,12 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Base
 
       def offense?
         enclosing = enclosing_class_or_module
-        enclosing && enclosing != node && !PrivateSectionCheck.new(enclosing, node).inside_private_section?
+        enclosing && enclosing != node && RuboCop::Callbacksystems::Helpers.private_nested_classes(enclosing).exclude?(node)
       end
 
       private
         def enclosing_class_or_module
           node.each_ancestor(:class, :module).first
-        end
-
-        class PrivateSectionCheck
-          attr_reader :enclosing, :node
-
-          def initialize(enclosing, node)
-            @enclosing = enclosing
-            @node = node
-          end
-
-          def inside_private_section?
-            enclosing.body&.begin_type? && after_private_keyword?
-          end
-
-          private
-            def after_private_keyword?
-              private_index = find_private_keyword_index
-              target_index = enclosing.body.children.index(node)
-              private_index && target_index && target_index > private_index
-            end
-
-            def find_private_keyword_index
-              enclosing.body.children.find_index do |child|
-                child.send_type? && child.method_name == :private && child.arguments.empty?
-              end
-            end
         end
     end
 end

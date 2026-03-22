@@ -22,7 +22,8 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::NoDirectEagerLoading < RuboCop::Cop::Base
-  EAGER_LOADING_METHODS = %i[preload eager_load includes].freeze
+  include RuboCop::Callbacksystems::Helpers
+
   MESSAGE = "Don't use `%<method>s` directly in controllers. Define a scope in the model instead."
 
   def on_send(node)
@@ -31,7 +32,7 @@ class RuboCop::Cop::Callbacksystems::NoDirectEagerLoading < RuboCop::Cop::Base
 
   private
     def offense?(node)
-      in_controller? && EAGER_LOADING_METHODS.include?(node.method_name)
+      in_controller? && RuboCop::Callbacksystems::Helpers::EAGER_LOADING_METHODS.include?(node.method_name)
     end
 
     def in_controller?

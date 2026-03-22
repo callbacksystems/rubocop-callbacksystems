@@ -21,11 +21,7 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
-  CONTROLLER_SUPERCLASSES = %w[
-    ApplicationController
-    ActionController::Base
-    ActionController::API
-  ].freeze
+  CONTROLLER_SUPERCLASSES = RuboCop::Callbacksystems::Helpers::CONTROLLER_SUPERCLASSES
 
   MESSAGE = "Controller names should be plural. Use `%<plural>sController` instead of `%<singular>sController`."
 

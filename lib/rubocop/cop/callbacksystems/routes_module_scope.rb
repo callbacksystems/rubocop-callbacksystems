@@ -14,6 +14,7 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
+  MESSAGE = "Extract repeated `module: %<module>s` to a `scope module: %<module>s do` block."
   ROUTE_METHODS = %i[resources resource get post put patch delete match root].freeze
 
   # Finds route calls with module: option
@@ -28,7 +29,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
       next unless routes.many?
 
       routes.each do |route|
-        add_offense(route[:node], message: "Extract repeated `module: #{module_value}` to a `scope module: #{module_value} do` block.")
+        add_offense(route[:node], message: format(MESSAGE, module: module_value))
       end
     end
   end

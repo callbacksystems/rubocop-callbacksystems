@@ -28,14 +28,11 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::ControllerTestResponseAssertion < RuboCop::Cop::Base
-  MESSAGE = "Controller test makes an HTTP request but has no response assertion (assert_response or assert_redirected_to)."
-  HTTP_METHODS = %i[get post put patch delete].freeze
-  RESPONSE_ASSERTIONS = %i[assert_response assert_redirected_to assert_raises].freeze
+  include RuboCop::Callbacksystems::TestCopHelpers
 
-  # Matches: test "description" do ... end
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str $_)) ...)
-  PATTERN
+  MESSAGE = "Controller test makes an HTTP request but has no response assertion (assert_response or assert_redirected_to)."
+  HTTP_METHODS = RuboCop::Callbacksystems::TestCopHelpers::HTTP_METHODS
+  RESPONSE_ASSERTIONS = %i[assert_response assert_redirected_to assert_raises].freeze
 
   def on_block(node)
     return unless test_block?(node)

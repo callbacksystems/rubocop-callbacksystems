@@ -20,6 +20,8 @@
 class RuboCop::Cop::Callbacksystems::PreferOrdinalArrayAccess < RuboCop::Cop::Base
   extend RuboCop::Cop::AutoCorrector
 
+  MESSAGE = "Use `%<method>s` instead of `[%<index>s]`."
+
   ORDINAL_METHODS = {
     1 => :second,
     2 => :third,
@@ -39,7 +41,7 @@ class RuboCop::Cop::Callbacksystems::PreferOrdinalArrayAccess < RuboCop::Cop::Ba
       ordinal_method = ORDINAL_METHODS[index]
       next unless ordinal_method
 
-      add_offense(node, message: "Use `#{ordinal_method}` instead of `[#{index}]`.") do |corrector|
+      add_offense(node, message: format(MESSAGE, method: ordinal_method, index: index)) do |corrector|
         corrector.replace(node.source_range, "#{receiver.source}.#{ordinal_method}")
       end
     end

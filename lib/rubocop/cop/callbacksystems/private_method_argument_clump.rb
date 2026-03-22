@@ -61,41 +61,30 @@
 #
 class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClump < RuboCop::Cop::Base
   CONTAINER_TYPES = %i[begin kwbegin].freeze
-
-  # Matches: private (with no arguments)
-  def_node_matcher :private_declaration?, <<~PATTERN
-    (send nil? :private)
-  PATTERN
+  MESSAGE = "Private methods `%<methods>s` share parameters `%<params>s`. Consider extracting to a private nested class or separate object."
 
   def on_class(node)
-    PrivateMethods.new(node, cop_config, self).check
+    PrivateMethods.new(node, cop_config).clumps.each do |params, methods|
+      add_offense(methods.first, message: format(MESSAGE, methods: methods.map(&:method_name).join(", "), params: params.join(", ")))
+    end
   end
 
-  def on_module(node)
-    PrivateMethods.new(node, cop_config, self).check
-  end
-
-  def on_sclass(node)
-    PrivateMethods.new(node, cop_config, self).check
-  end
+  alias on_module on_class
+  alias on_sclass on_class
 
   private
     class PrivateMethods
-      attr_reader :node, :cop_config, :cop
+      include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node, cop_config, cop)
+      attr_reader :node, :cop_config
+
+      def initialize(node, cop_config)
         @node = node
         @cop_config = cop_config
-        @cop = cop
       end
 
-      def check
-        grouped_methods.each do |params, methods|
-          next if methods.size < min_methods
-
-          message = "Private methods `#{methods.map(&:method_name).join(", ")}` share parameters `#{params.join(", ")}`. Consider extracting to a private nested class or separate object."
-          cop.send(:add_offense, methods.first, message: message)
-        end
+      def clumps
+        grouped_methods.select { |_, methods| methods.size >= min_methods }
       end
 
       private
@@ -111,7 +100,7 @@ class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClump < RuboCop::Cop::
 
           { in_private: false, methods: [] }.then do |state|
             traverse(node.body) do |child|
-              state[:in_private] = true if cop.send(:private_declaration?, child)
+              state[:in_private] = true if private_declaration?(child)
               next unless state[:in_private] && child.def_type?
 
               state[:methods] << child if child.arguments.size >= min_params

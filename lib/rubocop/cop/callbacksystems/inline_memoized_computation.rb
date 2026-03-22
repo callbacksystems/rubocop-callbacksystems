@@ -33,6 +33,8 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::InlineMemoizedComputation < RuboCop::Cop::Base
+  include RuboCop::Callbacksystems::Helpers
+
   MESSAGE = "Inline the computation from `%<method>s` instead of delegating."
 
   def on_def(node)
@@ -52,9 +54,5 @@ class RuboCop::Cop::Callbacksystems::InlineMemoizedComputation < RuboCop::Cop::B
       enclosing&.each_descendant(:def)&.any? do |def_node|
         def_node.method_name == method_name && direct_child_of_class?(def_node, enclosing)
       end
-    end
-
-    def direct_child_of_class?(method_node, class_node)
-      method_node.each_ancestor(:class, :module).first == class_node
     end
 end

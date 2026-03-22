@@ -47,7 +47,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
 
       def initialize(node)
         @node = node
-        @private_nested_classes = find_private_nested_classes
+        @private_nested_classes = RuboCop::Callbacksystems::Helpers.private_nested_classes(node)
       end
 
       def unused_public_methods
@@ -55,24 +55,11 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
           NestedClassMethods.new(nested_class, node).unused_public_methods
         end
       end
-
-      private
-        def find_private_nested_classes
-          return [] unless node.body
-
-          in_private = false
-          node.body.each_child_node.select do |child|
-            in_private = true if private_declaration?(child)
-            in_private && child.class_type?
-          end
-        end
-
-        def private_declaration?(child)
-          child.send_type? && child.method_name == :private && child.arguments.empty?
-        end
     end
 
     class NestedClassMethods
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(nested_class, parent_node)
         @nested_class = nested_class
         @parent_node = parent_node
@@ -97,10 +84,6 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
             in_private = true if private_declaration?(child)
             child.def_type? && !in_private
           end
-        end
-
-        def private_declaration?(child)
-          child.send_type? && child.method_name == :private && child.arguments.empty?
         end
     end
 

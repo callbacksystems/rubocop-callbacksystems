@@ -18,18 +18,22 @@
 #   scope :with_line_items, -> { includes(:line_items) }
 #
 class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Base
-  EAGER_LOADING_METHODS = %i[preload eager_load includes].freeze
-
   def_node_matcher :scope_definition, <<~PATTERN
     (send nil? :scope (sym $_name) $_body ...)
   PATTERN
+
+  PREFIX_MESSAGE = "Eager loading scopes should follow `with_*` convention. Rename `%<name>s` to `with_%<association>s`."
+  ACTION_MESSAGE = "Scope name `%<name>s` contains controller action `%<action>s`. Use a more descriptive name."
+  GENERIC_MESSAGE = "Scope name `%<name>s` contains generic term `%<term>s`. Use a more specific name like `with_%<association>s`."
 
   def on_send(node)
     scope_definition(node) do |name, body|
       association = ScopeBody.new(body).eager_loading_association
       next unless association
 
-      ScopeNameChecker.new(node, name, association, self).check
+      ScopeNameChecker.new(name, association).offenses.each do |message|
+        add_offense(node.first_argument, message: message)
+      end
     end
   end
 
@@ -38,48 +42,29 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
       CONTROLLER_ACTIONS = %w[index show new create edit update destroy].freeze
       GENERIC_TERMS = %w[association associations relation relations].freeze
 
-      def initialize(node, name, association, cop)
-        @node = node
+      def initialize(name, association)
         @name = name
         @association = association
-        @cop = cop
         @name_parts = name.to_s.split("_")
       end
 
-      def check
-        check_with_prefix
-        check_controller_actions
-        check_generic_terms
+      def offenses
+        [
+          (format(PREFIX_MESSAGE, name: name, association: association) unless name.to_s.start_with?("with_")),
+          (format(ACTION_MESSAGE, name: name, action: controller_action) if controller_action),
+          (format(GENERIC_MESSAGE, name: name, term: generic_term, association: association) if generic_term)
+        ].compact
       end
 
       private
-        attr_reader :node, :name, :association, :cop, :name_parts
+        attr_reader :name, :association, :name_parts
 
-        def check_with_prefix
-          return if name.to_s.start_with?("with_")
-
-          message = "Eager loading scopes should follow `with_*` convention. Rename `#{name}` to `with_#{association}`."
-          cop.add_offense(node.first_argument, message: message)
+        def controller_action
+          CONTROLLER_ACTIONS.find { |action| name_parts.include?(action) }
         end
 
-        def check_controller_actions
-          found = CONTROLLER_ACTIONS.find { |action| name_parts.include?(action) }
-          add_controller_action_offense(found) if found
-        end
-
-        def check_generic_terms
-          found = GENERIC_TERMS.find { |term| name_parts.include?(term) }
-          add_generic_term_offense(found) if found
-        end
-
-        def add_controller_action_offense(action)
-          message = "Scope name `#{name}` contains controller action `#{action}`. Use a more descriptive name."
-          cop.add_offense(node.first_argument, message: message)
-        end
-
-        def add_generic_term_offense(term)
-          message = "Scope name `#{name}` contains generic term `#{term}`. Use a more specific name like `with_#{association}`."
-          cop.add_offense(node.first_argument, message: message)
+        def generic_term
+          GENERIC_TERMS.find { |term| name_parts.include?(term) }
         end
     end
 
@@ -91,7 +76,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
       end
 
       def eager_loading_association
-        eager_load_node = scope_body&.each_descendant(:send)&.find { |send_node| EAGER_LOADING_METHODS.include?(send_node.method_name) }
+        eager_load_node = scope_body&.each_descendant(:send)&.find { |send_node| RuboCop::Callbacksystems::Helpers::EAGER_LOADING_METHODS.include?(send_node.method_name) }
         association_name_for(eager_load_node) if eager_load_node
       end
 

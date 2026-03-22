@@ -67,7 +67,7 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Base
 
     def accumulation_pattern?(body, assignment, variable_name)
       statements = statements_after(body, assignment)
-      AccumulationStatements.new(statements, variable_name, self).accumulation_pattern?
+      mutating_each?(statements, variable_name) && returns_variable?(statements, variable_name)
     end
 
     def statements_after(body, assignment)
@@ -75,30 +75,15 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Base
       body.children[(index + 1)..]
     end
 
-    class AccumulationStatements
-      attr_reader :statements, :variable_name, :cop
+    def mutating_each?(statements, variable_name)
+      statements.any? { |statement| each_block?(statement) && mutates_in_body?(statement.body, variable_name) }
+    end
 
-      def initialize(statements, variable_name, cop)
-        @statements = statements
-        @variable_name = variable_name
-        @cop = cop
-      end
+    def mutates_in_body?(body, variable_name)
+      body&.each_node(:send)&.any? { |send_node| mutates_variable?(send_node, variable_name) }
+    end
 
-      def accumulation_pattern?
-        mutating_each? && returns_variable?
-      end
-
-      private
-        def mutating_each?
-          statements.any? { |statement| cop.send(:each_block?, statement) && mutates_in_body?(statement.body) }
-        end
-
-        def mutates_in_body?(body)
-          body&.each_node(:send)&.any? { |send_node| cop.send(:mutates_variable?, send_node, variable_name) }
-        end
-
-        def returns_variable?
-          cop.send(:variable_reference, statements.last) == variable_name
-        end
+    def returns_variable?(statements, variable_name)
+      variable_reference(statements.last) == variable_name
     end
 end
