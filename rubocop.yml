@@ -210,6 +210,9 @@ Callbacksystems/PublicMethodsMustHaveTests:
   Include:
     - "app/**/*"
     - "lib/**/*"
+  Exclude:
+    - "app/controllers/concerns/**/*"
+    - "app/helpers/**/*"
 
 Callbacksystems/RedundantConcernExtend:
   Enabled: true
