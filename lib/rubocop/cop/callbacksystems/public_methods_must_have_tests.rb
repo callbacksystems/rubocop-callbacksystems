@@ -90,7 +90,7 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
       end
 
       def public_methods_without_tests
-        return [] if file_path.include?("/test/")
+        return [] if skip?
 
         tested = test_file_path ? TestedMethodsCollector.new(test_file_path).collect : Set.new
         macro_referenced = collect_macro_referenced_methods
@@ -105,6 +105,19 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
 
       private
         attr_reader :node, :file_path, :test_file_path
+
+        def skip?
+          file_path.include?("/test/") || lib_file_in_non_gem_project?
+        end
+
+        def lib_file_in_non_gem_project?
+          file_path.match?(%r{(^|/)lib/}) && !gem_project?
+        end
+
+        def gem_project?
+          root = file_path.sub(%r{/lib/.*}, "")
+          Dir.glob("#{root}/*.gemspec").any?
+        end
 
         def testable_public_methods
           PublicMethodCollector.new(node).collect.reject { |_, name| EXCLUDED_METHODS.include?(name) }

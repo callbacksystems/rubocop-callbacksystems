@@ -134,7 +134,9 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     assert_no_offense_in(source_file)
   end
 
-  test "works with lib files" do
+  test "works with lib files in gem projects" do
+    create_file("my_gem.gemspec", "")
+
     source_file = create_file("lib/utils/string_helper.rb", <<~RUBY)
       module Utils
         class StringHelper
@@ -183,6 +185,8 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
   end
 
   test "works with lib files using alternate test path (test/ instead of test/lib/)" do
+    create_file("my_gem.gemspec", "")
+
     source_file = create_file("lib/utils/helper.rb", <<~RUBY)
       class Helper
         def process
@@ -466,6 +470,35 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
 
     assert_includes collector.collect, "=="
     assert_includes collector.collect, "<=>"
+  end
+
+  test "skips lib files in non-gem projects" do
+    source_file = create_file("lib/constraints/internal.rb", <<~RUBY)
+      class Internal
+        def matches?(request)
+          true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "checks lib files in gem projects" do
+    create_file("my_gem.gemspec", "")
+
+    source_file = create_file("lib/constraints/internal.rb", <<~RUBY)
+      class Internal
+        def matches?(request)
+          true
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "matches?"
   end
 
   private
