@@ -60,9 +60,36 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
     RUBY
   end
 
-  test "allows block calls even with multiline parentheses" do
-    assert_no_offense <<~RUBY
-      items.map { |i| i.name }
+  test "registers offense for multiline call inside a do/end block" do
+    assert_offense <<~RUBY
+      items.each do |item|
+        log.info(
+          name: item.name,
+          id: item.id
+        )
+      end
+    RUBY
+  end
+
+  test "registers offense for multiline call inside a brace block" do
+    assert_offense <<~RUBY
+      with_lock {
+        update_columns(
+          status: "done",
+          updated_at: Time.current
+        )
+      }
+    RUBY
+  end
+
+  test "registers offense for multiline call inside a test block" do
+    assert_offense <<~RUBY
+      test "does something" do
+        assert_equal(
+          expected,
+          actual
+        )
+      end
     RUBY
   end
 

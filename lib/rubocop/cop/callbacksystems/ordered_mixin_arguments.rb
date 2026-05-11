@@ -17,7 +17,7 @@
 #   include Searchable
 #   include Confirmable  # depends on Searchable
 #
-class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MIXIN_METHODS = %i[include extend prepend].freeze
@@ -28,8 +28,10 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Base
 
     names = node.arguments.map(&:source)
     sorted = names.sort
-    add_offense(node, message: format(MESSAGE, sorted: sorted.join(", "))) { |corrector| correct_order(corrector, node, sorted) } if names != sorted
+    add_offense(node, message: format(MESSAGE, sorted: sorted.join(", "))) { correct_order(it, node, sorted) } if names != sorted
   end
+
+  alias on_csend on_send
 
   private
     def mixin_call?(node)

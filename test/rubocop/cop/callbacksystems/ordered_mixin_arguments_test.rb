@@ -53,10 +53,9 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArgumentsTest < CopTestCase
   end
 
   test "autocorrects unsorted arguments" do
-    assert_correction(
+    assert_correction \
       "include C, A, B",
       "include A, B, C"
-    )
   end
 
   test "does not flag method calls with receiver" do

@@ -1,131 +1,43 @@
-# Shared helper methods for Callbacksystems cops.
-# Can be included in a cop class or called directly on the module.
-#
 module RuboCop::Callbacksystems::Helpers
   extend self
 
-  EAGER_LOADING_METHODS = %i[preload eager_load includes].freeze
-  CONTROLLER_SUPERCLASSES = %w[ApplicationController ActionController::Base ActionController::API].freeze
-
-  # Returns the first statement from a method body.
-  # Handles both single statements and begin/kwbegin blocks.
-  #
-  # @example
-  #   first_statement(def_node.body)  # => first statement node
-  #
-  def first_statement(body)
-    case body.type
-    when :begin, :kwbegin then body.children.first
-    when :rescue then first_statement(body.body)
-    when :ensure then first_statement(body.children.first)
-    else body
-    end
+  def const_added(name)
+    super
+    helper = const_get(name)
+    Wiring.new(self, helper).perform unless helper.is_a?(Class)
   end
 
-  # Returns the last statement from a method body.
-  # Handles both single statements and begin/kwbegin blocks.
-  #
-  # @example
-  #   last_statement(def_node.body)  # => last statement node
-  #
-  def last_statement(body)
-    case body.type
-    when :begin, :kwbegin then body.children.last
-    when :rescue then last_statement(body.body)
-    when :ensure then last_statement(body.children.first)
-    else body
-    end
-  end
-
-  # Counts unique variable assignments of the given type in a body.
-  # Used for counting instance variables (:ivasgn) or local variables (:lvasgn).
-  #
-  # @example
-  #   assignment_count(node.body, :ivasgn)  # => 3
-  #   assignment_count(node.body, :lvasgn)  # => 5
-  #
-  def assignment_count(body, type)
-    body.each_node(type).to_set { |node| node.children.first }.size
-  end
-
-  # Returns the full name of a constant node, handling namespaces.
-  #
-  # @example
-  #   constant_name(node)  # => "Foo::Bar::Baz"
-  #
-  def constant_name(node)
-    return unless node
-
-    case node.type
-    when :const
-      if node.namespace
-        "#{constant_name(node.namespace)}::#{node.short_name}"
-      else
-        node.short_name.to_s
+  private
+    class Wiring
+      def initialize(helpers, submodule)
+        @helpers = helpers
+        @submodule = submodule
       end
-    when :cbase
-      ""
+
+      def perform
+        return unless helper_module?(submodule)
+
+        siblings.each { extend_mutually(it) }
+        helpers.include(submodule)
+      end
+
+      private
+        attr_reader :helpers, :submodule
+
+        def helper_module?(const)
+          const.is_a?(Module) && !const.is_a?(Class)
+        end
+
+        def siblings
+          helpers.constants.filter_map do |name|
+            candidate = helpers.const_get(name)
+            candidate if helper_module?(candidate) && candidate != submodule
+          end
+        end
+
+        def extend_mutually(other)
+          submodule.extend(other) unless submodule.singleton_class < other
+          other.extend(submodule) unless other.singleton_class < submodule
+        end
     end
-  end
-
-  # Returns the visibility of a method node (:public, :private, or :protected).
-  # Checks if the method is after a visibility modifier in the class body.
-  #
-  # @example
-  #   method_visibility(def_node)  # => :private
-  #
-  def method_visibility(method_node)
-    body = enclosing_body_for(method_node)
-    body ? visibility_at(method_node, body) : :public
-  end
-
-  # Checks if a node is a visibility modifier (private, protected, public).
-  #
-  def visibility_modifier(node)
-    return unless node.send_type? && node.arguments.empty?
-
-    node.method_name if %i[private protected public].include?(node.method_name)
-  end
-
-  def enclosing_body_for(method_node)
-    method_node.each_ancestor(:class, :module, :sclass).first&.body&.then { |b| b if b.begin_type? || b.kwbegin_type? }
-  end
-
-  def visibility_at(method_node, body)
-    current = :public
-    body.each_child_node do |child|
-      current = visibility_modifier(child) || current
-      break current if child.equal?(method_node)
-    end
-  end
-
-  # Checks if a node is a bare `private` declaration (no arguments).
-  #
-  def private_declaration?(node)
-    node.send_type? && node.method_name == :private && node.arguments.empty?
-  end
-
-  # Returns private nested classes within a class/module node.
-  #
-  def private_nested_classes(class_node)
-    return [] unless class_node.body
-
-    in_private = false
-    class_node.body.each_child_node.select do |child|
-      in_private = true if private_declaration?(child)
-      in_private && child.class_type?
-    end
-  end
-
-  # Checks if a method is a direct child of the given class/module (not nested deeper).
-  #
-  def direct_child_of_class?(method_node, class_node)
-    method_node.each_ancestor(:class, :module).first == class_node
-  end
-
-  # Checks if a method is non-public and not a predicate.
-  #
-  def private_non_predicate?(method_node)
-    method_visibility(method_node) != :public && !method_node.method_name.to_s.end_with?("?")
-  end
 end

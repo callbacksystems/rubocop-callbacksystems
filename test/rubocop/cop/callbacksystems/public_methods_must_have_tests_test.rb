@@ -135,7 +135,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
   end
 
   test "works with lib files in gem projects" do
-    create_file("my_gem.gemspec", "")
+    create_empty_file("my_gem.gemspec")
 
     source_file = create_file("lib/utils/string_helper.rb", <<~RUBY)
       module Utils
@@ -185,7 +185,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
   end
 
   test "works with lib files using alternate test path (test/ instead of test/lib/)" do
-    create_file("my_gem.gemspec", "")
+    create_empty_file("my_gem.gemspec")
 
     source_file = create_file("lib/utils/helper.rb", <<~RUBY)
       class Helper
@@ -400,30 +400,30 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     assert_includes offenses.first.message, "index"
   end
 
-  test "TestFilePathResolver resolves relative lib path to test/lib" do
+  test "find_test_file resolves relative lib path to test/lib" do
     Dir.chdir(@temp_dir) do
-      resolver = self.class.cop_class::TestFilePathResolver.new("lib/foo/bar.rb")
-      create_file("test/lib/foo/bar_test.rb", "")
+      mapping = RuboCop::Callbacksystems::TestPathMapping.new("lib/foo/bar.rb")
+      create_empty_file("test/lib/foo/bar_test.rb")
 
-      assert_equal "test/lib/foo/bar_test.rb", resolver.resolve
+      assert_equal "test/lib/foo/bar_test.rb", mapping.find_test_file
     end
   end
 
-  test "TestFilePathResolver resolves relative lib path to test/ when test/lib doesn't exist" do
+  test "find_test_file resolves relative lib path to test/ when test/lib doesn't exist" do
     Dir.chdir(@temp_dir) do
-      resolver = self.class.cop_class::TestFilePathResolver.new("lib/foo/bar.rb")
-      create_file("test/foo/bar_test.rb", "")
+      mapping = RuboCop::Callbacksystems::TestPathMapping.new("lib/foo/bar.rb")
+      create_empty_file("test/foo/bar_test.rb")
 
-      assert_equal "test/foo/bar_test.rb", resolver.resolve
+      assert_equal "test/foo/bar_test.rb", mapping.find_test_file
     end
   end
 
-  test "TestFilePathResolver resolves relative app path" do
+  test "find_test_file resolves relative app path" do
     Dir.chdir(@temp_dir) do
-      resolver = self.class.cop_class::TestFilePathResolver.new("app/models/user.rb")
-      create_file("test/models/user_test.rb", "")
+      mapping = RuboCop::Callbacksystems::TestPathMapping.new("app/models/user.rb")
+      create_empty_file("test/models/user_test.rb")
 
-      assert_equal "test/models/user_test.rb", resolver.resolve
+      assert_equal "test/models/user_test.rb", mapping.find_test_file
     end
   end
 
@@ -485,7 +485,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
   end
 
   test "checks lib files in gem projects" do
-    create_file("my_gem.gemspec", "")
+    create_empty_file("my_gem.gemspec")
 
     source_file = create_file("lib/constraints/internal.rb", <<~RUBY)
       class Internal
@@ -506,6 +506,13 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       File.join(@temp_dir, relative_path).tap do |full_path|
         FileUtils.mkdir_p(File.dirname(full_path))
         File.write(full_path, content)
+      end
+    end
+
+    def create_empty_file(relative_path)
+      File.join(@temp_dir, relative_path).tap do |full_path|
+        FileUtils.mkdir_p(File.dirname(full_path))
+        FileUtils.touch(full_path)
       end
     end
 

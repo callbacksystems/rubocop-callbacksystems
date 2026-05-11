@@ -23,7 +23,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoSingletonClassInModules < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoSingletonClassInModules < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Use `extend self` instead of `class << self` in modules."
 
   def on_sclass(node)

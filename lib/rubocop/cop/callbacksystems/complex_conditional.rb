@@ -21,7 +21,7 @@
 #     # ...
 #   end
 #
-class RuboCop::Cop::Callbacksystems::ComplexConditional < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::ComplexConditional < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Conditional has %<count>d boolean operators (max %<max>d). Extract to a predicate method."
 
   def on_if(node)
@@ -37,6 +37,6 @@ class RuboCop::Cop::Callbacksystems::ComplexConditional < RuboCop::Cop::Base
     end
 
     def max_operators
-      cop_config["MaxOperators"] || 1
+      cop_config["MaxOperators"]
     end
 end

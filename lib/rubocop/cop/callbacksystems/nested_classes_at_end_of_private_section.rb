@@ -26,11 +26,11 @@
 #       end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<method>s` should be defined before nested class `%<class>s`. Private nested classes should be at the end."
 
   def on_class(node)
-    PrivateSectionAnalysis.new(node).methods_after_classes.each do |method_node, class_name|
+    methods_after_first_class(node).each do |method_node, class_name|
       add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: class_name))
     end
   end
@@ -38,39 +38,14 @@ class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCo
   alias on_module on_class
 
   private
-    class PrivateSectionAnalysis
-      include RuboCop::Callbacksystems::Helpers
+    def methods_after_first_class(node)
+      children = each_child_with_visibility(node).filter_map { |child, in_private| child if in_private && child.type?(:def, :class) }
+      first_class_index = children.index(&:class_type?)
 
-      def initialize(node)
-        @node = node
-        @private_children = find_private_children
+      if first_class_index
+        children.drop(first_class_index + 1).filter_map { [ it, children[first_class_index].identifier.short_name ] if it.def_type? }
+      else
+        []
       end
-
-      def methods_after_classes
-        first_class_index = private_children.index(&:class_type?)
-        methods_after_first_class(first_class_index)
-      end
-
-      private
-        attr_reader :node, :private_children
-
-        def methods_after_first_class(first_class_index)
-          return [] unless first_class_index
-
-          first_class_name = private_children[first_class_index].identifier.short_name
-          private_children.drop(first_class_index + 1).filter_map do |child|
-            [ child, first_class_name ] if child.def_type?
-          end
-        end
-
-        def find_private_children
-          return [] unless node.body
-
-          in_private = false
-          node.body.each_child_node.select do |child|
-            in_private = true if private_declaration?(child)
-            in_private && (child.def_type? || child.class_type?)
-          end
-        end
     end
 end

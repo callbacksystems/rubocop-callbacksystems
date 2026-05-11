@@ -1,0 +1,216 @@
+require "test_helper"
+
+class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
+  self.cop_class = RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable
+
+  test "registers offense for variable aliasing a method call" do
+    assert_offense <<~RUBY
+      def process
+        directory = forbidden_directory
+        add_offense(node) if directory
+      end
+    RUBY
+  end
+
+  test "registers offense for variable aliasing a method call with receiver" do
+    assert_offense <<~RUBY
+      def process
+        memo_node = checker.memoization_node
+        add_offense(memo_node)
+      end
+    RUBY
+  end
+
+  test "registers offense for variable aliasing a method call with arguments" do
+    assert_offense <<~RUBY
+      def process
+        first_stmt = first_statement(body)
+        first_stmt&.if_type?
+      end
+    RUBY
+  end
+
+  test "allows variable used inside a nested block" do
+    assert_no_offense <<~RUBY
+      def detect
+        called = collect_called_methods
+        items.filter_map { |item| called.include?(item) }
+      end
+    RUBY
+  end
+
+  test "registers offense for variable with safe navigation" do
+    assert_offense <<~RUBY
+      def process
+        result = object&.value
+        transform(result)
+      end
+    RUBY
+  end
+
+  test "registers offense inside a block scope" do
+    assert_offense <<~RUBY
+      items.each do |item|
+        name = item.full_name
+        puts name
+      end
+    RUBY
+  end
+
+  test "allows variable used multiple times" do
+    assert_no_offense <<~RUBY
+      def process
+        user = find_user
+        user.activate
+        user.notify
+      end
+    RUBY
+  end
+
+  test "allows variable used in two contexts" do
+    assert_no_offense <<~RUBY
+      def process
+        collapser = HashCollapser.new(node)
+        add_offense(node) if collapser.collapsable?
+        collapser.collapsed
+      end
+    RUBY
+  end
+
+  test "allows assignment in conditional" do
+    assert_no_offense <<~RUBY
+      def process
+        if user = find_user
+          user.activate
+        end
+      end
+    RUBY
+  end
+
+  test "allows array literal initialization" do
+    assert_no_offense <<~RUBY
+      def process
+        items = []
+        items << item
+      end
+    RUBY
+  end
+
+  test "allows hash literal initialization" do
+    assert_no_offense <<~RUBY
+      def process
+        options = {}
+        options[:key] = value
+      end
+    RUBY
+  end
+
+  test "allows constructor mutated inside a loop" do
+    assert_no_offense <<~RUBY
+      def process
+        result = Set.new
+        items.each { |item| result << item }
+      end
+    RUBY
+  end
+
+  test "allows method call used inside a loop" do
+    assert_no_offense <<~RUBY
+      def detect
+        called = collect_called_methods
+        items.each { |item| called.include?(item) }
+      end
+    RUBY
+  end
+
+  test "flags constructor used outside a loop" do
+    assert_offense <<~RUBY
+      def process
+        user = User.new(params)
+        user.save!
+      end
+    RUBY
+  end
+
+  test "allows variable used inside deeply nested blocks" do
+    assert_no_offense <<~RUBY
+      def process
+        config = load_config
+        groups.each do |group|
+          group.items.each do |item|
+            item.apply(config)
+          end
+        end
+      end
+    RUBY
+  end
+
+  test "allows reassigned variable" do
+    assert_no_offense <<~RUBY
+      def process
+        current = node.receiver
+        current = current.next while current
+      end
+    RUBY
+  end
+
+  test "allows non-method-call assignment" do
+    assert_no_offense <<~RUBY
+      def process
+        name = "hello"
+        puts name
+      end
+    RUBY
+  end
+
+  test "allows assignment in parenthesized if condition" do
+    assert_no_offense <<~RUBY
+      def process
+        if (user = find_user)
+          user.activate
+        end
+      end
+    RUBY
+  end
+
+  test "allows assignment in boolean expression with subsequent use" do
+    assert_no_offense <<~RUBY
+      def process
+        items.find { |i| (matched = pattern.match(i)) && matched.captures.first }
+      end
+    RUBY
+  end
+
+  test "allows assignment in while loop condition" do
+    assert_no_offense <<~RUBY
+      def process
+        while (chunk = stream.read_chunk)
+          handle(chunk)
+        end
+      end
+    RUBY
+  end
+
+  test "allows snapshot variable restored in ensure" do
+    assert_no_offense <<~RUBY
+      def with_context(scope)
+        outer_context = context
+        @context = "\#{context}/\#{scope}"
+        yield
+      ensure
+        @context = outer_context
+      end
+    RUBY
+  end
+
+  test "allows snapshot variable referenced in rescue" do
+    assert_no_offense <<~RUBY
+      def request_with_logging
+        data = build_payload
+        send_request(data)
+      rescue => e
+        log_failure(data, e)
+      end
+    RUBY
+  end
+end

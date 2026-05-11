@@ -33,15 +33,13 @@
 #     nil
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Avoid `nil` at the end of a method. Restructure the code to make it unnecessary."
 
   def on_def(node)
     return if node.body&.nil_type?
 
-    last = node.body && last_statement(node.body)
+    last = last_statement(node.body)
     add_offense(last, message: MESSAGE) if last&.nil_type?
   end
 

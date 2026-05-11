@@ -183,4 +183,25 @@ class ControllerTestResponseFirstAssertionTest < CopTestCase
 
     assert_includes offenses.first.message, "assert_includes"
   end
+
+  test "evaluates each test block independently" do
+    offenses = assert_offense <<~RUBY, file: CONTROLLER_TEST
+      class UsersControllerTest
+        test "first" do
+          post users_url
+          assert_response :ok
+          assert_equal 1, User.count
+        end
+
+        test "second" do
+          post users_url
+          assert_equal 0, User.count
+          assert_response :ok
+        end
+      end
+    RUBY
+
+    assert_equal 1, offenses.size, "only the second test should report an offense"
+    assert_equal 10, offenses.first.location.line
+  end
 end

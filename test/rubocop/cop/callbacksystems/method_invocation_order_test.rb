@@ -355,19 +355,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
     RUBY
   end
 
-  test "still registers offense for public method calling public method out of order" do
-    assert_offense <<~RUBY
-      class Example
-        def helper
-        end
-
-        def process
-          helper
-        end
-      end
-    RUBY
-  end
-
   test "nested class methods are analyzed independently from outer class" do
     assert_no_offense <<~RUBY
       class Outer
@@ -443,5 +430,48 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
           end
       end
     RUBY
+  end
+
+  test "does not treat block_pass references as calls on self" do
+    assert_no_offense <<~RUBY
+      class Example
+        def transform
+        end
+
+        def process(items)
+          items.each(&:transform)
+        end
+      end
+    RUBY
+  end
+
+  test "computes visibilities per class instead of memoizing across the file" do
+    offenses = assert_offense <<~RUBY
+      class A
+        private
+          def helper
+          end
+
+        public
+
+        def main
+          helper
+        end
+      end
+
+      class B
+        private
+          def main
+          end
+
+        public
+
+        def helper
+          main
+        end
+      end
+    RUBY
+
+    assert_equal 2, offenses.size, "Both classes should report the same out-of-order call"
   end
 end

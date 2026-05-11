@@ -1,4 +1,5 @@
-# Prohibits early returns except for a single guard clause on the first line.
+# Prohibits early exits except for a single guard clause on the first line.
+# Applies to `return` in methods and `next`/`break` in blocks.
 #
 # @example
 #   # bad - return in the middle of method
@@ -15,99 +16,153 @@
 #     do_something
 #   end
 #
+#   # bad - next in the middle of a block
+#   items.each do |item|
+#     process(item)
+#     next if item.done?
+#     finalize(item)
+#   end
+#
+#   # bad - break in the middle of a block
+#   items.each do |item|
+#     process(item)
+#     break if item.last?
+#   end
+#
 #   # good - single guard clause on first line
 #   def process(user)
 #     return unless user
 #     do_something(user)
 #   end
 #
-#   # good - no early returns
-#   def process(user)
-#     if user
-#       do_something(user)
-#     end
+#   # good - single next guard on first line
+#   items.each do |item|
+#     next if item.nil?
+#     process(item)
 #   end
 #
-class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Avoid early returns. Only a single guard clause on the first line is allowed."
-  IGNORE_TYPES = %i[block numblock].freeze
+  BLOCK_MESSAGE = "Avoid early next/break. Only a single guard clause on the first line is allowed."
 
   def on_def(node)
     return unless node.body
 
-    illegal_returns(node).each { |return_node| add_offense(return_node, message: MESSAGE) }
+    illegal_exits(node.body, :return, walk_blocks: true).each { add_offense(it, message: MESSAGE) }
   end
 
   alias on_defs on_def
 
+  def on_block(node)
+    return if loop_block?(node) || !node.body
+
+    %i[next break].each do |type|
+      illegal_exits(node.body, type, walk_blocks: false).each { add_offense(it, message: BLOCK_MESSAGE) }
+    end
+  end
+
+  alias on_numblock on_block
+  alias on_itblock on_block
+
   private
-    def illegal_returns(method_node)
-      all_returns = Returns.new(method_node.body).find_all
-      allowed = Guard.new(method_node.body).allowed_return
-      all_returns.reject { |r| r.equal?(allowed) }
+    def loop_block?(node)
+      node.method?(:loop)
+    end
+
+    def illegal_exits(body, type, walk_blocks:)
+      allowed = Guard.new(body, type).allowed_exit
+      ExitFinder.new(body, type, walk_blocks: walk_blocks).find_all.reject { it.equal?(allowed) }
     end
 
     class Guard
       include RuboCop::Callbacksystems::Helpers
 
-      attr_reader :body
-
-      def initialize(body)
+      def initialize(body, exit_type)
         @body = body
+        @exit_type = exit_type
       end
 
-      def allowed_return
-        first_stmt = first_statement(body)
-        first_stmt&.if_type? && IfGuard.new(first_stmt).allowed_return
-      end
-    end
-
-    class IfGuard
-      attr_reader :if_node
-
-      def initialize(if_node)
-        @if_node = if_node
-      end
-
-      def allowed_return
-        return_if_guard || return_unless_guard
+      def allowed_exit
+        stmt = first_statement(body)
+        stmt&.if_type? && allowed_from_if(stmt)
       end
 
       private
-        def return_if_guard
-          if_node.if_branch if if_node.if_branch&.return_type? && if_node.else_branch.nil?
+        attr_reader :body, :exit_type
+
+        def allowed_from_if(if_node)
+          if_guard(if_node) || unless_guard(if_node)
         end
 
-        def return_unless_guard
-          if_node.else_branch if if_node.else_branch&.return_type? && if_node.if_branch.nil?
+        def if_guard(if_node)
+          if_node.if_branch if if_node.if_branch&.type == exit_type && if_node.else_branch.nil?
+        end
+
+        def unless_guard(if_node)
+          if_node.else_branch if if_node.else_branch&.type == exit_type && if_node.if_branch.nil?
         end
     end
 
-    class Returns
-      IGNORE_TYPES = %i[block numblock].freeze
-
+    class ExitFinder
       FINDERS = {
-        return: ->(node, _finder) { [ node ] },
         if: ->(node, finder) { finder.call(node.if_branch) + finder.call(node.else_branch) },
-        begin: ->(node, finder) { node.children.flat_map { |c| finder.call(c) } },
-        kwbegin: ->(node, finder) { node.children.flat_map { |c| finder.call(c) } },
-        case: ->(node, finder) { node.when_branches.flat_map { |b| finder.call(b.body) } + finder.call(node.else_branch) },
-        rescue: ->(node, finder) { finder.call(node.body) + node.resbody_branches.flat_map { |b| finder.call(b.body) } + (node.else_branch ? finder.call(node.else_branch) : []) },
+        begin: ->(node, finder) do
+          node.children.flat_map { finder.call(it) }
+        end,
+        kwbegin: ->(node, finder) do
+          node.children.flat_map { finder.call(it) }
+        end,
+        case: ->(node, finder) do
+          node.when_branches.flat_map { finder.call(it.body) } + finder.call(node.else_branch)
+        end,
+        case_match: ->(node, finder) do
+          node.each_child_node(:in_pattern).flat_map { it.body ? finder.call(it.body) : [] } +
+            (node.else_branch ? finder.call(node.else_branch) : [])
+        end,
+        in_pattern: ->(node, finder) { node.body ? finder.call(node.body) : [] },
+        rescue: ->(node, finder) do
+          finder.call(node.body) + node.resbody_branches.flat_map { finder.call(it.body) } + (node.else_branch ? finder.call(node.else_branch) : [])
+        end,
         resbody: ->(node, finder) { finder.call(node.body) },
         when: ->(node, finder) { finder.call(node.body) },
         ensure: ->(node, finder) { finder.call(node.branch) }
       }.freeze
 
-      attr_reader :node
-
-      def initialize(node)
+      def initialize(node, target_type, walk_blocks:)
         @node = node
+        @target_type = target_type
+        @walk_blocks = walk_blocks
       end
 
-      def find_all(node = self.node)
-        return [] unless node && IGNORE_TYPES.exclude?(node.type)
+      def find_all(current = node)
+        return [] unless current
 
-        FINDERS.fetch(node.type, ->(_, _) { [] }).call(node, method(:find_all))
+        if current.type == target_type
+          [ current ]
+        elsif current.type?(:any_block)
+          walk_block(current)
+        else
+          FINDERS.fetch(current.type, ->(_, _) { [] }).call(current, method(:find_all))
+        end
       end
+
+      private
+        attr_reader :node, :target_type, :walk_blocks
+
+        def walk_block(current)
+          walkable_block?(current) ? find_all(current.body) : []
+        end
+
+        def walkable_block?(current)
+          walk_blocks && !lambda?(current) && !loop_block?(current) && current.body
+        end
+
+        def lambda?(current)
+          current.respond_to?(:lambda?) && current.lambda?
+        end
+
+        def loop_block?(current)
+          current.respond_to?(:method?) && current.method?(:loop)
+        end
     end
 end

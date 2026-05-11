@@ -28,19 +28,17 @@
 #       end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Nested class `%<name>s` should be in the private section at the end of the enclosing class."
 
   def on_class(node)
     add_offense(node, message: format(MESSAGE, name: node.identifier.source)) if NestedClass.new(node).offense?
   end
 
-  def on_sclass(node)
-    # Skip singleton class definitions (class << self)
-  end
-
   private
     class NestedClass
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :node
 
       def initialize(node)
@@ -49,7 +47,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Base
 
       def offense?
         enclosing = enclosing_class_or_module
-        enclosing && enclosing != node && RuboCop::Callbacksystems::Helpers.private_nested_classes(enclosing).exclude?(node)
+        enclosing && enclosing != node && private_nested_classes(enclosing).exclude?(node)
       end
 
       private

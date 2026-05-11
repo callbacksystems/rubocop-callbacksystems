@@ -32,7 +32,7 @@
 #     cleanup
 #   end
 #
-class RuboCop::Cop::Callbacksystems::TestMethodDefinition < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::TestMethodDefinition < RuboCop::Cop::Callbacksystems::Base
   TEST_MESSAGE = "Use `test \"description\" do` instead of `def %<method>s`."
   BLOCK_MESSAGE = "Use `%<method>s do` block instead of `def %<method>s`."
 

@@ -40,19 +40,16 @@
 #     def helper
 #     end
 #
-class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Add an empty line before `%<method>s`."
-  VISIBILITY_MODIFIERS = %i[private protected public].freeze
 
   def on_def(node)
     check_empty_line_before(node)
   end
 
-  def on_defs(node)
-    check_empty_line_before(node)
-  end
+  alias on_defs on_def
 
   private
     def check_empty_line_before(node)
@@ -65,51 +62,7 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Base
     end
 
     def needs_empty_line_before?(node)
-      previous_node = previous_sibling(node)
-      checkable?(node, previous_node) && missing_empty_line?(node, previous_node)
-    end
-
-    def checkable?(node, previous_node)
-      previous_node &&
-        !first_in_body?(node) &&
-        !after_visibility_modifier?(previous_node)
-    end
-
-    def missing_empty_line?(node, previous_node)
-      !empty_line_between?(previous_node, node)
-    end
-
-    def first_in_body?(node)
-      parent = node.parent
-      first_in_body_for_parent?(node, parent)
-    end
-
-    def first_in_body_for_parent?(node, parent)
-      return true unless parent
-
-      case parent.type
-      when :begin
-        first_in_begin?(node, parent)
-      when :class, :module, :sclass
-        parent.body == node
-      else
-        false
-      end
-    end
-
-    def first_in_begin?(node, parent)
-      return false unless parent.children.first == node
-
-      grandparent = parent.parent
-      grandparent.nil? || grandparent.block_type? || grandparent.class_type? || grandparent.module_type?
-    end
-
-    def after_visibility_modifier?(previous_node)
-      visibility_modifier?(previous_node)
-    end
-
-    def visibility_modifier?(node)
-      node.send_type? && VISIBILITY_MODIFIERS.include?(node.method_name) && node.arguments.empty?
+      SiblingCheck.new(node, previous_sibling(node)).needed?
     end
 
     def previous_sibling(node)
@@ -120,9 +73,67 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Base
       siblings[node_index - 1] if node_index&.positive?
     end
 
-    def empty_line_between?(first_node, second_node)
-      first_line = first_node.last_line
-      second_line = second_node.first_line
-      (second_line - first_line) > 1
+    class SiblingCheck
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, previous_node)
+        @node = node
+        @previous_node = previous_node
+      end
+
+      def needed?
+        checkable? && missing_empty_line?
+      end
+
+      private
+        attr_reader :node, :previous_node
+
+        def checkable?
+          previous_node &&
+            !first_in_body? &&
+            !after_visibility_modifier?
+        end
+
+        def missing_empty_line?
+          (node.first_line - previous_node.last_line) <= 1
+        end
+
+        def first_in_body?
+          ParentCheck.new(node, node.parent).first_in_body?
+        end
+
+        def after_visibility_modifier?
+          !visibility_modifier(previous_node).nil?
+        end
+    end
+
+    class ParentCheck
+      def initialize(node, parent)
+        @node = node
+        @parent = parent
+      end
+
+      def first_in_body?
+        return true unless parent
+
+        case parent.type
+        when :begin
+          first_in_begin?
+        when :class, :module, :sclass
+          parent.body == node
+        else
+          false
+        end
+      end
+
+      private
+        attr_reader :node, :parent
+
+        def first_in_begin?
+          return false unless parent.children.first == node
+
+          grandparent = parent.parent
+          grandparent.nil? || grandparent.block_type? || grandparent.class_type? || grandparent.module_type?
+        end
     end
 end

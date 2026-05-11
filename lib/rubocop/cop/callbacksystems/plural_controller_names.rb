@@ -20,9 +20,7 @@
 #   class BaseController < ApplicationController
 #   end
 #
-class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
-  CONTROLLER_SUPERCLASSES = RuboCop::Callbacksystems::Helpers::CONTROLLER_SUPERCLASSES
-
+class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Controller names should be plural. Use `%<plural>sController` instead of `%<singular>sController`."
 
   def on_class(node)
@@ -33,6 +31,8 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
 
   private
     class ControllerClass
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :node, :cop_config
 
       def initialize(node, cop_config)
@@ -41,8 +41,7 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
       end
 
       def controller_class?
-        superclass_name = RuboCop::Callbacksystems::Helpers.constant_name(node.parent_class)
-        superclass_name && (CONTROLLER_SUPERCLASSES.include?(superclass_name) || superclass_name.end_with?("Controller"))
+        controller_superclass?(node.parent_class)
       end
 
       def singular_resource_name
@@ -55,12 +54,11 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
         end
 
         def non_plural_non_ignored_resource
-          name = resource_name
-          name unless Resource.new(name, cop_config).excluded?
+          resource_name unless Resource.new(resource_name, cop_config).excluded?
         end
 
         def class_name
-          RuboCop::Callbacksystems::Helpers.constant_name(node.identifier)
+          constant_name(node.identifier)
         end
 
         def resource_name
@@ -91,7 +89,7 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Base
         end
 
         def ignored_names
-          cop_config.fetch("IgnoredNames", %w[Application Base])
+          cop_config["IgnoredNames"]
         end
     end
 end

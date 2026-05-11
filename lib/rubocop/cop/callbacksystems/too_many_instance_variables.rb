@@ -32,21 +32,19 @@
 #     @created_at = Time.current
 #   end
 #
-class RuboCop::Cop::Callbacksystems::TooManyInstanceVariables < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::TooManyInstanceVariables < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method has %<count>d instance variable assignments (max %<max>d). " \
     "Consider splitting into separate methods."
 
   def on_def(node)
-    return if node.method_name == :initialize || method_visibility(node) == :public
+    return if node.method?(:initialize) || method_visibility(node) == :public
 
-    count = node.body && assignment_count(node.body, :ivasgn)
-    add_offense(node, message: format(MESSAGE, count: count, max: max_assignments)) if count && count > max_assignments
+    count = assignment_count(node.body, :ivasgn)
+    add_offense(node, message: format(MESSAGE, count: count, max: max_assignments)) if count > max_assignments
   end
 
   private
     def max_assignments
-      cop_config["MaxAssignments"] || 2
+      cop_config["MaxAssignments"]
     end
 end

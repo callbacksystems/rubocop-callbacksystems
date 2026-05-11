@@ -30,10 +30,8 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Only standard Rails actions (index, show, new, create, edit, update, destroy) are allowed in controllers. Extract `%<method>s` to a new controller."
-  ALLOWED_ACTIONS = %i[index show new create edit update destroy].freeze
-  CONTROLLER_SUPERCLASSES = RuboCop::Callbacksystems::Helpers::CONTROLLER_SUPERCLASSES
 
   def on_def(node)
     return unless Action.new(node).offense?
@@ -43,6 +41,8 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
 
   private
     class Action
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :node
 
       def initialize(node)
@@ -50,18 +50,19 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
       end
 
       def offense?
-        return false if ALLOWED_ACTIONS.include?(node.method_name)
+        return false if STANDARD_CONTROLLER_ACTIONS.include?(node.method_name)
 
-        class_node = enclosing_class
-        class_node && ControllerClassCheck.new(class_node, node).offense?
+        enclosing_class&.then { ControllerClassCheck.new(it, node).offense? }
       end
 
       private
         def enclosing_class
-          node.each_ancestor(:class, :module).first&.then { |n| n.class_type? ? n : nil }
+          node.each_ancestor(:class, :module).first&.then { it.class_type? ? it : nil }
         end
 
         class ControllerClassCheck
+          include RuboCop::Callbacksystems::Helpers
+
           attr_reader :class_node, :method_node
 
           def initialize(class_node, method_node)
@@ -75,17 +76,11 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
 
           private
             def controller_class?
-              superclass = class_node.parent_class
-              superclass && matches_controller_superclass?(superclass)
-            end
-
-            def matches_controller_superclass?(superclass)
-              name = RuboCop::Callbacksystems::Helpers.constant_name(superclass)
-              CONTROLLER_SUPERCLASSES.include?(name) || name&.end_with?("Controller")
+              controller_superclass?(class_node.parent_class)
             end
 
             def public_method?
-              RuboCop::Callbacksystems::Helpers.method_visibility(method_node) == :public
+              method_visibility(method_node) == :public
             end
         end
     end

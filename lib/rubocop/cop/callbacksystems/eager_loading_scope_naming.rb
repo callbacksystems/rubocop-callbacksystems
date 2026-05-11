@@ -17,7 +17,8 @@
 #   scope :with_posts, -> { includes(:posts) }
 #   scope :with_line_items, -> { includes(:line_items) }
 #
-class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Callbacksystems::Base
+  # @!method scope_definition(node)
   def_node_matcher :scope_definition, <<~PATTERN
     (send nil? :scope (sym $_name) $_body ...)
   PATTERN
@@ -28,8 +29,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
 
   def on_send(node)
     scope_definition(node) do |name, body|
-      association = ScopeBody.new(body).eager_loading_association
-      next unless association
+      next unless (association = ScopeBody.new(body).eager_loading_association)
 
       ScopeNameChecker.new(name, association).offenses.each do |message|
         add_offense(node.first_argument, message: message)
@@ -37,9 +37,12 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
     end
   end
 
+  alias on_csend on_send
+
   private
     class ScopeNameChecker
-      CONTROLLER_ACTIONS = %w[index show new create edit update destroy].freeze
+      include RuboCop::Callbacksystems::Helpers
+
       GENERIC_TERMS = %w[association associations relation relations].freeze
 
       def initialize(name, association)
@@ -60,15 +63,17 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
         attr_reader :name, :association, :name_parts
 
         def controller_action
-          CONTROLLER_ACTIONS.find { |action| name_parts.include?(action) }
+          STANDARD_CONTROLLER_ACTIONS.find { name_parts.include?(it.to_s) }
         end
 
         def generic_term
-          GENERIC_TERMS.find { |term| name_parts.include?(term) }
+          GENERIC_TERMS.find { name_parts.include?(it) }
         end
     end
 
     class ScopeBody
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :body
 
       def initialize(body)
@@ -76,7 +81,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
       end
 
       def eager_loading_association
-        eager_load_node = scope_body&.each_descendant(:send)&.find { |send_node| RuboCop::Callbacksystems::Helpers::EAGER_LOADING_METHODS.include?(send_node.method_name) }
+        eager_load_node = scope_body&.each_descendant(:send)&.find { EAGER_LOADING_METHODS.include?(it.method_name) }
         association_name_for(eager_load_node) if eager_load_node
       end
 
@@ -86,15 +91,15 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNaming < RuboCop::Cop::Bas
         end
 
         def block_body
-          body if body&.block_type? || body&.numblock_type?
+          body if any_block_type?(body)
         end
 
         def lambda_body
-          body.children.last if body&.send_type? && body.method_name == :lambda
+          body.children.last if body&.send_type? && body.method?(:lambda)
         end
 
         def association_name_for(eager_load_node)
-          first_arg = eager_load_node.arguments.first
+          first_arg = eager_load_node.first_argument
           if first_arg&.sym_type?
             first_arg.value.to_s
           elsif first_arg

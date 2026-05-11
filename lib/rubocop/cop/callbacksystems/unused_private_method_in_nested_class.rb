@@ -38,35 +38,21 @@
 #       end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Private method `%<method>s` in nested class `%<class>s` is never called. Remove it."
 
   def on_class(node)
-    NestedClassAnalysis.new(node).unused_private_methods.each do |method_node, klass_name|
-      add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: klass_name))
+    private_nested_classes(node).each do |nested_class|
+      UnusedMethodDetector.new(nested_class).detect.each do |method_node, klass_name|
+        add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: klass_name))
+      end
     end
   end
 
   alias on_module on_class
 
   private
-    class NestedClassAnalysis
-      def initialize(node)
-        @node = node
-        @private_nested_classes = RuboCop::Callbacksystems::Helpers.private_nested_classes(node)
-      end
-
-      def unused_private_methods
-        private_nested_classes.flat_map do |nested_class|
-          NestedClassMethods.new(nested_class).unused_private_methods
-        end
-      end
-
-      private
-        attr_reader :node, :private_nested_classes
-    end
-
-    class NestedClassMethods
+    class UnusedMethodDetector
       include RuboCop::Callbacksystems::Helpers
 
       def initialize(nested_class)
@@ -74,43 +60,21 @@ class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop:
         @class_name = nested_class.identifier.short_name
       end
 
-      def unused_private_methods
-        called_methods = collect_called_methods
-        macro_methods = collect_macro_referenced_methods
-
-        private_methods.filter_map do |method_node|
-          method_name = method_node.method_name
-          [ method_node, class_name ] if called_methods.exclude?(method_name) && macro_methods.exclude?(method_name)
+      def detect
+        private_methods_in(nested_class).filter_map do |method_node|
+          [ method_node, class_name ] if called_methods.exclude?(method_node.method_name) && macro_referenced_methods.exclude?(method_node.method_name)
         end
       end
 
       private
         attr_reader :nested_class, :class_name
 
-        def private_methods
-          return [] unless nested_class.body
-
-          in_private = false
-          nested_class.body.each_child_node.select do |child|
-            in_private = true if private_declaration?(child)
-            child.def_type? && in_private
-          end
+        def called_methods
+          @called_methods ||= nested_class.body ? Set.new(nested_class.body.each_node(:send).filter_map { it.method_name if it.receiver.nil? }) : Set.new
         end
 
-        def collect_called_methods
-          return Set.new unless nested_class.body
-
-          Set.new(
-            nested_class.body.each_node(:send).filter_map do |send_node|
-              send_node.method_name if send_node.receiver.nil?
-            end
-          )
-        end
-
-        def collect_macro_referenced_methods
-          return Set.new unless nested_class.body
-
-          RuboCop::Callbacksystems::MacroReferencedMethods.new(nested_class.body).collect
+        def macro_referenced_methods
+          @macro_referenced_methods ||= nested_class.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(nested_class.body).collect : Set.new
         end
     end
 end

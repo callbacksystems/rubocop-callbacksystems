@@ -26,7 +26,7 @@
 #   end
 #   # test "full_name returns concatenated names" do ... end
 #
-class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Public method `%<method>s` has no test. " \
     "Convention: tests begin with the method name followed by what it does, " \
     "e.g. `test \"%<method>s returns the expected value\" do`"
@@ -44,7 +44,7 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
   private
     def private_nested_class?(node)
       parent = node.each_ancestor(:class, :module).first
-      parent && RuboCop::Callbacksystems::Helpers.private_nested_classes(parent).include?(node)
+      parent && private_nested_classes(parent).include?(node)
     end
 
     class Analysis
@@ -53,21 +53,13 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
       def initialize(node, file_path)
         @node = node
         @file_path = file_path
-        @test_file_path = TestFilePathResolver.new(file_path).resolve
+        @test_file_path = RuboCop::Callbacksystems::TestPathMapping.new(file_path).find_test_file
       end
 
       def public_methods_without_tests
         return [] if skip?
 
-        tested = test_file_path ? TestedMethodsCollector.new(test_file_path).collect : Set.new
-        macro_referenced = collect_macro_referenced_methods
-
-        testable_public_methods.filter_map do |method_node, method_name|
-          next if tested.include?(method_name.to_s)
-          next if macro_referenced.include?(method_name) && !scope_node?(method_node)
-
-          [ method_node, method_name ]
-        end
+        testable_public_methods.reject { |method_node, method_name| MethodCoverage.new(method_node, method_name, tested_methods, macro_referenced_methods).covered? }
       end
 
       private
@@ -82,124 +74,49 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
         end
 
         def gem_project?
-          root = file_path.sub(%r{/lib/.*}, "")
-          Dir.glob("#{root}/*.gemspec").any?
+          Dir.glob("#{file_path.sub(%r{/lib/.*}, "")}/*.gemspec").any?
         end
 
         def testable_public_methods
-          PublicMethodCollector.new(node).collect.reject { |_, name| EXCLUDED_METHODS.include?(name) }
+          RuboCop::Callbacksystems::MethodCollector.new(node).collect.reject { |_, name| EXCLUDED_METHODS.include?(name) }
         end
 
-        def scope_node?(method_node)
-          method_node.send_type? && method_node.method_name == :scope
+        def tested_methods
+          @tested_methods ||= test_file_path ? TestedMethodsCollector.new(test_file_path).collect : Set.new
         end
 
-        def collect_macro_referenced_methods
-          node.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body).collect : Set.new
+        def macro_referenced_methods
+          @macro_referenced_methods ||= node.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body).collect : Set.new
         rescue
           Set.new
         end
-    end
 
-    class TestFilePathResolver
-      def initialize(file_path)
-        @file_path = file_path
-      end
-
-      def resolve
-        return unless file_path
-
-        find_existing_test_file(candidate_paths)
-      end
-
-      private
-        attr_reader :file_path
-
-        def candidate_paths
-          lib_paths + app_paths
-        end
-
-        def lib_paths
-          return [] unless lib_file?
-
-          [
-            file_path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/lib/#{Regexp.last_match(2)}_test.rb" },
-            file_path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
-          ]
-        end
-
-        def app_paths
-          return [] unless app_file?
-
-          [ file_path.sub(%r{(^|/)app/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" } ]
-        end
-
-        def find_existing_test_file(paths)
-          paths.find { |path| File.exist?(path) }
-        end
-
-        def lib_file?
-          file_path.match?(%r{(^|/)lib/})
-        end
-
-        def app_file?
-          file_path.match?(%r{(^|/)app/})
-        end
-    end
-
-    class PublicMethodCollector
-      attr_reader :node, :results
-
-      def initialize(node)
-        @node = node
-        @results = []
-      end
-
-      def collect
-        traverse(node.body, public_section: true)
-        results
-      end
-
-      private
-        def traverse(body, public_section:)
-          return unless body
-
-          add_public_method(body, public_section) || traverse_children(body, public_section: public_section)
-        end
-
-        def add_public_method(body, public_section)
-          return unless public_section
-
-          if %i[def defs].include?(body.type)
-            results << [ body, body.method_name ]
-          elsif scope_definition?(body)
-            results << [ body, body.first_argument.value ]
+        class MethodCoverage
+          def initialize(method_node, method_name, tested_methods, macro_referenced_methods)
+            @method_node = method_node
+            @method_name = method_name
+            @tested_methods = tested_methods
+            @macro_referenced_methods = macro_referenced_methods
           end
-        end
 
-        def traverse_children(body, public_section:)
-          case body.type
-          when :begin
-            traverse_begin(body, public_section: public_section)
-          when :sclass, :block
-            traverse(body.body, public_section: true)
+          def covered?
+            already_covered? || macro_referenced_non_scope?
           end
-        end
 
-        def traverse_begin(body, public_section:)
-          current_public = public_section
-          body.each_child_node do |child|
-            current_public = false if visibility_modifier?(child)
-            traverse(child, public_section: current_public)
-          end
-        end
+          private
+            attr_reader :method_node, :method_name, :tested_methods, :macro_referenced_methods
 
-        def scope_definition?(node)
-          node.send_type? && node.method_name == :scope && node.first_argument&.sym_type?
-        end
+            def already_covered?
+              tested_methods.include?(method_name.to_s)
+            end
 
-        def visibility_modifier?(child)
-          child.send_type? && %i[private protected].include?(child.method_name) && child.arguments.empty?
+            def macro_referenced_non_scope?
+              macro_referenced_methods.include?(method_name) && !scope_node?
+            end
+
+            def scope_node?
+              method_node.send_type? && method_node.method?(:scope)
+            end
         end
     end
 
@@ -211,10 +128,24 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
       def collect
         return Set.new unless File.exist?(test_file_path)
 
-        Set.new(File.read(test_file_path).scan(/test\s+["'](\w+[?!=]?|<=>|==)/).flatten)
+        parse_ast&.then do |ast|
+          Set.new(ast.each_node(:block).filter_map { tested_method_name(it) })
+        end || Set.new
       end
 
       private
         attr_reader :test_file_path
+
+        def parse_ast
+          RuboCop::AST::ProcessedSource.new(File.read(test_file_path), RUBY_VERSION.to_f, test_file_path).ast
+        rescue
+          nil
+        end
+
+        def tested_method_name(node)
+          return unless node.method?(:test) && node.receiver.nil?
+
+          node.send_node.first_argument&.then { it.value.split(/\s+/).first if it.str_type? }
+        end
     end
 end

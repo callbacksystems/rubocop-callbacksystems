@@ -10,28 +10,30 @@ require "rubocop-callbacksystems"
 require "minitest/autorun"
 
 class CopTestCase < ActiveSupport::TestCase
+  DEFAULT_FILE = "test/example_test.rb"
+
   class << self
     attr_accessor :cop_class
   end
 
   private
-    def cop_investigation(source, file: "test/example_test.rb")
+    def cop_investigation(source, file: DEFAULT_FILE)
       CopInvestigation.new(self.class.cop_class, source, file)
     end
 
-    def assert_offense(bad_code, file: "test/example_test.rb")
+    def assert_offense(bad_code, file: DEFAULT_FILE)
       cop_investigation(bad_code, file: file).tap do |investigation|
         assert investigation.offenses.any?, "Expected an offense but found none.\nSource:\n#{bad_code}"
       end.offenses
     end
 
-    def assert_no_offense(code, file: "test/example_test.rb")
+    def assert_no_offense(code, file: DEFAULT_FILE)
       investigation = cop_investigation(code, file: file)
 
       assert_empty investigation.offenses, "Expected no offenses but found: #{investigation.offenses.map(&:message).join(", ")}\nSource:\n#{code}"
     end
 
-    def assert_correction(original, corrected, file: "test/example_test.rb")
+    def assert_correction(original, corrected, file: DEFAULT_FILE)
       investigation = CopInvestigation.new(self.class.cop_class, original, file)
 
       assert_equal corrected, investigation.corrected_source, "Autocorrection did not produce expected result"
@@ -48,7 +50,7 @@ class CopTestCase < ActiveSupport::TestCase
 
       def corrected_source
         corrector = RuboCop::Cop::Corrector.new(processed_source)
-        report.offenses.each { |offense| corrector.merge!(offense.corrector) if offense.corrector }
+        report.offenses.each { corrector.merge!(it.corrector) if it.corrector }
         corrector.rewrite
       end
 

@@ -42,7 +42,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoNestedModulesInClasses < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoNestedModulesInClasses < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Do not nest modules inside classes. Use a nested class or define the module at the top level."
 
   def on_module(node)

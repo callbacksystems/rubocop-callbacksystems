@@ -37,7 +37,7 @@
 #   # good
 #   User.new(name: "John")
 #
-class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "This expression can fit on a single line."
@@ -47,7 +47,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
     if collapser.offense?
       add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node.source_range, collapser.collapsed)
+        corrector.replace(node, collapser.collapsed)
       end
     end
   end
@@ -57,7 +57,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
     if collapser.offense?
       add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node.source_range, collapser.collapsed)
+        corrector.replace(node, collapser.collapsed)
       end
     end
   end
@@ -67,14 +67,16 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
     if collapser.offense?
       add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node.source_range, collapser.collapsed)
+        corrector.replace(node, collapser.collapsed)
       end
     end
   end
 
+  alias on_csend on_send
+
   private
     def max_line_length
-      cop_config["MaxLineLength"] || 120
+      cop_config["MaxLineLength"]
     end
 
     class HashCollapser
@@ -99,11 +101,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def multiline?
-          node.first_line != node.last_line
+          !node.single_line?
         end
 
         def no_multiline_pairs?
-          node.pairs.none? { |pair| pair.first_line != pair.last_line }
+          node.pairs.none? { !it.single_line? }
         end
 
         def fits_on_one_line?
@@ -111,12 +113,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def suffix_length
-          last_line = node.loc.end.source_line
-          last_line.length - node.loc.end.column - 1
+          node.loc.end.source_line.length - node.loc.end.column - 1
         end
 
         def pairs_source
-          node.pairs.map { |pair| pair.source.strip }.join(", ")
+          node.pairs.map { it.source.strip }.join(", ")
         end
     end
 
@@ -142,11 +143,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def multiline?
-          node.first_line != node.last_line
+          !node.single_line?
         end
 
         def no_multiline_elements?
-          node.values.none? { |element| element.first_line != element.last_line }
+          node.values.none? { !it.single_line? }
         end
 
         def fits_on_one_line?
@@ -154,16 +155,17 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def suffix_length
-          last_line = node.loc.end.source_line
-          last_line.length - node.loc.end.column - 1
+          node.loc.end.source_line.length - node.loc.end.column - 1
         end
 
         def elements_source
-          node.values.map { |element| element.source.strip }.join(", ")
+          node.values.map { it.source.strip }.join(", ")
         end
     end
 
     class SendCollapser
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(node, max_line_length)
         @node = node
         @max_line_length = max_line_length
@@ -181,7 +183,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         attr_reader :node, :max_line_length
 
         def multiline?
-          node.first_line != node.last_line
+          !node.single_line?
         end
 
         def block_call?
@@ -208,12 +210,8 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           false
         end
 
-        def any_block_type?(ast_node)
-          ast_node&.block_type? || ast_node&.numblock_type? || ast_node&.itblock_type?
-        end
-
         def chain_collapsible?
-          chain_sends.all? { |send_node| send_args_single_line?(send_node) }
+          chain_sends.all? { send_args_single_line?(it) }
         end
 
         def chain_sends
@@ -228,13 +226,13 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def send_args_single_line?(send_node)
-          send_node.arguments.all? { |arg| argument_single_line?(arg) }
+          send_node.arguments.all? { argument_single_line?(it) }
         end
 
         def argument_single_line?(arg)
-          return arg.children.none? { |child| child.first_line != child.last_line } if implicit_hash?(arg)
+          return arg.children.none? { !it.single_line? } if implicit_hash?(arg)
 
-          arg.first_line == arg.last_line
+          arg.single_line?
         end
 
         def fits_on_one_line?
@@ -264,11 +262,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def arguments_joined
-          node.arguments.flat_map { |arg| argument_sources(arg) }.join(", ")
+          node.arguments.flat_map { argument_sources(it) }.join(", ")
         end
 
         def argument_sources(arg)
-          return arg.children.map { |child| child.source.strip } if implicit_hash?(arg)
+          return arg.children.map { it.source.strip } if implicit_hash?(arg)
 
           [ arg.source.strip ]
         end

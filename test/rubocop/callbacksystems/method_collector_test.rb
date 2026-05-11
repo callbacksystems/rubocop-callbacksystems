@@ -96,6 +96,6 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   private
     def collect_from(source)
       processed = RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f)
-      RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect
+      RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect.map(&:second)
     end
 end

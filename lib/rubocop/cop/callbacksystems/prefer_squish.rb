@@ -9,15 +9,15 @@
 #   text.squish
 #   name.squish
 #
-class RuboCop::Cop::Callbacksystems::PreferSquish < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferSquish < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = 'Use `squish` instead of `strip.gsub(/\s+/, " ")`.'
   WHITESPACE_PATTERNS = %w[\s+ [[:space:]]+].freeze
 
-  # Matches: something.strip.gsub(regexp, " ")
+  # @!method strip_gsub_pattern(node)
   def_node_matcher :strip_gsub_pattern, <<~PATTERN
-    (send (send $_ :strip) :gsub (regexp (str $_pattern) (regopt)) (str " "))
+    (send (call $_ :strip) :gsub (regexp (str $_pattern) (regopt)) (str " "))
   PATTERN
 
   def on_send(node)
@@ -25,8 +25,10 @@ class RuboCop::Cop::Callbacksystems::PreferSquish < RuboCop::Cop::Base
       next if WHITESPACE_PATTERNS.exclude?(pattern)
 
       add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node.source_range, "#{receiver.source}.squish")
+        corrector.replace(node, "#{receiver.source}.squish")
       end
     end
   end
+
+  alias on_csend on_send
 end

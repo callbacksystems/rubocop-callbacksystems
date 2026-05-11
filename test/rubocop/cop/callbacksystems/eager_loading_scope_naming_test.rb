@@ -83,7 +83,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNamingTest < CopTestCase
       end
     RUBY
 
-    assert offenses.any? { |o| o.message.include?("controller action `show`") }
+    assert offenses.any? { it.message.include?("controller action `show`") }
   end
 
   test "registers offense for scope containing controller action index" do
@@ -93,7 +93,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNamingTest < CopTestCase
       end
     RUBY
 
-    assert offenses.any? { |o| o.message.include?("controller action `index`") }
+    assert offenses.any? { it.message.include?("controller action `index`") }
   end
 
   test "registers offense for scope containing generic term associations" do
@@ -103,7 +103,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNamingTest < CopTestCase
       end
     RUBY
 
-    assert offenses.any? { |o| o.message.include?("generic term `associations`") }
+    assert offenses.any? { it.message.include?("generic term `associations`") }
   end
 
   test "registers offense for scope containing generic term relations" do
@@ -113,7 +113,7 @@ class RuboCop::Cop::Callbacksystems::EagerLoadingScopeNamingTest < CopTestCase
       end
     RUBY
 
-    assert offenses.any? { |o| o.message.include?("generic term `relations`") }
+    assert offenses.any? { it.message.include?("generic term `relations`") }
   end
 
   test "allows descriptive eager loading scope names" do

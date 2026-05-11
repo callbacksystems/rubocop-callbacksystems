@@ -29,15 +29,19 @@
 #     content
 #   end)
 #
-class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Use `\\` for line continuation instead of wrapping arguments in parentheses."
 
   def on_send(node)
     add_offense(node.loc.begin, message: MESSAGE) if MethodCall.new(node).offense?
   end
 
+  alias on_csend on_send
+
   private
     class MethodCall
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :node
 
       def initialize(node)
@@ -45,25 +49,21 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
       end
 
       def offense?
-        node.parenthesized? && multiline_call? && !allowed?
+        node.parenthesized? && multiline_send?(node) && !allowed?
       end
 
       private
         def allowed?
-          block_call? || nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
+          nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
         end
 
-        def multiline_call?
-          node.arguments? && node.loc.begin && node.loc.end && node.loc.begin.line != node.loc.end.line
-        end
-
-        def block_call?
-          node.parent&.block_type? || node.parent&.numblock_type?
+        def multiline_send?(send_node)
+          send_node.arguments? && send_node.loc.begin && send_node.loc.end && send_node.loc.begin.line != send_node.loc.end.line
         end
 
         def nested_in_call?
           node.each_ancestor(:send).any? do |ancestor|
-            ancestor.arguments.any? { |arg| arg == node || arg.each_descendant.include?(node) }
+            ancestor.arguments.any? { it == node || it.each_descendant.include?(node) }
           end
         end
 
@@ -72,33 +72,28 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
         end
 
         def direct_block_argument?
-          node.arguments.any? { |arg| block_or_send_with_block?(arg) }
+          node.arguments.any? { block_or_send_with_block?(it) }
         end
 
         def block_or_send_with_block?(arg)
-          arg.block_type? || arg.numblock_type? || (arg.send_type? && arg.parent&.block_type?)
+          any_block_type?(arg) || (arg.send_type? && arg.parent&.block_type?)
         end
 
         def nested_block_in_arguments?
-          node.arguments.flat_map { |arg| arg.each_descendant(:block, :numblock).to_a }.any?
+          node.arguments.flat_map { it.each_descendant(:any_block).to_a }.any?
         end
 
         def contains_multiline_call?
-          node.each_descendant(:send).any? { |descendant| descendant_multiline?(descendant) }
-        end
-
-        def descendant_multiline?(descendant)
-          descendant.arguments? && descendant.loc.begin && descendant.loc.end && descendant.loc.begin.line != descendant.loc.end.line
+          node.each_descendant(:send).any? { multiline_send?(it) }
         end
 
         def inside_backslash_continuation?
-          source = node.source_range.source_buffer.source
           line_number = node.loc.begin.line - 1
-          line_number.positive? && source.lines[line_number - 1]&.rstrip&.end_with?("\\")
+          line_number.positive? && node.source_range.source_buffer.source.lines[line_number - 1]&.rstrip&.end_with?("\\")
         end
 
         def chained_method_receiver?
-          (node.parent&.send_type? || node.parent&.csend_type?) && node.parent.receiver == node
+          node.parent&.call_type? && node.parent.receiver == node
         end
 
         def inside_collection_literal?

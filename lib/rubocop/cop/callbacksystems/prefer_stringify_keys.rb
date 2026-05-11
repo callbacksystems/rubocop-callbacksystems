@@ -8,8 +8,8 @@
 #   # good
 #   hash.stringify_keys
 #
-class RuboCop::Cop::Callbacksystems::PreferStringifyKeys < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::PreferKeyTransform
+class RuboCop::Cop::Callbacksystems::PreferStringifyKeys < RuboCop::Cop::Callbacksystems::Base
+  include RuboCop::Callbacksystems::KeyTransformDetection
 
   private
     def source_method = :to_s

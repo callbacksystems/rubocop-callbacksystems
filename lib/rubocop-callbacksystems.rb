@@ -13,3 +13,5 @@ loader.tag = "rubocop-callbacksystems"
 loader.push_dir("#{__dir__}/rubocop", namespace: RuboCop)
 loader.setup
 loader.eager_load
+
+RuboCop::ConfigLoader.inject_defaults!("#{__dir__}/../config/default.yml")

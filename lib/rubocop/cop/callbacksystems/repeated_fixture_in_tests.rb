@@ -26,7 +26,7 @@
 #     assert @user.email.present?
 #   end
 #
-class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Callbacksystems::Base
   include RuboCop::Callbacksystems::TestCopHelpers
 
   MESSAGE = "Fixture `%<fixture>s` is used in multiple tests. Move it to `setup`."
@@ -46,12 +46,12 @@ class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Base
   private
     def fixture_usages
       test_blocks.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |test_block, usages|
-        collect_fixture_calls(test_block).each { |fixture_call| usages[fixture_call.signature] << fixture_call.node }
+        collect_fixture_calls(test_block).each { usages[it.signature] << it.node }
       end
     end
 
     def test_blocks
-      processed_source.ast.each_node(:block).select { |n| test_block?(n) }
+      processed_source.ast.each_node(:block).select { test_block?(it) }
     end
 
     def collect_fixture_calls(test_block)

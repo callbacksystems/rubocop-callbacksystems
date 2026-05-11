@@ -24,9 +24,7 @@
 #     find(@node).compact
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<wrapper>s` only wraps `%<target>s` without adding value. Consider removing the indirection."
 
   def on_def(node)
@@ -67,11 +65,9 @@ class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Ba
         def arguments_are_pass_through?
           return true if body.arguments.empty?
 
-          call_args = body.arguments.map { |arg| argument_source(arg) }
-          method_params = node.arguments.map { |arg| arg.name.to_s }
-          instance_variables = body.arguments.select(&:ivar_type?).map(&:source)
-
-          (call_args - method_params - instance_variables).empty?
+          (body.arguments.map { argument_source(it) } -
+            node.arguments.map { it.name.to_s } -
+            body.arguments.select(&:ivar_type?).map(&:source)).empty?
         end
 
         def argument_source(arg)

@@ -163,6 +163,18 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
     assert_includes result, :@bar
   end
 
+  test "does not collect block_pass references (they call on elements, not self)" do
+    body = parse_body <<~RUBY
+      included do
+        items.each(&:notify)
+      end
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).collect
+
+    assert_not_includes result, :notify
+  end
+
   private
     def parse_body(source)
       parsed = RuboCop::ProcessedSource.new(source, RUBY_VERSION.to_f)

@@ -30,7 +30,7 @@
 #       attr_reader :node
 #   end
 #
-class RuboCop::Cop::Callbacksystems::PreferAttrReaderOverInstanceVariable < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferAttrReaderOverInstanceVariable < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Use `%<name>s` (via attr_reader) instead of `@%<name>s` for instance variables assigned in initialize."
 
   def on_class(node)
@@ -41,6 +41,8 @@ class RuboCop::Cop::Callbacksystems::PreferAttrReaderOverInstanceVariable < Rubo
 
   private
     class ClassAnalysis
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(class_node)
         @class_node = class_node
         @constructor_ivars = find_constructor_ivars
@@ -61,24 +63,20 @@ class RuboCop::Cop::Callbacksystems::PreferAttrReaderOverInstanceVariable < Rubo
         def find_constructor_ivars
           return Set.new unless initialize_method&.body
 
-          initialize_method.body.each_node(:ivasgn).to_set { |ivasgn| ivasgn.children.first.to_s.delete_prefix("@") }
+          initialize_method.body.each_node(:ivasgn).to_set { it.children.first.to_s.delete_prefix("@") }
         end
 
         def initialize_method
           @initialize_method ||= class_node.body&.each_node(:def)&.find do |method|
-            method.method_name == :initialize && direct_child_method?(method)
+            method.method?(:initialize) && direct_child_of_class?(method, class_node)
           end
-        end
-
-        def direct_child_method?(method_node)
-          method_node.each_ancestor(:class).first == class_node
         end
 
         def ivar_reads_outside_constructor
           return [] unless class_node.body
 
           class_node.body.each_node(:ivar).select do |ivar_node|
-            IvarRead.new(ivar_node, class_node).outside_constructor_and_nested_classes?
+            IvarRead.new(ivar_node, class_node).outside_constructor_and_nested_scopes?
           end
         end
     end
@@ -89,20 +87,20 @@ class RuboCop::Cop::Callbacksystems::PreferAttrReaderOverInstanceVariable < Rubo
         @class_node = class_node
       end
 
-      def outside_constructor_and_nested_classes?
-        !inside_initialize? && !inside_nested_class?
+      def outside_constructor_and_nested_scopes?
+        !inside_initialize? && !inside_nested_scope?
       end
 
       private
         attr_reader :ivar_node, :class_node
 
         def inside_initialize?
-          ivar_node.each_ancestor(:def).any? { |method| method.method_name == :initialize }
+          ivar_node.each_ancestor(:def).any? { it.method?(:initialize) }
         end
 
-        def inside_nested_class?
-          immediate_class = ivar_node.each_ancestor(:class).first
-          immediate_class && immediate_class != class_node
+        def inside_nested_scope?
+          immediate_scope = ivar_node.each_ancestor(:class, :module).first
+          immediate_scope && immediate_scope != class_node
         end
     end
 end

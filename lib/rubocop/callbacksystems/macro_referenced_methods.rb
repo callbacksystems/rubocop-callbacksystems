@@ -1,12 +1,7 @@
-# Collects method names referenced in macros (callbacks, delegates, blocks).
-# Handles: symbol arguments, lambda arguments, if:/unless: options, delegate to:, and blocks.
-#
-# @example
-#   MacroReferencedMethods.new(class_node.body).collect  # => Set[:validate, :process, ...]
-#
 class RuboCop::Callbacksystems::MacroReferencedMethods
+  include RuboCop::Callbacksystems::Helpers
+
   CALLBACK_OPTIONS = %i[if unless].freeze
-  BLOCK_TYPES = %i[block numblock].freeze
 
   def initialize(body)
     @body = body
@@ -25,12 +20,12 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       return unless node
 
       collect_from_node(node)
-      node.children.each { |child| traverse(child) if child.is_a?(RuboCop::AST::Node) }
+      node.children.each { traverse(it) if it.is_a?(RuboCop::AST::Node) }
     end
 
     def collect_from_node(node)
       collect_from_send(node) if node.send_type?
-      collect_from_block(node) if BLOCK_TYPES.include?(node.type)
+      collect_from_block(node) if any_block_type?(node)
     end
 
     def collect_from_send(node)
@@ -40,7 +35,8 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     end
 
     def collect_symbol_arguments(node)
-      results << node.arguments.find(&:sym_type?)&.value
+      sym_arg = node.arguments.find(&:sym_type?)
+      results << sym_arg.value if sym_arg
     end
 
     def collect_lambda_arguments(node)
@@ -71,7 +67,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       when :sym
         results << value.value
       when :str
-        # Handle "a.b.c" - extract first method in chain
+        # delegate to: "foo.bar" — extract "foo"
         results << value.value.to_s.split(".").first&.to_sym
       end
     end
@@ -90,6 +86,6 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     end
 
     def collect_method_calls_from(body)
-      body&.each_node(:send) { |s| results << s.method_name if s.receiver.nil? }
+      body&.each_node(:send) { results << it.method_name if it.receiver.nil? }
     end
 end

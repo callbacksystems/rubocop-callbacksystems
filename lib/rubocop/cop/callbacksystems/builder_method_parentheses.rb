@@ -22,7 +22,7 @@
 #   User.create \
 #     name: "John"
 #
-class RuboCop::Cop::Callbacksystems::BuilderMethodParentheses < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::BuilderMethodParentheses < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Use parentheses for `%<method>s` when passing arguments."
@@ -43,10 +43,12 @@ class RuboCop::Cop::Callbacksystems::BuilderMethodParentheses < RuboCop::Cop::Ba
     if missing_parentheses?(node)
       add_offense(node, message: format(MESSAGE, method: node.method_name)) do |corrector|
         corrector.replace(gap_range(node), "(")
-        corrector.insert_after(node.last_argument.source_range, ")")
+        corrector.insert_after(node.last_argument, ")")
       end
     end
   end
+
+  alias on_csend on_send
 
   private
     def missing_parentheses?(node)
@@ -58,8 +60,7 @@ class RuboCop::Cop::Callbacksystems::BuilderMethodParentheses < RuboCop::Cop::Ba
     end
 
     def gap_range(node)
-      buffer = node.source_range.source_buffer
-      Parser::Source::Range.new(buffer, node.loc.selector.end_pos, node.first_argument.source_range.begin_pos)
+      Parser::Source::Range.new(node.source_range.source_buffer, node.loc.selector.end_pos, node.first_argument.source_range.begin_pos)
     end
 
     def gap_source(node)

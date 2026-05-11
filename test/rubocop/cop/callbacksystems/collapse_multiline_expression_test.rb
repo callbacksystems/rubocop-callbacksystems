@@ -4,7 +4,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   self.cop_class = RuboCop::Cop::Callbacksystems::CollapseMultilineExpression
 
   test "registers offense and corrects multiline hash that fits on one line" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         x = {
           foo: 1,
@@ -14,11 +14,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         x = { foo: 1, bar: 2 }
       RUBY
-    )
   end
 
   test "registers offense and corrects single-pair multiline hash" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         x = {
           foo: 1
@@ -27,7 +26,6 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         x = { foo: 1 }
       RUBY
-    )
   end
 
   test "allows single-line hash" do
@@ -57,7 +55,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "registers offense and corrects multiline send with implicit hash" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         method_call foo: 1,
           bar: 2
@@ -65,11 +63,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         method_call foo: 1, bar: 2
       RUBY
-    )
   end
 
   test "registers offense and corrects multiline array that fits on one line" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         x = [
           1,
@@ -80,11 +77,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         x = [ 1, 2, 3 ]
       RUBY
-    )
   end
 
   test "registers offense and corrects two-element multiline array" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         x = [
           :foo,
@@ -94,7 +90,6 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         x = [ :foo, :bar ]
       RUBY
-    )
   end
 
   test "allows single-line array" do
@@ -133,7 +128,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "registers offense and corrects backslash continuation that fits" do
-    assert_correction(
+    assert_correction \
       <<~'RUBY',
         redirect_to \
           users_path
@@ -141,11 +136,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         redirect_to users_path
       RUBY
-    )
   end
 
   test "registers offense and corrects backslash with multiple args" do
-    assert_correction(
+    assert_correction \
       <<~'RUBY',
         redirect_to \
           users_path,
@@ -154,11 +148,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         redirect_to users_path, notice: "Done"
       RUBY
-    )
   end
 
   test "registers offense and corrects parenthesized multiline call" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         User.new(
           name: "John"
@@ -167,11 +160,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         User.new(name: "John")
       RUBY
-    )
   end
 
   test "registers offense and corrects parenthesized call with multiple args" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         assert_equal(
           "expected",
@@ -181,7 +173,6 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         assert_equal("expected", actual)
       RUBY
-    )
   end
 
   test "allows single-line method call" do
@@ -207,7 +198,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "registers offense and corrects single method call on new line" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         users
           .where(active: true)
@@ -215,7 +206,6 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         users.where(active: true)
       RUBY
-    )
   end
 
   test "allows long method chain that exceeds max length" do
@@ -228,7 +218,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "registers offense and corrects short method chain that fits on one line" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         users
           .where(active: true)
@@ -237,11 +227,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         users.where(active: true).order(:name)
       RUBY
-    )
   end
 
   test "registers offense and corrects chain ending with no-arg method" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         users
           .active
@@ -250,11 +239,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         users.active.count
       RUBY
-    )
   end
 
   test "preserves indentation context when collapsing hash" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         def method
           config = {
@@ -268,7 +256,6 @@ class CollapseMultilineExpressionTest < CopTestCase
           config = { timeout: 30, retries: 3 }
         end
       RUBY
-    )
   end
 
   test "allows chain with blocks even if it fits on one line" do
@@ -297,7 +284,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "registers offense and corrects chain with symbol-to-proc blocks" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         users
           .select(&:active?)
@@ -306,11 +293,10 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         users.select(&:active?).map(&:name)
       RUBY
-    )
   end
 
   test "corrects multiline hash inside kwsplat without clobbering" do
-    assert_correction(
+    assert_correction \
       <<~RUBY,
         update! **{
           status: "canceled",
@@ -320,7 +306,6 @@ class CollapseMultilineExpressionTest < CopTestCase
       <<~RUBY
         update! **{ status: "canceled", ends_at: Time.current }.compact
       RUBY
-    )
   end
 
   test "allows multiline kwsplat hash when suffix pushes line over limit" do

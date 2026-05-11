@@ -1,6 +1,6 @@
 require "test_helper"
 
-class RuboCop::Callbacksystems::PreferKeyTransformTest < CopTestCase
+class RuboCop::Callbacksystems::KeyTransformDetectionTest < CopTestCase
   self.cop_class = RuboCop::Cop::Callbacksystems::PreferStringifyKeys
 
   test "included extends AutoCorrector on the including class" do

@@ -13,14 +13,9 @@
 #     resources :comments
 #   end
 #
-class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Extract repeated `module: %<module>s` to a `scope module: %<module>s do` block."
   ROUTE_METHODS = %i[resources resource get post put patch delete match root].freeze
-
-  # Finds route calls with module: option
-  def_node_search :route_calls_with_module, <<~PATTERN
-    (send nil? {#{ROUTE_METHODS.map(&:inspect).join(" ")}} ... (hash <(pair (sym :module) $_) ...>))
-  PATTERN
 
   def on_new_investigation
     return unless routes_file?
@@ -41,7 +36,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
     end
 
     def grouped_routes
-      routes_with_module.group_by { |route| [ RouteNode.new(route[:node]).parent_block, route[:module_value] ] }
+      routes_with_module.group_by { [ it[:parent_block], it[:module_value] ] }
     end
 
     def routes_with_module
@@ -50,8 +45,8 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
       processed_source.ast.each_node(:send).filter_map do |node|
         next if ROUTE_METHODS.exclude?(node.method_name)
 
-        module_value = RouteNode.new(node).module_value
-        { node: node, module_value: module_value } if module_value
+        route = RouteNode.new(node)
+        { node: node, module_value: route.module_value, parent_block: route.parent_block } if route.module_value
       end
     end
 
@@ -63,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
       end
 
       def module_value
-        find_module_pair&.then do |pair|
+        @module_value ||= find_module_pair&.then do |pair|
           pair.value.respond_to?(:value) ? pair.value.value.to_s : pair.value.source
         end
       end
@@ -74,7 +69,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Base
 
       private
         def find_module_pair
-          node.arguments.select(&:hash_type?).flat_map(&:pairs).find { |p| p.key.value == :module }
+          node.arguments.select(&:hash_type?).flat_map(&:pairs).find { it.key.value == :module }
         end
     end
 end

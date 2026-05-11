@@ -32,7 +32,7 @@
 #   # ok - tap for configuring object
 #   User.new.tap { |u| u.name = "John" }
 #
-class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Callbacksystems::Base
   MUTATION_METHODS = %i[<< push append []= store merge!].freeze
   COLLECTION_CLASSES = %i[Set Hash Array].freeze
   MESSAGE = "Don't use `tap` to build collections. Use `map`, `select`, `index_by`, `group_by`, or `to_h` instead."
@@ -42,6 +42,7 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Bas
   end
 
   alias on_numblock on_block
+  alias on_itblock on_block
 
   private
     class TapBlock
@@ -57,11 +58,11 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Bas
         attr_reader :node
 
         def tap_on_empty_collection?
-          node.method?(:tap) && CollectionReceiver.new(node.send_node.receiver).empty_collection?
+          node.method?(:tap) && CollectionReceiver.new(node.receiver).empty_collection?
         end
 
         def has_mutation_in_block?
-          node.body&.each_node(:send)&.any? { |send_node| MUTATION_METHODS.include?(send_node.method_name) }
+          node.body&.each_node(:send)&.any? { MUTATION_METHODS.include?(it.method_name) }
         end
     end
 
@@ -73,28 +74,27 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Bas
       def empty_collection?
         return false unless receiver
 
-        literal_empty_collection? || class_new_call? || block_with_class_new?
+        literal_empty_collection? || collection_class_constructor?
       end
 
       private
         attr_reader :receiver
 
         def literal_empty_collection?
-          (receiver.array_type? || receiver.hash_type?) && receiver.children.empty?
+          receiver.type?(:array, :hash) && receiver.children.empty?
         end
 
-        def class_new_call?
-          return false unless receiver.send_type? && receiver.method_name == :new
-
-          receiver.receiver&.const_type? && COLLECTION_CLASSES.include?(receiver.receiver.short_name)
+        def collection_class_constructor?
+          constructor = constructor_send
+          constructor&.method?(:new) &&
+            constructor.receiver&.const_type? &&
+            COLLECTION_CLASSES.include?(constructor.receiver.short_name)
         end
 
-        def block_with_class_new?
-          return false unless receiver.block_type?
+        def constructor_send
+          return receiver if receiver.send_type?
 
-          receiver.send_node.method_name == :new &&
-            receiver.send_node.receiver&.const_type? &&
-            COLLECTION_CLASSES.include?(receiver.send_node.receiver.short_name)
+          receiver.send_node if receiver.block_type?
         end
     end
 end

@@ -42,12 +42,10 @@
 #     assert_response :created
 #   end
 #
-class RuboCop::Cop::Callbacksystems::ControllerTestResponseFirstAssertion < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::ControllerTestResponseFirstAssertion < RuboCop::Cop::Callbacksystems::Base
   include RuboCop::Callbacksystems::TestCopHelpers
 
   MESSAGE = "The first assertion after an HTTP request must be `assert_response` or `assert_redirected_to`, not `%<method>s`."
-  HTTP_METHODS = RuboCop::Callbacksystems::TestCopHelpers::HTTP_METHODS
-  RESPONSE_ASSERTIONS = %i[assert_response assert_redirected_to].freeze
   SIDE_EFFECT_ASSERTIONS = %i[
     assert_enqueued_jobs assert_no_enqueued_jobs assert_performed_jobs assert_no_performed_jobs
     assert_enqueued_with assert_performed_with
@@ -57,65 +55,54 @@ class RuboCop::Cop::Callbacksystems::ControllerTestResponseFirstAssertion < Rubo
   def on_block(node)
     return unless test_block?(node)
 
-    TestBlock.new(node).offenses.each { |offense_node, method_name| add_offense(offense_node, message: format(MESSAGE, method: method_name)) }
+    find_offenses(node).each { |offense_node, method_name| add_offense(offense_node, message: format(MESSAGE, method: method_name)) }
   end
 
+  alias on_numblock on_block
+  alias on_itblock on_block
+
   private
-    class TestBlock
-      attr_reader :node
+    def find_offenses(node)
+      return [] unless node.body
 
-      def initialize(node)
-        @node = node
-      end
+      statements = top_level_statements(node)
+      statements.each_index.filter_map { offense_at(statements, it) }
+    end
 
-      def offenses
-        return [] unless node.body
+    def top_level_statements(node)
+      node.body.type?(:begin, :kwbegin) ? node.body.children.to_a : [ node.body ]
+    end
 
-        top_level_statements.each_index.filter_map { |i| offense_at(i) }
-      end
+    def offense_at(statements, index)
+      return unless http_request_statement?(statements[index])
 
-      private
-        def top_level_statements
-          @top_level_statements ||= begin
-            return [ node.body ] unless node.body.begin_type? || node.body.kwbegin_type?
+      first_assertion = statements[(index + 1)..].find { assertion?(it) && !side_effect_assertion?(it) }
+      [ first_assertion, first_assertion.method_name ] if first_assertion && !response_assertion?(first_assertion)
+    end
 
-            node.body.children.to_a
-          end
-        end
+    def http_request_statement?(statement)
+      direct_http_request?(statement) || contains_http_request_in_block?(statement)
+    end
 
-        def offense_at(index)
-          return unless http_request_statement?(top_level_statements[index])
+    def direct_http_request?(statement)
+      statement.send_type? && http_request?(statement)
+    end
 
-          first_assertion = top_level_statements[(index + 1)..].find { |s| assertion?(s) && !side_effect_assertion?(s) }
-          [ first_assertion, first_assertion.method_name ] if first_assertion && !response_assertion?(first_assertion)
-        end
+    def contains_http_request_in_block?(statement)
+      return false unless any_block_type?(statement)
 
-        def http_request_statement?(statement)
-          direct_http_request?(statement) || contains_http_request_in_block?(statement)
-        end
+      statement.body&.each_node(:send)&.any? { http_request?(it) }
+    end
 
-        def direct_http_request?(statement)
-          statement.send_type? && statement.receiver.nil? && HTTP_METHODS.include?(statement.method_name)
-        end
+    def assertion?(statement)
+      bare_send?(statement) && statement.method_name.to_s.start_with?("assert", "refute")
+    end
 
-        def contains_http_request_in_block?(statement)
-          return false unless statement.block_type?
+    def side_effect_assertion?(statement)
+      bare_send?(statement) && SIDE_EFFECT_ASSERTIONS.include?(statement.method_name)
+    end
 
-          statement.body&.each_node(:send)&.any? { |send_node| send_node.receiver.nil? && HTTP_METHODS.include?(send_node.method_name) }
-        end
-
-        def assertion?(statement)
-          return false unless statement.send_type? && statement.receiver.nil?
-
-          statement.method_name.to_s.start_with?("assert", "refute")
-        end
-
-        def response_assertion?(statement)
-          statement.send_type? && statement.receiver.nil? && RESPONSE_ASSERTIONS.include?(statement.method_name)
-        end
-
-        def side_effect_assertion?(statement)
-          statement.send_type? && statement.receiver.nil? && SIDE_EFFECT_ASSERTIONS.include?(statement.method_name)
-        end
+    def bare_send?(statement)
+      statement.send_type? && statement.receiver.nil?
     end
 end

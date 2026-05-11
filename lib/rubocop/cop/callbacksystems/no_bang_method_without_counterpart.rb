@@ -21,48 +21,22 @@
 #     # ...
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoBangMethodWithoutCounterpart < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoBangMethodWithoutCounterpart < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<method>s` has no non-bang counterpart. Only use `!` when a version without `!` exists."
 
   def on_class(node)
     return unless node.body
 
-    methods = collect_method_names(node.body)
-    methods.select { |name| name.to_s.end_with?("!") }.each do |bang_method|
-      next if methods.include?(bang_method.to_s.chomp("!").to_sym)
+    methods = direct_method_nodes(node.body)
+    names = methods.to_set(&:method_name)
 
-      find_method_node(bang_method, node.body)&.then { |found| add_offense(found, message: format(MESSAGE, method: bang_method)) }
+    names.select { it.to_s.end_with?("!") }.each do |bang_method|
+      next if names.include?(bang_method.to_s.chomp("!").to_sym)
+
+      method_node = methods.find { it.method?(bang_method) }
+      add_offense(method_node, message: format(MESSAGE, method: bang_method)) if method_node
     end
   end
 
   alias on_module on_class
-
-  private
-    def collect_method_names(target_node, names = Set.new)
-      return names unless target_node
-
-      names.tap do
-        case target_node.type
-        when :def, :defs
-          names << target_node.method_name
-        when :begin, :kwbegin
-          target_node.children.each { |child| collect_method_names(child, names) }
-        when :sclass
-          collect_method_names(target_node.body, names) if target_node.body
-        end
-      end
-    end
-
-    def find_method_node(method_name, target_node)
-      return unless target_node
-
-      case target_node.type
-      when :def, :defs
-        target_node if target_node.method_name == method_name
-      when :begin, :kwbegin
-        target_node.children.lazy.filter_map { |child| find_method_node(method_name, child) }.first
-      when :sclass
-        find_method_node(method_name, target_node.body)
-      end
-    end
 end

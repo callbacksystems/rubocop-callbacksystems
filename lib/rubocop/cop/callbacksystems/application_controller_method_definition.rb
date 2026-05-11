@@ -31,7 +31,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::ApplicationControllerMethodDefinition < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::ApplicationControllerMethodDefinition < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Don't define methods in ApplicationController. Extract to a concern and include it."
 
   def on_def(node)

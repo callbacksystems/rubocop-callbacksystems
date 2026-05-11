@@ -40,7 +40,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Memoization should be the entire method body. Extract other statements to separate methods."
 
   def on_def(node)
@@ -58,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Base
       end
 
       def memoization_node
-        body&.each_node(:or_asgn)&.find { |n| n.children.first.ivasgn_type? }
+        body&.each_node(:or_asgn)&.find { ivar_memoization?(it) }
       end
 
       def memoization_is_entire_body?
@@ -66,21 +66,24 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Base
       end
 
       private
+        def ivar_memoization?(node)
+          node&.or_asgn_type? && node.children.first.ivasgn_type?
+        end
+
         def simple_memoization?
-          body&.or_asgn_type? && body.children.first.ivasgn_type?
+          ivar_memoization?(body)
         end
 
         def multiple_memoizations?
-          body&.begin_type? && body.children.all? { |child| child.or_asgn_type? && child.children.first.ivasgn_type? }
+          body&.begin_type? && body.children.all? { ivar_memoization?(it) }
         end
 
         def conditional_memoization?
-          body&.if_type? && body.children.second&.or_asgn_type? && body.children.second.children.first.ivasgn_type?
+          body&.if_type? && ivar_memoization?(body.children.second)
         end
 
         def memoization_with_rescue?
-          rescue_node = rescue_node_from_body
-          rescue_node && rescue_body_is_memoization?(rescue_node)
+          ivar_memoization?(rescue_node_from_body&.children&.first)
         end
 
         def rescue_node_from_body
@@ -89,11 +92,6 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Base
           elsif body&.kwbegin_type? && body.children.first&.rescue_type?
             body.children.first
           end
-        end
-
-        def rescue_body_is_memoization?(rescue_node)
-          rescue_body = rescue_node.children.first
-          rescue_body&.or_asgn_type? && rescue_body.children.first.ivasgn_type?
         end
     end
 end

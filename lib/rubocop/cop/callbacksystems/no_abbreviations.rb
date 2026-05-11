@@ -21,7 +21,7 @@
 #   # good
 #   USER_ATTRIBUTES = %i[name email]
 #
-class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Callbacksystems::Base
   # Common abbreviations mapped to their full forms
   # Excluded: params (Rails), args (Ruby), id/ids (standard),
   #           config/env/info/lib/max/min/proc/temp/sync (common and clear)
@@ -36,7 +36,6 @@ class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Base
     "docs" => "documents",
     "err" => "error",
     "errs" => "errors",
-    "exec" => "execute",
     "expr" => "expression",
     "func" => "function",
     "funcs" => "functions",
@@ -118,6 +117,6 @@ class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Base
     end
 
     def found_abbreviations(name)
-      name.split("_").select { |part| ABBREVIATIONS.key?(part) }
+      name.split("_").select { ABBREVIATIONS.key?(it) }
     end
 end

@@ -97,12 +97,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
         end
 
         def find_send_node(node)
-          node.each_child_node do |child|
-            return child if child.send_type?
-
-            found = find_send_node(child)
-            return found if found
-          end
+          node.each_descendant(:send).first
         end
     end
 end

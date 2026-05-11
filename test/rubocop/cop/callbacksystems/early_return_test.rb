@@ -141,13 +141,115 @@ class EarlyReturnTest < CopTestCase
     RUBY
   end
 
-  test "does not check returns inside blocks" do
+  test "allows next guard on first line of block" do
     assert_no_offense(<<~RUBY)
       def process(items)
         return if items.empty?
         items.each do |item|
           next if item.invalid?
           process_item(item)
+        end
+      end
+    RUBY
+  end
+
+  test "allows break guard on first line of block" do
+    assert_no_offense(<<~RUBY)
+      def process(items)
+        items.each do |item|
+          break if item.last?
+          process_item(item)
+        end
+      end
+    RUBY
+  end
+
+  test "registers offense for next in middle of block" do
+    assert_offense(<<~RUBY)
+      items.each do |item|
+        process(item)
+        next if item.done?
+        finalize(item)
+      end
+    RUBY
+  end
+
+  test "registers offense for break in middle of block" do
+    assert_offense(<<~RUBY)
+      items.each do |item|
+        process(item)
+        break if item.last?
+      end
+    RUBY
+  end
+
+  test "registers offense for multiple next in block" do
+    assert_offense(<<~RUBY)
+      items.each do |item|
+        next if item.nil?
+        next if item.invalid?
+        process(item)
+      end
+    RUBY
+  end
+
+  test "registers offense for return inside a block" do
+    assert_offense(<<~RUBY)
+      def process(items)
+        items.reduce(0) do |count, item|
+          return :done if item.finished?
+          count + 1
+        end
+      end
+    RUBY
+  end
+
+  test "allows return inside a lambda" do
+    assert_no_offense(<<~RUBY)
+      def process
+        validator = lambda { |x| return false unless x.valid?; true }
+        validator.call(input)
+      end
+    RUBY
+  end
+
+  test "next in nested block does not affect outer block" do
+    assert_no_offense(<<~RUBY)
+      items.each do |item|
+        item.parts.each do |part|
+          next if part.nil?
+          process(part)
+        end
+      end
+    RUBY
+  end
+
+  test "allows break anywhere inside loop do block" do
+    assert_no_offense(<<~RUBY)
+      loop do
+        data = fetch
+        break if data.nil?
+        process(data)
+      end
+    RUBY
+  end
+
+  test "allows break anywhere inside method named loop with receiver" do
+    assert_no_offense(<<~RUBY)
+      ssh.loop do |channel|
+        channel.read
+        break unless channel.active?
+        channel.process
+      end
+    RUBY
+  end
+
+  test "allows return inside a loop block of a method" do
+    assert_no_offense(<<~RUBY)
+      def find_active
+        loop do
+          item = next_item
+          return item if item.active?
         end
       end
     RUBY

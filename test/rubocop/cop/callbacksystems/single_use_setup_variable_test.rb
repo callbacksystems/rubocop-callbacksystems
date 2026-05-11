@@ -77,8 +77,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
     assert_equal 2, offenses.size
   end
 
-  test "no offense for variable used in zero tests" do
-    assert_no_offense <<~RUBY, file: "test/models/order_test.rb"
+  test "registers offense for variable used in zero tests" do
+    offenses = assert_offense <<~RUBY, file: "test/models/order_test.rb"
       class OrderTest < ActiveSupport::TestCase
         setup do
           @order = orders(:one)
@@ -89,6 +89,10 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
         end
       end
     RUBY
+
+    assert_equal 1, offenses.size
+    assert_includes offenses.first.message, "@order"
+    assert_includes offenses.first.message, "not used"
   end
 
   test "handles multiple setup blocks" do
@@ -113,5 +117,58 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
     RUBY
 
     assert_equal 2, offenses.size
+  end
+
+  test "does not flag ivar used via a helper method called from tests" do
+    assert_no_offense <<~RUBY, file: "test/models/user_test.rb"
+      class UserTest < ActiveSupport::TestCase
+        setup do
+          @user = users(:john)
+        end
+
+        test "is admin" do
+          assert_admin
+        end
+
+        test "is active" do
+          assert_admin
+        end
+
+        private
+          def assert_admin
+            assert @user.admin?
+          end
+      end
+    RUBY
+  end
+
+  test "skips abstract test base classes that directly inherit Rails test bases" do
+    assert_no_offense <<~RUBY, file: "test/integration_test.rb"
+      class IntegrationTest < ActionDispatch::IntegrationTest
+        setup do
+          @user = users(:admin)
+        end
+      end
+    RUBY
+  end
+
+  test "does not flag ivar used elsewhere in the same setup block" do
+    assert_no_offense <<~RUBY, file: "test/cli_test.rb"
+      class CliTest < ActiveSupport::TestCase
+        setup do
+          @secrets_dir = Dir.mktmpdir
+          PGBOX.stubs(:secrets_path).returns(File.join(@secrets_dir, ".pgbox/secrets"))
+          FileUtils.mkdir_p(File.join(@secrets_dir, ".pgbox"))
+        end
+
+        teardown do
+          FileUtils.rm_rf(@secrets_dir)
+        end
+
+        test "something" do
+          assert true
+        end
+      end
+    RUBY
   end
 end

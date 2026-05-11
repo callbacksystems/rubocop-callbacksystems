@@ -30,8 +30,8 @@ class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClumpTest < CopTestCas
     assert_includes offenses.first.message, "account, user"
   end
 
-  test "allows 2 private methods sharing same parameters" do
-    assert_no_offense <<~RUBY
+  test "registers offense when 2 private methods share 2 parameters" do
+    offenses = assert_offense <<~RUBY
       class Order
         private
           def validate(user, account)
@@ -43,6 +43,8 @@ class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClumpTest < CopTestCas
           end
       end
     RUBY
+    assert_includes offenses.first.message, "validate, execute"
+    assert_includes offenses.first.message, "account, user"
   end
 
   test "allows 3 private methods sharing only 1 parameter" do

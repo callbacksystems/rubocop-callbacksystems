@@ -30,61 +30,27 @@
 #       end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<method>s` in private nested class `%<class>s` is never called from outside. Make it private."
 
   def on_class(node)
-    NestedClassAnalysis.new(node).unused_public_methods.each do |method_node, klass_name|
-      add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: klass_name))
+    private_nested_classes(node).each do |nested_class|
+      report_visibility_violations(node, nested_class)
     end
   end
 
   alias on_module on_class
 
   private
-    class NestedClassAnalysis
-      attr_reader :node, :private_nested_classes
+    def report_visibility_violations(node, nested_class)
+      class_name = nested_class.identifier.short_name
+      external_calls = ExternalCallCollector.new(node, nested_class, class_name).collect
 
-      def initialize(node)
-        @node = node
-        @private_nested_classes = RuboCop::Callbacksystems::Helpers.private_nested_classes(node)
+      public_methods_in(nested_class).each do |method_node|
+        next if external_calls.include?(method_node.method_name)
+
+        add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: class_name))
       end
-
-      def unused_public_methods
-        private_nested_classes.flat_map do |nested_class|
-          NestedClassMethods.new(nested_class, node).unused_public_methods
-        end
-      end
-    end
-
-    class NestedClassMethods
-      include RuboCop::Callbacksystems::Helpers
-
-      def initialize(nested_class, parent_node)
-        @nested_class = nested_class
-        @parent_node = parent_node
-        @class_name = nested_class.identifier.short_name
-      end
-
-      def unused_public_methods
-        external = ExternalCallCollector.new(parent_node, nested_class, class_name).collect
-        public_methods.filter_map do |method_node|
-          [ method_node, class_name ] if external.exclude?(method_node.method_name)
-        end
-      end
-
-      private
-        attr_reader :nested_class, :parent_node, :class_name
-
-        def public_methods
-          return [] unless nested_class.body
-
-          in_private = false
-          nested_class.body.each_child_node.select do |child|
-            in_private = true if private_declaration?(child)
-            child.def_type? && !in_private
-          end
-        end
     end
 
     class ExternalCallCollector
@@ -95,27 +61,34 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
       end
 
       def collect
-        Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
+        @collect ||= Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
       end
 
       private
         attr_reader :parent_node, :nested_class, :class_name
 
         def direct_calls
-          parent_node.body.each_node(:send).filter_map do |send_node|
-            send_node.method_name if DirectCall.new(send_node, nested_class, class_name).match?
+          external_sends.filter_map do |send_node|
+            send_node.method_name if instance_method_call?(send_node.receiver)
           end
         end
 
         def variable_calls
-          parent_node.body.each_node(:lvasgn).flat_map do |assignment|
-            VariableTracker.new(assignment, class_name, nested_class, parent_node).calls_on_variable
+          parent_node.body.each_node(:lvasgn).flat_map { calls_on_assigned_variable(it) }
+        end
+
+        def calls_on_assigned_variable(assignment)
+          return [] unless instance_method_call?(assignment.children.second)
+
+          variable_name = assignment.children.first
+          external_sends.filter_map do |send_node|
+            send_node.method_name if call_on_variable?(send_node, variable_name)
           end
         end
 
         def block_pass_calls
           parent_node.body.each_node(:block_pass).filter_map do |node|
-            next if node.each_ancestor(:class).any?(nested_class)
+            next if inside_nested_class?(node)
 
             node.children.first.value if node.children.first&.sym_type?
           end
@@ -126,82 +99,23 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
 
           RuboCop::Callbacksystems::MacroReferencedMethods.new(nested_class.body).collect.to_a
         end
-    end
 
-    class DirectCall
-      def initialize(send_node, nested_class, class_name)
-        @send_node = send_node
-        @nested_class = nested_class
-        @class_name = class_name
-      end
-
-      def match?
-        !inside_nested_class? && call_to_new_instance?
-      end
-
-      private
-        attr_reader :send_node, :nested_class, :class_name
-
-        def inside_nested_class?
-          send_node.each_ancestor(:class).any?(nested_class)
+        def external_sends
+          @external_sends ||= parent_node.body.each_node(:send).reject { inside_nested_class?(it) }
         end
 
-        def call_to_new_instance?
-          send_node.receiver&.send_type? &&
-            send_node.receiver.method_name == :new &&
-            send_node.receiver.receiver&.const_type? &&
-            send_node.receiver.receiver.short_name == class_name
-        end
-    end
-
-    class VariableTracker
-      attr_reader :assignment, :class_name, :nested_class, :parent_node, :variable_name
-
-      def initialize(assignment, class_name, nested_class, parent_node)
-        @assignment = assignment
-        @class_name = class_name
-        @nested_class = nested_class
-        @parent_node = parent_node
-        @variable_name = assignment.children.first
-      end
-
-      def calls_on_variable
-        return [] unless assignment_creates_instance?
-
-        parent_node.body.each_node(:send).filter_map do |send_node|
-          send_node.method_name if VariableCall.new(send_node, variable_name, nested_class).match?
-        end
-      end
-
-      private
-        def assignment_creates_instance?
-          value = assignment.children.second
-          value&.send_type? &&
-            value.method_name == :new &&
-            value.receiver&.const_type? &&
-            value.receiver.short_name == class_name
-        end
-    end
-
-    class VariableCall
-      def initialize(send_node, variable_name, nested_class)
-        @send_node = send_node
-        @variable_name = variable_name
-        @nested_class = nested_class
-      end
-
-      def match?
-        !inside_nested_class? && call_on_tracked_variable?
-      end
-
-      private
-        attr_reader :send_node, :variable_name, :nested_class
-
-        def inside_nested_class?
-          send_node.each_ancestor(:class).any?(nested_class)
+        def inside_nested_class?(node)
+          node.each_ancestor(:class).any?(nested_class)
         end
 
-        def call_on_tracked_variable?
+        def instance_method_call?(node)
+          node&.send_type? &&
+            node.method?(:new) &&
+            node.receiver&.const_type? &&
+            node.receiver.short_name == class_name
+        end
+
+        def call_on_variable?(send_node, variable_name)
           send_node.receiver&.lvar_type? && send_node.receiver.children.first == variable_name
         end
     end

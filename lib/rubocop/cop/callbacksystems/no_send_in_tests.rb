@@ -20,7 +20,7 @@
 #     assert order.paid?
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoSendInTests < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoSendInTests < RuboCop::Cop::Callbacksystems::Base
   include RuboCop::Callbacksystems::TestCopHelpers
 
   MESSAGE = "Don't use `%<method>s` to test private methods. Test behavior through the public interface instead."
@@ -31,10 +31,12 @@ class RuboCop::Cop::Callbacksystems::NoSendInTests < RuboCop::Cop::Base
     return unless test_block?(node)
 
     node.body&.each_node(:send) do |send_node|
-      next if RESTRICTED_METHODS.exclude?(send_node.method_name)
-      next if send_node.receiver.nil?
+      next unless RESTRICTED_METHODS.include?(send_node.method_name) && send_node.receiver
 
       add_offense(send_node, message: format(MESSAGE, method: send_node.method_name))
     end
   end
+
+  alias on_numblock on_block
+  alias on_itblock on_block
 end

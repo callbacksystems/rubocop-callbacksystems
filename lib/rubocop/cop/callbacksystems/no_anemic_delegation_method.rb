@@ -22,9 +22,7 @@
 #     Validator.new(self).valid?
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<method>s` only delegates to `%<class>s.new(...).%<target>s`. Consider inlining or removing this method."
 
   def on_def(node)
@@ -60,15 +58,14 @@ class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Ba
 
         def receiver_is_new_instance?
           body.receiver&.send_type? &&
-            body.receiver.method_name == :new &&
+            body.receiver.method?(:new) &&
             body.receiver.receiver&.const_type?
         end
 
         def uses_method_params_only?
-          new_call_args = body.receiver.arguments.map(&:source)
-          method_params = node.arguments.map { |argument| argument.name.to_s }
-
-          new_call_args.all? { |argument| method_params.include?(argument) }
+          body.receiver.arguments.map(&:source).all? do |argument|
+            node.arguments.map { it.name.to_s }.include?(argument)
+          end
         end
     end
 end

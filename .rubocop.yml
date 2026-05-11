@@ -5,10 +5,8 @@ inherit_from: rubocop.yml
 require:
   - ./lib/rubocop-callbacksystems.rb
 
-AllCops:
-  Exclude:
-    - "tmp/**/*"
-    - "Gemfile"
+plugins:
+  - rubocop-internal_affairs
 
 Callbacksystems/PublicMethodsMustHaveTests:
   Exclude:

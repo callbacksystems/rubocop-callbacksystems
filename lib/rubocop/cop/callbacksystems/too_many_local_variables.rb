@@ -40,21 +40,19 @@
 #     config.verbose = true
 #   end
 #
-class RuboCop::Cop::Callbacksystems::TooManyLocalVariables < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::TooManyLocalVariables < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method has %<count>d local variable assignments (max %<max>d). " \
     "Extract methods instead of using local variables."
 
   def on_def(node)
-    count = node.body && assignment_count(node.body, :lvasgn)
-    add_offense(node, message: format(MESSAGE, count: count, max: max_assignments)) if count && count > max_assignments
+    count = assignment_count(node.body, :lvasgn)
+    add_offense(node, message: format(MESSAGE, count: count, max: max_assignments)) if count > max_assignments
   end
 
   alias on_defs on_def
 
   private
     def max_assignments
-      cop_config["MaxAssignments"] || 3
+      cop_config["MaxAssignments"]
     end
 end

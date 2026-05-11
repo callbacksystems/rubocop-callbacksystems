@@ -24,13 +24,12 @@
 #     def save(contact); end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Parameters `%<params>s` appear together in %<count>d methods. Consider extracting to a parameter object."
 
   def on_class(node)
     ParameterClumps.new(node, cop_config).detect.each do |param_set, method_nodes|
-      message = format(MESSAGE, params: param_set.join(", "), count: method_nodes.size)
-      add_offense(method_nodes.first.loc.name, message: message)
+      add_offense(method_nodes.first.loc.name, message: format(MESSAGE, params: param_set.join(", "), count: method_nodes.size))
     end
   end
 
@@ -38,6 +37,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
 
   private
     class ParameterClumps
+      include RuboCop::Callbacksystems::Helpers
+
       attr_reader :node, :cop_config
 
       def initialize(node, cop_config)
@@ -46,18 +47,31 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
       end
 
       def detect
-        result = Hash.new { |h, k| h[k] = [] }
-        methods.combination(2).each { |pair| record_common_params(result, pair) }
+        result = Hash.new { |hash, key| hash[key] = [] }
+        methods_with_params.combination(2).each { record_common_params(result, it) }
         result.select { |_, nodes| nodes.size >= min_methods }
       end
 
       private
-        def methods
+        def methods_with_params
           return [] unless node.body
 
-          collect_methods(node.body).filter_map do |child|
-            params = param_names_for(child)
-            [ child, params ] if params.size >= min_params
+          method_nodes.filter_map do |method_node|
+            params = parameter_names(method_node)
+            [ method_node, params ] if params.size >= min_params
+          end
+        end
+
+        def method_nodes(current = node.body)
+          return [] unless current
+
+          case current.type
+          when :begin
+            current.children.flat_map { method_nodes(it) }
+          when :def
+            current.arguments.size >= min_params ? [ current ] : []
+          else
+            []
           end
         end
 
@@ -70,31 +84,12 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Base
           end
         end
 
-        def collect_methods(current)
-          return [] unless current
-
-          case current.type
-          when :begin
-            current.children.flat_map { |child| collect_methods(child) }
-          when :def
-            current.arguments.size >= min_params ? [ current ] : []
-          else
-            []
-          end
-        end
-
-        def param_names_for(method_node)
-          method_node.arguments.children
-            .select { |arg| arg.arg_type? || arg.optarg_type? }
-            .map { |arg| arg.children.first.to_s }
-        end
-
         def min_params
-          cop_config["MinParams"] || 3
+          cop_config["MinParams"]
         end
 
         def min_methods
-          cop_config["MinMethods"] || 3
+          cop_config["MinMethods"]
         end
     end
 end

@@ -31,7 +31,7 @@
 #   # or with filter_map
 #   results = items.filter_map { it.name if it.active? }
 #
-class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Prefer declarative collection methods (map, select, filter_map) over imperative `each` with `<<`."
 
   def on_block(node)
@@ -39,6 +39,7 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
   end
 
   alias on_numblock on_block
+  alias on_itblock on_block
 
   private
     class ImperativeEachBlock
@@ -54,7 +55,7 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
 
       private
         def each_block?
-          node.send_node.method?(:each) && node.send_node.receiver
+          node.method?(:each) && node.receiver
         end
 
         def imperative_pattern?
@@ -68,8 +69,7 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
 
         def find_preceding_assignment
           siblings = node.parent.children
-          block_index = siblings.index(node)
-          siblings[0...block_index].rfind { |sibling| empty_assignment?(sibling) }
+          siblings[0...siblings.index(node)].rfind { empty_assignment?(it) }
         end
 
         def empty_assignment?(sibling)
@@ -82,9 +82,9 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
           when :send
             push_to_variable?(target_node, variable_name)
           when :if, :case
-            target_node.each_child_node.any? { |child| contains_push_to?(child, variable_name) }
+            target_node.each_child_node.any? { contains_push_to?(it, variable_name) }
           when :begin
-            target_node.children.any? { |child| contains_push_to?(child, variable_name) }
+            target_node.children.any? { contains_push_to?(it, variable_name) }
           else
             false
           end

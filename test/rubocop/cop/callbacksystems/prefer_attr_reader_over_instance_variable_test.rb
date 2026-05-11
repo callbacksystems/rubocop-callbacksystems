@@ -144,7 +144,7 @@ class PreferAttrReaderOverInstanceVariableTest < CopTestCase
 
     # Should flag ALL direct ivar usages: @object, @default, @card_id, and @pay_customer
     # Even though pay_customer has attr_reader, using @pay_customer directly is still wrong
-    ivar_names = offenses.map { |o| o.message[/`(\w+)`/, 1] }
+    ivar_names = offenses.map { it.message[/`(\w+)`/, 1] }
 
     assert_includes ivar_names, "object"
     assert_includes ivar_names, "default"
@@ -190,10 +190,42 @@ class PreferAttrReaderOverInstanceVariableTest < CopTestCase
     RUBY
 
     # Should flag @outer_var and @inner_one_var but NOT @inner_two_var
-    ivar_names = offenses.map { |o| o.message[/`(\w+)`/, 1] }
+    ivar_names = offenses.map { it.message[/`(\w+)`/, 1] }
 
     assert_includes ivar_names, "outer_var"
     assert_includes ivar_names, "inner_one_var"
     assert_not_includes ivar_names, "inner_two_var"
+  end
+
+  test "ignores initialize defined inside a nested module" do
+    assert_no_offense <<~RUBY
+      class Outer
+        module Inner
+          def initialize(node)
+            @node = node
+          end
+        end
+
+        def process
+          @node.foo
+        end
+      end
+    RUBY
+  end
+
+  test "does not flag ivars used inside a nested module" do
+    assert_no_offense <<~RUBY
+      class Outer
+        def initialize(value)
+          @value = value
+        end
+
+        module Helper
+          def use
+            @value
+          end
+        end
+      end
+    RUBY
   end
 end

@@ -43,7 +43,7 @@
 #   formatted_date = date.strftime("%Y-%m-%d")
 #   active_users = users.select(&:active?)
 #
-class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Callbacksystems::Base
   DELEGATE_MESSAGE = "Variable `%<var>s` mirrors method call. Use `delegate :%<var>s, to: :%<receiver>s` or extract a method."
   FINDER_MESSAGE = "Variable `%<var>s` assigned from finder. Consider extracting a `%<var>s` method."
 
@@ -63,9 +63,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
       def offense
         return if skip_assignment?
 
-        variable_name = node.children.first
-        value_node = node.children.second
-        Value.new(node, variable_name, value_node).offense
+        Value.new(node, node.children.first, node.children.second).offense
       end
 
       private
@@ -74,7 +72,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
         end
 
         def inside_conditional?
-          node.parent&.type == :if && node.parent.condition == node
+          node.parent&.if_type? && node.parent.condition == node
         end
     end
 
@@ -89,8 +87,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
 
       def offense
         if same_name_with_simple_receiver?
-          receiver_name = Receiver.new(value_node).name_for
-          format(DELEGATE_MESSAGE, var: variable_name, receiver: receiver_name)
+          format(DELEGATE_MESSAGE, var: variable_name, receiver: Receiver.new(value_node).receiver_name)
         elsif FinderPattern.new(variable_name, value_node).matches?
           format(FINDER_MESSAGE, var: variable_name)
         end
@@ -98,7 +95,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
 
       private
         def same_name_with_simple_receiver?
-          value_node.method_name == variable_name && delegatable_receiver?
+          value_node.method?(variable_name) && delegatable_receiver?
         end
 
         def delegatable_receiver?
@@ -110,8 +107,8 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
         end
 
         def parameter?(receiver_variable_name)
-          node.each_ancestor(:def, :defs, :block).any? do |ancestor|
-            ancestor.arguments.any? { |arg| arg.name == receiver_variable_name }
+          node.each_ancestor(:any_def, :block).any? do |ancestor|
+            ancestor.arguments.any? { it.name == receiver_variable_name }
           end
         end
     end
@@ -127,7 +124,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ba
         value_node.receiver.send_type? && value_node.receiver.receiver
       end
 
-      def name_for
+      def receiver_name
         case value_node.receiver.type
         when :send
           value_node.receiver.method_name

@@ -1,73 +1,72 @@
-# Collects public method names from an AST node (class or module body).
-# Traverses through blocks (class_methods, included, etc.), class << self,
-# and respects visibility modifiers (private/protected).
-#
-# @example
-#   MethodCollector.new(class_node_ast).collect  # => [:name, :email, :admin?]
-#
 class RuboCop::Callbacksystems::MethodCollector
-  attr_reader :ast, :methods
+  include RuboCop::Callbacksystems::Helpers
 
   def initialize(ast)
     @ast = ast
-    @methods = []
+    @results = []
   end
 
   def collect
-    traverse(ast, top_level: true, public_section: true)
-    methods
+    @top_level = true
+    @public_section = true
+    traverse(ast)
+    results
   end
 
   private
-    def traverse(node, top_level:, public_section:)
+    attr_reader :ast, :results
+
+    def traverse(node)
       return unless node
 
-      add_method_name(node, public_section) || traverse_children(node, top_level: top_level, public_section: public_section)
+      add_method(node) || traverse_children(node)
     end
 
-    def add_method_name(node, public_section)
-      return unless public_method?(node, public_section)
+    def add_method(node)
+      return unless @public_section
 
-      methods << method_name_for(node)
-    end
-
-    def public_method?(node, public_section)
-      public_section && (method_definition?(node) || scope_definition?(node))
-    end
-
-    def method_name_for(node)
-      scope_definition?(node) ? node.first_argument.value : node.method_name
-    end
-
-    def method_definition?(node)
-      %i[def defs].include?(node.type)
+      if node.type?(:def, :defs)
+        results << [ node, node.method_name ]
+      elsif scope_definition?(node)
+        results << [ node, node.first_argument.value ]
+      end
     end
 
     def scope_definition?(node)
-      node.type == :send && node.method_name == :scope && node.first_argument&.sym_type?
+      node.send_type? && node.method?(:scope) && node.first_argument&.sym_type?
     end
 
-    def traverse_children(node, top_level:, public_section:)
+    def traverse_children(node)
       case node.type
       when :class, :module
-        traverse(node.body, top_level: false, public_section: true) if top_level
+        in_scope { traverse(node.body) } if @top_level
       when :begin
-        traverse_begin(node, top_level: top_level, public_section: public_section)
+        traverse_begin(node)
       when :sclass, :block
-        traverse(node.body, top_level: false, public_section: true)
+        in_scope { traverse(node.body) }
       end
     end
 
-    def traverse_begin(node, top_level:, public_section:)
-      current_public = public_section
+    def traverse_begin(node)
       node.children.each do |child|
-        current_public = false if visibility_modifier?(child)
-        child_is_class_or_module = %i[class module].include?(child.type)
-        traverse(child, top_level: top_level && child_is_class_or_module, public_section: current_public)
+        @public_section = false if leaves_public_section?(child)
+        saved_top_level = @top_level
+        @top_level &&= child.type?(:class, :module)
+        traverse(child)
+        @top_level = saved_top_level
       end
     end
 
-    def visibility_modifier?(node)
-      node.type == :send && node.receiver.nil? && %i[private protected].include?(node.method_name) && node.arguments.empty?
+    def in_scope
+      saved_top_level, saved_public_section = @top_level, @public_section
+      @top_level = false
+      @public_section = true
+      yield
+    ensure
+      @top_level, @public_section = saved_top_level, saved_public_section
+    end
+
+    def leaves_public_section?(node)
+      %i[private protected].include?(visibility_modifier(node))
     end
 end

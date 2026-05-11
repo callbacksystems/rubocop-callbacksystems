@@ -1,14 +1,3 @@
-# Maps between source file paths and test file paths.
-# Supports app/ always, and lib/ only in gem projects (detected by .gemspec).
-#
-# @example
-#   TestPathMapping.new("/project/app/models/user.rb").test_path
-#   # => "/project/test/models/user_test.rb"
-#
-#   # In a gem project (has .gemspec):
-#   TestPathMapping.new("/gem/lib/payment_gateway.rb").test_path
-#   # => "/gem/test/payment_gateway_test.rb"
-#
 class RuboCop::Callbacksystems::TestPathMapping
   attr_reader :path
 
@@ -41,9 +30,31 @@ class RuboCop::Callbacksystems::TestPathMapping
     end
   end
 
+  def find_test_file
+    @find_test_file ||= candidate_test_paths.find { File.exist?(it) }
+  end
+
   private
     def gem_project?
-      root = path.split("/lib/").first
-      Dir.glob("#{root}/*.gemspec").any?
+      Dir.glob("#{path.split("/lib/").first}/*.gemspec").any?
+    end
+
+    def candidate_test_paths
+      lib_test_paths + app_test_paths
+    end
+
+    def lib_test_paths
+      return [] unless path.match?(%r{(^|/)lib/})
+
+      [
+        path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/lib/#{Regexp.last_match(2)}_test.rb" },
+        path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
+      ]
+    end
+
+    def app_test_paths
+      return [] unless path.match?(%r{(^|/)app/})
+
+      [ path.sub(%r{(^|/)app/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" } ]
     end
 end

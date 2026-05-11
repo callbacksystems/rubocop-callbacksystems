@@ -74,4 +74,23 @@ class RuboCop::Callbacksystems::TestPathMappingTest < ActiveSupport::TestCase
 
     assert_nil mapping.test_path
   end
+
+  test "find_test_file returns existing test file for app path" do
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p("#{dir}/test/models")
+      File.write("#{dir}/test/models/user_test.rb", "class UserTest; end")
+
+      mapping = RuboCop::Callbacksystems::TestPathMapping.new("#{dir}/app/models/user.rb")
+
+      assert_equal "#{dir}/test/models/user_test.rb", mapping.find_test_file
+    end
+  end
+
+  test "find_test_file returns nil when no test file exists" do
+    Dir.mktmpdir do |dir|
+      mapping = RuboCop::Callbacksystems::TestPathMapping.new("#{dir}/app/models/user.rb")
+
+      assert_nil mapping.find_test_file
+    end
+  end
 end

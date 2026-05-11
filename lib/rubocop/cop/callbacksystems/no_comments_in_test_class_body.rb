@@ -28,7 +28,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoCommentsInTestClassBody < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoCommentsInTestClassBody < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Avoid comments in test class body. Tests should be self-documenting through descriptive names."
 
   def on_new_investigation
@@ -51,7 +51,7 @@ class RuboCop::Cop::Callbacksystems::NoCommentsInTestClassBody < RuboCop::Cop::B
       end
 
       def in_class_body?
-        enclosing_class && !inside_block_or_method? && class_has_content?
+        enclosing_class && class_has_content? && !inside_block_or_method?
       end
 
       private
@@ -63,14 +63,16 @@ class RuboCop::Cop::Callbacksystems::NoCommentsInTestClassBody < RuboCop::Cop::B
           end
         end
 
+        def block_or_method_nodes
+          @block_or_method_nodes ||= enclosing_class.each_node(:any_block, :any_def).to_a
+        end
+
         def inside_block_or_method?
-          enclosing_class.each_node(:block, :def, :defs).any? do |node|
-            node.source_range.contains?(comment.source_range)
-          end
+          block_or_method_nodes.any? { it.source_range.contains?(comment.source_range) }
         end
 
         def class_has_content?
-          enclosing_class.each_node(:block, :def, :defs).any?
+          block_or_method_nodes.any?
         end
     end
 end

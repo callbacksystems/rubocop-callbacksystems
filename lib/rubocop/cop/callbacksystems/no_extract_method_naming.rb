@@ -4,32 +4,24 @@
 # @example
 #   # bad - imperative "extract" naming
 #   def extract_job_class_name(node)
-#     # ...
 #   end
 #
-#   # good - descriptive with "_for" suffix
+#   # good - pick the suffix that fits the context
 #   def job_class_name_for(node)
-#     # ...
-#   end
+#   def job_class_name_from(node)
+#   def job_class_name_in(node)
+#   def job_class_name_at(node)
+#   def job_class_name # sometimes no suffix is needed
 #
-#   # bad
-#   def extract_user_id(params)
-#     # ...
-#   end
-#
-#   # good
-#   def user_id_from(params)
-#     # ...
-#   end
-#
-class RuboCop::Cop::Callbacksystems::NoExtractMethodNaming < RuboCop::Cop::Base
-  MESSAGE = "Avoid `extract_*` method names. Use `%<suggestion>s` instead."
+class RuboCop::Cop::Callbacksystems::NoExtractMethodNaming < RuboCop::Cop::Callbacksystems::Base
+  MESSAGE = "Avoid `extract_*` method names. Consider `%<name>s_for`, `%<name>s_from`, `%<name>s_in`, `%<name>s_at`, or just `%<name>s`."
   EXTRACT_PREFIX = /\Aextract_(.+)\z/
 
   def on_def(node)
     EXTRACT_PREFIX.match(node.method_name.to_s) do |match_data|
-      suggestion = "#{match_data.captures.first}_for"
-      add_offense(node.loc.name, message: format(MESSAGE, suggestion: suggestion))
+      next if match_data.captures.first.empty?
+
+      add_offense(node.loc.name, message: format(MESSAGE, name: match_data.captures.first))
     end
   end
 

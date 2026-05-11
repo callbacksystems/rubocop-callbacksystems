@@ -15,32 +15,33 @@
 #     @account = accounts(:callback)
 #   end
 #
-class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Use `%<method>s { ... }` for single-line blocks instead of `do ... end`."
 
-  # Matches: setup do ... end or teardown do ... end
+  # @!method setup_or_teardown_block?(node)
   def_node_matcher :setup_or_teardown_block?, <<~PATTERN
     (block (send nil? ${:setup :teardown}) ...)
   PATTERN
 
   def on_block(node)
     setup_or_teardown_block?(node) do |method_name|
-      next if node.braces?
-      next unless single_line_body?(node)
+      next if node.braces? || !single_line_body?(node)
 
       add_offense(node, message: format(MESSAGE, method: method_name)) do |corrector|
-        body_source = node.body.source.strip
-        corrector.replace(node, "#{method_name} { #{body_source} }")
+        corrector.replace(node, "#{method_name} { #{node.body.source.strip} }")
       end
     end
   end
+
+  alias on_numblock on_block
+  alias on_itblock on_block
 
   private
     def single_line_body?(node)
       node.body &&
         !(node.body.begin_type? && node.body.children.many?) &&
-        node.body.first_line == node.body.last_line
+        node.body.single_line?
     end
 end

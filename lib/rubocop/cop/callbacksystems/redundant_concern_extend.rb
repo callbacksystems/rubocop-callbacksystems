@@ -41,7 +41,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   CONCERN_METHODS = %i[included class_methods prepended].freeze
@@ -51,18 +51,10 @@ class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Base
   def on_module(node)
     concern = ConcernModule.new(node)
     extend_node = concern.find_concern_extend
-    add_offense(extend_node, message: MESSAGE) { |corrector| corrector.remove(extend_line_range(extend_node)) } if extend_node && !concern.uses_concern_features?
+    add_offense(extend_node, message: MESSAGE) { it.remove(line_removal_range(extend_node)) } if extend_node && !concern.uses_concern_features?
   end
 
   private
-    def extend_line_range(extend_node)
-      range = extend_node.source_range
-      Parser::Source::Range.new \
-        range.source_buffer,
-        range.begin_pos - range.column,
-        range.source_buffer.source[range.end_pos] == "\n" ? range.end_pos + 1 : range.end_pos
-    end
-
     class ConcernModule
       attr_reader :node
 
@@ -74,13 +66,13 @@ class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Base
         return unless node.body
 
         body = node.body.begin_type? ? node.body.children : [ node.body ]
-        body.find { |n| concern_extend?(n) }
+        body.find { concern_extend?(it) }
       end
 
       def uses_concern_features?
         return false unless node.body
 
-        node.body.each_descendant(:block).any? do |block|
+        node.body.each_descendant(:any_block).any? do |block|
           send_node = block.send_node
           send_node.receiver.nil? && CONCERN_METHODS.include?(send_node.method_name)
         end
@@ -88,8 +80,8 @@ class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Base
 
       private
         def concern_extend?(target_node)
-          target_node.send_type? && target_node.method_name == :extend &&
-            target_node.arguments.any? { |arg| arg.const_type? && [ "ActiveSupport::Concern", "Concern" ].include?(arg.source) }
+          target_node.send_type? && target_node.method?(:extend) &&
+            target_node.arguments.any? { it.const_type? && [ "ActiveSupport::Concern", "Concern" ].include?(it.source) }
         end
     end
 end

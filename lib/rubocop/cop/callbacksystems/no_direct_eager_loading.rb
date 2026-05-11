@@ -21,22 +21,22 @@
 #     scope :with_posts, -> { includes(:posts) }
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoDirectEagerLoading < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::NoDirectEagerLoading < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Don't use `%<method>s` directly in controllers. Define a scope in the model instead."
 
   def on_send(node)
     add_offense(node, message: format(MESSAGE, method: node.method_name)) if offense?(node)
   end
 
+  alias on_csend on_send
+
   private
     def offense?(node)
-      in_controller? && RuboCop::Callbacksystems::Helpers::EAGER_LOADING_METHODS.include?(node.method_name)
+      in_controller? && EAGER_LOADING_METHODS.include?(node.method_name)
     end
 
     def in_controller?
       path = processed_source.file_path
-      path&.include?("/controllers/") || path&.end_with?("_controller.rb")
+      path && (path.split("/").include?("controllers") || path.end_with?("_controller.rb"))
     end
 end

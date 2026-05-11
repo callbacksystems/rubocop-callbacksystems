@@ -9,21 +9,23 @@
 #   # good
 #   users.many?
 #
-class RuboCop::Cop::Callbacksystems::PreferMany < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferMany < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Use `many?` instead of `%<method>s > 1`."
 
-  # Matches: something.size > 1, something.length > 1, something.count > 1
+  # @!method size_greater_than_one?(node)
   def_node_matcher :size_greater_than_one?, <<~PATTERN
-    (send (send $_ ${:size :length :count}) :> (int 1))
+    (send (call $_ ${:size :length :count}) :> (int 1))
   PATTERN
 
   def on_send(node)
     size_greater_than_one?(node) do |receiver, method|
       add_offense(node, message: format(MESSAGE, method: method)) do |corrector|
-        corrector.replace(node.source_range, "#{receiver.source}.many?")
+        corrector.replace(node, "#{receiver.source}.many?")
       end
     end
   end
+
+  alias on_csend on_send
 end

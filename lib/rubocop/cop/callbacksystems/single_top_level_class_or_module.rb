@@ -43,7 +43,7 @@
 #     end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::SingleTopLevelClassOrModule < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::SingleTopLevelClassOrModule < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Only one top-level class or module is allowed per file."
 
   def on_new_investigation
@@ -68,6 +68,6 @@ class RuboCop::Cop::Callbacksystems::SingleTopLevelClassOrModule < RuboCop::Cop:
     end
 
     def class_or_module?(node)
-      node&.class_type? || node&.module_type?
+      node&.type?(:class, :module)
     end
 end

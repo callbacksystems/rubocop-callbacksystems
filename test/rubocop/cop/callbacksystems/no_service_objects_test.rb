@@ -86,4 +86,32 @@ class RuboCop::Cop::Callbacksystems::NoServiceObjectsTest < CopTestCase
       end
     RUBY
   end
+
+  test "allows commands directory under lib (non-Rails gem)" do
+    assert_no_offense <<~RUBY, file: "lib/my_gem/commands/run.rb"
+      class MyGem::Commands::Run
+      end
+    RUBY
+  end
+
+  test "allows queries directory under lib (non-Rails gem)" do
+    assert_no_offense <<~RUBY, file: "lib/queries/build.rb"
+      class Queries::Build
+      end
+    RUBY
+  end
+
+  test "allows services directory at the top level (non-Rails)" do
+    assert_no_offense <<~RUBY, file: "services/external_api.rb"
+      class ExternalApi
+      end
+    RUBY
+  end
+
+  test "registers offense with absolute path under app/" do
+    assert_offense <<~RUBY, file: "/home/user/project/app/services/order_processor.rb"
+      class OrderProcessor
+      end
+    RUBY
+  end
 end

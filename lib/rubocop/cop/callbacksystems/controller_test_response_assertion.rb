@@ -27,46 +27,31 @@
 #     assert_equal "expected", helper_method
 #   end
 #
-class RuboCop::Cop::Callbacksystems::ControllerTestResponseAssertion < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::ControllerTestResponseAssertion < RuboCop::Cop::Callbacksystems::Base
   include RuboCop::Callbacksystems::TestCopHelpers
 
   MESSAGE = "Controller test makes an HTTP request but has no response assertion (assert_response or assert_redirected_to)."
-  HTTP_METHODS = RuboCop::Callbacksystems::TestCopHelpers::HTTP_METHODS
-  RESPONSE_ASSERTIONS = %i[assert_response assert_redirected_to assert_raises].freeze
+  # If a test asserts an exception, the request didn't complete normally,
+  # so checking the response status is unnecessary.
+  EXTRA_RESPONSE_ASSERTIONS = %i[assert_raises].freeze
 
   def on_block(node)
     return unless test_block?(node)
 
-    add_offense(node, message: MESSAGE) if TestBlock.new(node).offense?
+    add_offense(node, message: MESSAGE) if body_has_http_request?(node) && !body_has_response_assertion?(node)
   end
 
+  alias on_numblock on_block
+  alias on_itblock on_block
+
   private
-    class TestBlock
-      attr_reader :node
-
-      def initialize(node)
-        @node = node
+    def body_has_response_assertion?(node)
+      node.body&.each_node(:send)&.any? do |send_node|
+        response_assertion?(send_node) || extra_response_assertion?(send_node)
       end
+    end
 
-      def offense?
-        has_http_request? && !has_response_assertion?
-      end
-
-      private
-        def has_http_request?
-          node.body&.each_node(:send)&.any? { |send_node| http_request?(send_node) }
-        end
-
-        def has_response_assertion?
-          node.body&.each_node(:send)&.any? { |send_node| response_assertion?(send_node) }
-        end
-
-        def http_request?(send_node)
-          send_node.receiver.nil? && HTTP_METHODS.include?(send_node.method_name)
-        end
-
-        def response_assertion?(send_node)
-          send_node.receiver.nil? && RESPONSE_ASSERTIONS.include?(send_node.method_name)
-        end
+    def extra_response_assertion?(send_node)
+      send_node.receiver.nil? && EXTRA_RESPONSE_ASSERTIONS.include?(send_node.method_name)
     end
 end

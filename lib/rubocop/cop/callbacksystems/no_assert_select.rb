@@ -15,10 +15,10 @@
 #   assert_redirected_to dashboard_path
 #   assert user.confirmed?
 #
-class RuboCop::Cop::Callbacksystems::NoAssertSelect < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoAssertSelect < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Don't use `assert_select` to test HTML content. Test response status, redirects, and data changes instead."
 
-  # Matches: assert_select(...)
+  # @!method assert_select_call?(node)
   def_node_matcher :assert_select_call?, <<~PATTERN
     (send nil? :assert_select ...)
   PATTERN
@@ -28,4 +28,6 @@ class RuboCop::Cop::Callbacksystems::NoAssertSelect < RuboCop::Cop::Base
 
     add_offense(node, message: MESSAGE)
   end
+
+  alias on_csend on_send
 end

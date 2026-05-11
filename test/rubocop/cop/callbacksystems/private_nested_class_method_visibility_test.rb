@@ -289,4 +289,37 @@ class PrivateNestedClassMethodVisibilityTest < CopTestCase
       end
     RUBY
   end
+
+  test "no offense when outer class shares a method name with the nested class" do
+    assert_no_offense <<~RUBY
+      class Page::Offer::Revision
+        def revise
+          valid? && commit
+        end
+
+        private
+          def commit
+            true
+          end
+
+          def commit_listings
+            listing_entries.each(&:commit)
+          end
+
+          def listing_entries
+            @listing_entries || []
+          end
+
+          class ListingEntry
+            def initialize(listing)
+              @listing = listing
+            end
+
+            def commit
+              listing.save!
+            end
+          end
+      end
+    RUBY
+  end
 end

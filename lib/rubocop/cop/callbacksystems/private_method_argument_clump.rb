@@ -59,8 +59,7 @@
 #       end
 #   end
 #
-class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClump < RuboCop::Cop::Base
-  CONTAINER_TYPES = %i[begin kwbegin].freeze
+class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClump < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Private methods `%<methods>s` share parameters `%<params>s`. Consider extracting to a private nested class or separate object."
 
   def on_class(node)
@@ -89,46 +88,26 @@ class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClump < RuboCop::Cop::
 
       private
         def grouped_methods
-          collect_private_methods.each_with_object(Hash.new { |h, k| h[k] = [] }) do |method, groups|
+          collect_private_methods.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |method, groups|
             params = param_names_for(method)
             groups[params] << method if params.size >= min_params
           end
         end
 
         def collect_private_methods
-          return [] unless node.body
-
-          { in_private: false, methods: [] }.then do |state|
-            traverse(node.body) do |child|
-              state[:in_private] = true if private_declaration?(child)
-              next unless state[:in_private] && child.def_type?
-
-              state[:methods] << child if child.arguments.size >= min_params
-            end
-            state[:methods]
-          end
-        end
-
-        def traverse(body, &block)
-          return unless body
-
-          yield body
-          body.children.each { |child| traverse(child, &block) } if CONTAINER_TYPES.include?(body.type)
+          private_methods_in(node).select { it.arguments.size >= min_params }
         end
 
         def param_names_for(method_node)
-          method_node.arguments.children
-            .select { |arg| arg.arg_type? || arg.optarg_type? }
-            .map { |arg| arg.children.first.to_s }
-            .sort
+          parameter_names(method_node).sort
         end
 
         def min_params
-          cop_config["MinParams"] || 2
+          cop_config["MinParams"]
         end
 
         def min_methods
-          cop_config["MinMethods"] || 3
+          cop_config["MinMethods"]
         end
     end
 end

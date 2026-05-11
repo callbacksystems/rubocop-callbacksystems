@@ -22,7 +22,7 @@
 #     items.find { it.valid? }
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Don't use `each` with early `return`. Use `find` instead."
 
   def on_block(node)
@@ -30,6 +30,7 @@ class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Base
   end
 
   alias on_numblock on_block
+  alias on_itblock on_block
 
   private
     class EachBlock
@@ -45,7 +46,7 @@ class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Base
 
       private
         def has_conditional_return?
-          node.body&.each_node(:return)&.any? { |return_node| return_node.parent&.if_type? }
+          node.body&.each_node(:return)&.any? { it.parent&.if_type? }
         end
     end
 end

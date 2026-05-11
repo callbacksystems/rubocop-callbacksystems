@@ -200,4 +200,22 @@ class RuboCop::Cop::Callbacksystems::JobEnqueueMethodsTest < CopTestCase
       end
     RUBY
   end
+
+  test "flags enqueue defined after a nested class in the outer scope" do
+    assert_offense <<~RUBY
+      class Outer
+        class Inner
+          def helper; end
+        end
+
+        def enqueue
+          ProcessJob.perform_later(self)
+        end
+
+        def process
+          # actual work in Outer
+        end
+      end
+    RUBY
+  end
 end

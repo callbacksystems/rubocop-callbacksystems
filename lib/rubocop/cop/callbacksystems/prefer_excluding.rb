@@ -9,12 +9,12 @@
 #   users.excluding(admin)
 #   items.excluding(first_item)
 #
-class RuboCop::Cop::Callbacksystems::PreferExcluding < RuboCop::Cop::Base
+class RuboCop::Cop::Callbacksystems::PreferExcluding < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Use `excluding` instead of `- [element]`."
 
-  # Matches: receiver - [single_element]
+  # @!method minus_single_element_array?(node)
   def_node_matcher :minus_single_element_array?, <<~PATTERN
     (send $_ :- (array $_element))
   PATTERN
@@ -22,8 +22,10 @@ class RuboCop::Cop::Callbacksystems::PreferExcluding < RuboCop::Cop::Base
   def on_send(node)
     minus_single_element_array?(node) do |receiver, element|
       add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node.source_range, "#{receiver.source}.excluding(#{element.source})")
+        corrector.replace(node, "#{receiver.source}.excluding(#{element.source})")
       end
     end
   end
+
+  alias on_csend on_send
 end

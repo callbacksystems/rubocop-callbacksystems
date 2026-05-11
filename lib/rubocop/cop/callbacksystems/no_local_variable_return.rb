@@ -53,14 +53,12 @@
 #     [item]
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::Helpers
-
+class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Avoid returning a local variable. " \
     "Return the expression directly, or use `.tap`, `.then`, or `each_with_object`."
 
   def on_def(node)
-    last = node.body && last_statement(node.body)
+    last = last_statement(node.body)
     add_offense(last, message: MESSAGE) if last && returns_local_variable?(last)
   end
 

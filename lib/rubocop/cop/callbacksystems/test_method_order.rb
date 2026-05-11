@@ -27,11 +27,8 @@
 #   test "admin? returns true for admins" do
 #   end
 #
-class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
-  # Matches: test "description" do ... end
-  def_node_matcher :test_block?, <<~PATTERN
-    (block (send nil? :test (str $_)) ...)
-  PATTERN
+class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksystems::Base
+  include RuboCop::Callbacksystems::TestCopHelpers
 
   def on_new_investigation
     return unless checkable?
@@ -45,42 +42,48 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
     end
 
     def path_mapping
-      @path_mapping ||= RuboCop::Callbacksystems::TestPathMapping.new(processed_source.file_path)
+      RuboCop::Callbacksystems::TestPathMapping.new(processed_source.file_path)
     end
 
     def source_methods
-      @source_methods ||= begin
-        source = File.read(path_mapping.source_path)
-        processed = RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f, path_mapping.source_path)
-        processed.ast ? RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect : []
-      rescue
-        []
-      end
+      source_methods_cache[path_mapping.source_path] ||= load_source_methods(path_mapping.source_path)
+    end
+
+    def source_methods_cache
+      @source_methods_cache ||= {}
+    end
+
+    def load_source_methods(source_path)
+      processed = RuboCop::AST::ProcessedSource.new(File.read(source_path), RUBY_VERSION.to_f, source_path)
+      processed.ast ? RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect.map(&:second) : []
+    rescue
+      []
     end
 
     def order_violations
       return [] if source_methods.empty?
 
-      method_positions = {}.tap { |h| source_methods.each_with_index { |name, i| h[name] ||= i } }
+      method_positions = {}.tap do |hash|
+        source_methods.each_with_index { |name, index| hash[name] ||= index }
+      end
       tests = build_test_list(method_positions)
       tests.size >= 2 ? Ordering.new(tests, method_positions).detect : []
     end
 
     def build_test_list(method_positions)
-      processed_source.ast.each_node(:block).filter_map do |node|
-        description = test_block?(node)
-        next unless description
+      processed_source.ast.each_node(:block)
+        .select { test_block?(it) }
+        .filter_map { test_entry_for(it, method_positions) }
+    end
 
-        method_name = method_from_description_for(description, method_positions)
-        [ node, method_name ] if method_name
-      end
+    def test_entry_for(node, method_positions)
+      method_name = method_from_description_for(test_block?(node), method_positions)
+      [ node, method_name ] if method_name
     end
 
     def method_from_description_for(description, method_positions)
       words = description.split(/\s+/)
-      first_word = words.first
-      candidates = build_method_candidates(first_word, words.second)
-      candidates.find { |candidate| method_positions.key?(candidate) }
+      build_method_candidates(words.first, words.second).find { method_positions.key?(it) }
     end
 
     def build_method_candidates(first_word, second_word)
@@ -121,11 +124,10 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Base
         end
 
         def consecutive?(method_name, current_test)
-          previous_test = seen[method_name]
-          previous_index = tests.index { |t, _| t == previous_test }
-          current_index = tests.index { |t, _| t == current_test }
+          previous_index = tests.index { |test_node, _| test_node == seen[method_name] }
+          current_index = tests.index { |test_node, _| test_node == current_test }
 
-          (previous_index...current_index).all? { |i| tests[i].second == method_name }
+          (previous_index...current_index).all? { tests[it].second == method_name }
         end
     end
 end

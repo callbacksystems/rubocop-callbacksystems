@@ -8,8 +8,8 @@
 #   # good
 #   hash.symbolize_keys
 #
-class RuboCop::Cop::Callbacksystems::PreferSymbolizeKeys < RuboCop::Cop::Base
-  include RuboCop::Callbacksystems::PreferKeyTransform
+class RuboCop::Cop::Callbacksystems::PreferSymbolizeKeys < RuboCop::Cop::Callbacksystems::Base
+  include RuboCop::Callbacksystems::KeyTransformDetection
 
   private
     def source_method = :to_sym
