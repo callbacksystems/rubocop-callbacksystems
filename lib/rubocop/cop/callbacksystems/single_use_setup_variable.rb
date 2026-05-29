@@ -40,15 +40,18 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
   UNUSED_MESSAGE = "Instance variable `%<variable>s` assigned in `setup` is not used by any test. Remove it."
 
   def on_new_investigation
-    return unless investigable?
-
-    test_blocks = collect_test_blocks
-    setup_assignments.each do |assignment|
-      offense_message_for(assignment, test_blocks).then { add_offense(assignment, message: it) if it }
-    end
+    each_offense { |node, message| add_offense(node, message: message) }
   end
 
   private
+    def each_offense(&block)
+      if block
+        yield_offenses(&block) if investigable?
+      else
+        to_enum(__method__)
+      end
+    end
+
     def investigable?
       processed_source.ast && !abstract_test_class?
     end
@@ -59,35 +62,26 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
     end
 
     def abstract_base_class?(class_node)
-      rails_test_base_class?(class_node.parent_class) && tests_in(class_node).empty?
+      rails_test_base_class?(class_node.parent_class) && test_blocks(class_node).empty?
     end
 
-    def tests_in(class_node)
-      class_node.each_node(:block).select { test_block?(it) }
-    end
-
-    def offense_message_for(assignment, test_blocks)
-      variable_name = assignment.children.first
-      case IvarUsage.new(processed_source.ast, variable_name, test_blocks).classify
-      when :unused then format(UNUSED_MESSAGE, variable: variable_name)
-      when :single_use then format(USED_ONCE_MESSAGE, variable: variable_name)
+    def yield_offenses(&block)
+      tests = test_blocks
+      setup_assignments.each do |assignment|
+        message = offense_message_for(assignment, tests)
+        yield assignment, message if message
       end
     end
 
     def setup_assignments
-      collect_setup_blocks.flat_map do |block|
-        block.body ? block.body.each_node(:ivasgn).to_a : []
-      end
+      setup_blocks.filter_map(&:body).flat_map { it.each_node(:ivasgn).to_a }
     end
 
-    def collect_setup_blocks
-      processed_source.ast.each_node(:block).select do |node|
-        node.method?(:setup) && node.receiver.nil?
+    def offense_message_for(assignment, tests)
+      case IvarUsage.new(processed_source.ast, assignment.name, tests).classify
+      when :unused then format(UNUSED_MESSAGE, variable: assignment.name)
+      when :single_use then format(USED_ONCE_MESSAGE, variable: assignment.name)
       end
-    end
-
-    def collect_test_blocks
-      processed_source.ast.each_node(:block).select { test_block?(it) }
     end
 
     class IvarUsage
@@ -111,21 +105,21 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         attr_reader :ast, :variable_name, :test_blocks
 
         def used_outside_tests?
-          references.any? { !inside_test_block?(it) }
+          variable_references.any? { !inside_test_block?(it) }
         end
 
-        def tests_using_variable
-          test_blocks.count do |test_block|
-            test_block.each_node(:ivar).any? { it.children.first == variable_name }
-          end
-        end
-
-        def references
-          ast.each_node(:ivar).select { it.children.first == variable_name }
+        def variable_references
+          ast.each_node(:ivar).select { it.name == variable_name }
         end
 
         def inside_test_block?(ivar_node)
           test_blocks.any? { it.source_range.contains?(ivar_node.source_range) }
+        end
+
+        def tests_using_variable
+          test_blocks.count do |test_block|
+            test_block.each_node(:ivar).any? { it.name == variable_name }
+          end
         end
     end
 end

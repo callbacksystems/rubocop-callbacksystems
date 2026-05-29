@@ -27,11 +27,11 @@ class RuboCop::Cop::Callbacksystems::NoSingletonClassInModules < RuboCop::Cop::C
   MESSAGE = "Use `extend self` instead of `class << self` in modules."
 
   def on_sclass(node)
-    add_offense(node, message: MESSAGE) if offense?(node)
+    add_offense(node, message: MESSAGE) if singleton_class_in_module?(node)
   end
 
   private
-    def offense?(node)
-      node.identifier.self_type? && node.each_ancestor(:module, :class).first&.module_type?
+    def singleton_class_in_module?(node)
+      node.identifier.self_type? && enclosing_class_or_module_of(node)&.module_type?
     end
 end

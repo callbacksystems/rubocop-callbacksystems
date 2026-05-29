@@ -356,4 +356,140 @@ class RuboCop::Cop::Callbacksystems::PrivateMethodArgumentClumpTest < CopTestCas
     assert_equal 1, offenses.count
     assert_includes offenses.first.message, "x, y"
   end
+
+  test "registers offense when a single parameter is threaded through enough private methods" do
+    offenses = assert_offense <<~RUBY
+      class Visitor
+        private
+          def first(node); end
+          def second(node); end
+          def third(node); end
+          def fourth(node); end
+          def fifth(node); end
+          def sixth(node); end
+          def seventh(node); end
+      end
+    RUBY
+    assert_includes offenses.first.message, "Parameter `node` is threaded"
+    assert_includes offenses.first.message, "first, second, third, fourth, fifth, sixth, seventh"
+  end
+
+  test "counts a threaded parameter even alongside other parameters" do
+    offenses = assert_offense <<~RUBY
+      class Visitor
+        private
+          def first(node, a); end
+          def second(node, b); end
+          def third(node, c); end
+          def fourth(node, d); end
+          def fifth(node, e); end
+          def sixth(node, f); end
+          def seventh(node, g); end
+      end
+    RUBY
+    assert_includes offenses.first.message, "Parameter `node` is threaded"
+  end
+
+  test "allows a single parameter shared below the single-parameter threshold" do
+    assert_no_offense <<~RUBY
+      class Visitor
+        private
+          def first(node); end
+          def second(node); end
+          def third(node); end
+          def fourth(node); end
+          def fifth(node); end
+          def sixth(node); end
+      end
+    RUBY
+  end
+
+  test "allows a single parameter threaded through many public methods" do
+    assert_no_offense <<~RUBY
+      class Visitor
+        def first(node); end
+        def second(node); end
+        def third(node); end
+        def fourth(node); end
+        def fifth(node); end
+        def sixth(node); end
+        def seventh(node); end
+      end
+    RUBY
+  end
+
+  test "exempts a recursion subject passed both directly and as a derivative" do
+    assert_no_offense <<~RUBY
+      class Walker
+        private
+          def walk(node)
+            descend(node.child, node)
+          end
+
+          def descend(child, node); end
+          def first(node); end
+          def second(node); end
+          def third(node); end
+          def fourth(node); end
+          def fifth(node); end
+      end
+    RUBY
+  end
+
+  test "exempts a recursion subject indexed and passed as itself in one call" do
+    assert_no_offense <<~RUBY
+      class Walker
+        private
+          def walk(node, key)
+            descend(node[key], node)
+          end
+
+          def descend(child, node); end
+          def first(node); end
+          def second(node); end
+          def third(node); end
+          def fourth(node); end
+          def fifth(node); end
+      end
+    RUBY
+  end
+
+  test "still flags a threaded parameter that is not the recursion subject" do
+    offenses = assert_offense <<~RUBY
+      class Walker
+        private
+          def walk(node, context)
+            descend(node.child, node)
+          end
+
+          def descend(child, context); end
+          def first(context); end
+          def second(context); end
+          def third(context); end
+          def fourth(context); end
+          def fifth(context); end
+          def sixth(context); end
+      end
+    RUBY
+    assert_includes offenses.first.message, "Parameter `context` is threaded"
+  end
+
+  test "single-parameter detection works inside a private nested class" do
+    offenses = assert_offense <<~RUBY
+      class Outer
+        private
+          class Inner
+            private
+              def first(node); end
+              def second(node); end
+              def third(node); end
+              def fourth(node); end
+              def fifth(node); end
+              def sixth(node); end
+              def seventh(node); end
+          end
+      end
+    RUBY
+    assert_includes offenses.first.message, "Parameter `node` is threaded"
+  end
 end

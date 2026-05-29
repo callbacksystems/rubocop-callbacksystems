@@ -25,13 +25,13 @@ class RuboCop::Cop::Callbacksystems::NoDirectEagerLoading < RuboCop::Cop::Callba
   MESSAGE = "Don't use `%<method>s` directly in controllers. Define a scope in the model instead."
 
   def on_send(node)
-    add_offense(node, message: format(MESSAGE, method: node.method_name)) if offense?(node)
+    add_offense(node, message: format(MESSAGE, method: node.method_name)) if direct_eager_loading?(node)
   end
 
   alias on_csend on_send
 
   private
-    def offense?(node)
+    def direct_eager_loading?(node)
       in_controller? && EAGER_LOADING_METHODS.include?(node.method_name)
     end
 

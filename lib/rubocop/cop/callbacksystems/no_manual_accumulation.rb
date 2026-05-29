@@ -28,7 +28,7 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
   PATTERN
 
   def on_def(node)
-    check_body(node.body)
+    each_offense(node) { |offense_node, message| add_offense(offense_node, message: message) }
   end
 
   alias on_defs on_def
@@ -37,16 +37,20 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
   alias on_itblock on_def
 
   private
-    def check_body(body)
-      return unless body&.begin_type?
-
-      body.children
-        .select { empty_collection_assignment(it) }
-        .each { add_offense(it, message: MESSAGE) if accumulation_pattern?(body, it, empty_collection_assignment(it)) }
+    def each_offense(node, &block)
+      if block
+        yield_accumulations(node.body, &block) if node.body&.begin_type?
+      else
+        to_enum(__method__, node)
+      end
     end
 
-    def accumulation_pattern?(body, assignment, variable_name)
-      AccumulationCheck.new(body.children[(body.children.index(assignment) + 1)..], variable_name).match?
+    def yield_accumulations(body)
+      statements = body.children
+      statements.each_with_index do |assignment, index|
+        name = empty_collection_assignment(assignment)
+        yield assignment, MESSAGE if name && AccumulationCheck.new(statements[(index + 1)..], name).match?
+      end
     end
 
     class AccumulationCheck
@@ -54,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
 
       # @!method each_block?(node)
       def_node_matcher :each_block?, <<~PATTERN
-        {(block (send _ :each) ...) (numblock (send _ :each) ...)}
+        (any_block (send _ :each) ...)
       PATTERN
 
       # @!method mutates_variable?(node)
@@ -83,8 +87,15 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
           statements.any? { each_block?(it) && mutates_in_body?(it.body) }
         end
 
+        # The block must do nothing but the mutation (optionally behind a one-armed
+        # `if`/`unless` guard). Any extra statement means a declarative `map`/`select`
+        # would drop a side effect, so the loop is left alone.
         def mutates_in_body?(body)
-          body&.each_node(:send)&.any? { mutates_variable?(it, variable_name) }
+          mutates_variable?(body, variable_name) || guarded_mutation?(body)
+        end
+
+        def guarded_mutation?(body)
+          body&.if_type? && body.else_branch.nil? && mutates_variable?(body.if_branch, variable_name)
         end
 
         def returns_variable?

@@ -158,4 +158,46 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturnTest < CopTestCase
       end
     RUBY
   end
+
+  test "inlines an adjacent single-use local variable" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        result = calculate_something
+        result
+      end
+    RUBY
+      def process
+        calculate_something
+      end
+    CORRECTED
+  end
+
+  test "inlines an explicit return of an adjacent single-use local" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def build
+        options = compute_options
+        return options
+      end
+    RUBY
+      def build
+        return compute_options
+      end
+    CORRECTED
+  end
+
+  test "leaves a mutated local untouched for a human to restructure" do
+    assert_correction <<~RUBY, <<~SAME
+      def process
+        result = []
+        result << item
+        result
+      end
+    RUBY
+      def process
+        result = []
+        result << item
+        result
+      end
+    SAME
+  end
 end

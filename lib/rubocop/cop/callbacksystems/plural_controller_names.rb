@@ -25,40 +25,47 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Callb
 
   def on_class(node)
     controller = ControllerClass.new(node, cop_config)
-    resource = controller.controller_class? && controller.singular_resource_name
-    add_offense(node.loc.name, message: format(MESSAGE, plural: resource.pluralize, singular: resource)) if resource
+    add_offense(node.loc.name, message: controller.offense_message) if controller.offense?
   end
 
   private
     class ControllerClass
       include RuboCop::Callbacksystems::Helpers
 
-      attr_reader :node, :cop_config
-
       def initialize(node, cop_config)
         @node = node
         @cop_config = cop_config
       end
 
-      def controller_class?
-        controller_superclass?(node.parent_class)
+      def offense?
+        singular_resource_name
       end
 
-      def singular_resource_name
-        named_controller? && non_plural_non_ignored_resource
+      def offense_message
+        format(MESSAGE, plural: singular_resource_name.pluralize, singular: singular_resource_name)
       end
 
       private
+        attr_reader :node, :cop_config
+
+        def singular_resource_name
+          @singular_resource_name ||= non_plural_non_ignored_resource if controller_class? && named_controller?
+        end
+
+        def controller_class?
+          controller_superclass?(node.parent_class)
+        end
+
         def named_controller?
           class_name&.end_with?("Controller")
         end
 
-        def non_plural_non_ignored_resource
-          resource_name unless Resource.new(resource_name, cop_config).excluded?
+        def class_name
+          constant_name_of(node.identifier)
         end
 
-        def class_name
-          constant_name(node.identifier)
+        def non_plural_non_ignored_resource
+          resource_name unless Resource.new(resource_name, cop_config).excluded?
         end
 
         def resource_name
@@ -67,8 +74,6 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Callb
     end
 
     class Resource
-      attr_reader :resource, :cop_config
-
       def initialize(resource, cop_config)
         @resource = resource
         @cop_config = cop_config
@@ -79,17 +84,19 @@ class RuboCop::Cop::Callbacksystems::PluralControllerNames < RuboCop::Cop::Callb
       end
 
       private
+        attr_reader :resource, :cop_config
+
         def ignored?
           ignored_names.include?(resource)
+        end
+
+        def ignored_names
+          cop_config["IgnoredNames"]
         end
 
         def plural?
           singularized = resource.singularize
           singularized != resource || singularized.pluralize == resource
-        end
-
-        def ignored_names
-          cop_config["IgnoredNames"]
         end
     end
 end

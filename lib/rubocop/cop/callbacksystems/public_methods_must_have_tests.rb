@@ -34,59 +34,59 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
   def on_class(node)
     return if private_nested_class?(node)
 
-    Analysis.new(node, processed_source.file_path).public_methods_without_tests.each do |method_node, method_name|
-      add_offense(method_node, message: format(MESSAGE, method: method_name))
+    Analysis.new(node, processed_source.file_path).each_offense do |offense_node, message|
+      add_offense(offense_node, message: message)
     end
   end
 
   alias on_module on_class
 
   private
-    def private_nested_class?(node)
-      parent = node.each_ancestor(:class, :module).first
-      parent && private_nested_classes(parent).include?(node)
-    end
-
     class Analysis
       EXCLUDED_METHODS = %i[initialize].to_set.freeze
 
       def initialize(node, file_path)
         @node = node
         @file_path = file_path
-        @test_file_path = RuboCop::Callbacksystems::TestPathMapping.new(file_path).find_test_file
+        @path_mapping = RuboCop::Callbacksystems::TestPathMapping.new(file_path)
+        @test_file_path = path_mapping.find_test_file
       end
 
-      def public_methods_without_tests
-        return [] if skip?
-
-        testable_public_methods.reject { |method_node, method_name| MethodCoverage.new(method_node, method_name, tested_methods, macro_referenced_methods).covered? }
+      def each_offense(&block)
+        if block
+          untested_methods.each { |method_node, method_name| yield method_node, format(MESSAGE, method: method_name) }
+        else
+          to_enum(__method__)
+        end
       end
 
       private
-        attr_reader :node, :file_path, :test_file_path
+        attr_reader :node, :file_path, :test_file_path, :path_mapping
+
+        def untested_methods
+          return [] if skip?
+
+          testable_public_methods.reject { |method_node, method_name| MethodCoverage.new(method_node, method_name, tested_methods, macro_referenced_methods).covered? }
+        end
 
         def skip?
           file_path.include?("/test/") || lib_file_in_non_gem_project?
         end
 
         def lib_file_in_non_gem_project?
-          file_path.match?(%r{(^|/)lib/}) && !gem_project?
-        end
-
-        def gem_project?
-          Dir.glob("#{file_path.sub(%r{/lib/.*}, "")}/*.gemspec").any?
+          file_path.match?(%r{(^|/)lib/}) && !path_mapping.gem_project?
         end
 
         def testable_public_methods
-          RuboCop::Callbacksystems::MethodCollector.new(node).collect.reject { |_, name| EXCLUDED_METHODS.include?(name) }
+          RuboCop::Callbacksystems::MethodCollector.new(node).all.reject { |_, name| EXCLUDED_METHODS.include?(name) }
         end
 
         def tested_methods
-          @tested_methods ||= test_file_path ? TestedMethodsCollector.new(test_file_path).collect : Set.new
+          @tested_methods ||= test_file_path ? TestedMethodsCollector.new(test_file_path).all : Set.new
         end
 
         def macro_referenced_methods
-          @macro_referenced_methods ||= node.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body).collect : Set.new
+          @macro_referenced_methods ||= RuboCop::Callbacksystems::MacroReferencedMethods.for(node.body)
         rescue
           Set.new
         end
@@ -121,31 +121,25 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
     end
 
     class TestedMethodsCollector
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(test_file_path)
         @test_file_path = test_file_path
       end
 
-      def collect
-        return Set.new unless File.exist?(test_file_path)
-
-        parse_ast&.then do |ast|
-          Set.new(ast.each_node(:block).filter_map { tested_method_name(it) })
+      def all
+        RuboCop::Callbacksystems::FileAst.ast(test_file_path)&.then do |ast|
+          Set.new(ast.each_node(:block).filter_map { tested_method_name_in(it) })
         end || Set.new
       end
 
       private
         attr_reader :test_file_path
 
-        def parse_ast
-          RuboCop::AST::ProcessedSource.new(File.read(test_file_path), RUBY_VERSION.to_f, test_file_path).ast
-        rescue
-          nil
-        end
-
-        def tested_method_name(node)
-          return unless node.method?(:test) && node.receiver.nil?
-
-          node.send_node.first_argument&.then { it.value.split(/\s+/).first if it.str_type? }
+        def tested_method_name_in(node)
+          if bare_send?(node.send_node) && node.method?(:test)
+            node.send_node.first_argument&.then { it.value.split(/\s+/).first if it.str_type? }
+          end
         end
     end
 end

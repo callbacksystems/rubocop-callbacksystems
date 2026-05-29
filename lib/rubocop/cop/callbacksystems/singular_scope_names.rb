@@ -23,16 +23,12 @@ class RuboCop::Cop::Callbacksystems::SingularScopeNames < RuboCop::Cop::Callback
 
   def on_send(node)
     scope_with_symbol_name?(node) do |name|
-      next unless plural_name?(name)
+      string_name = name.to_s
+      singular = string_name.singularize
 
-      add_offense(node.first_argument, message: format(MESSAGE, singular: name.to_s.singularize, name: name))
+      add_offense(node.first_argument, message: format(MESSAGE, singular:, name:)) unless string_name.start_with?("with_") || string_name == singular
     end
   end
 
   alias on_csend on_send
-
-  private
-    def plural_name?(name)
-      !name.to_s.start_with?("with_") && name.to_s != name.to_s.singularize
-    end
 end

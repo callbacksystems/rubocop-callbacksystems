@@ -164,4 +164,22 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoizationTest < CopTestCase
       end
     RUBY
   end
+
+  test "allows memoization followed by a read of the same field" do
+    assert_no_offense <<~RUBY
+      def user
+        @user ||= load_user
+        @user
+      end
+    RUBY
+  end
+
+  test "allows memoization followed by an explicit return of the same field" do
+    assert_no_offense <<~RUBY
+      def user
+        @user ||= load_user
+        return @user
+      end
+    RUBY
+  end
 end

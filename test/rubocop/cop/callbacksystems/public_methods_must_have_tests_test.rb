@@ -439,9 +439,9 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
 
     collector = self.class.cop_class::TestedMethodsCollector.new(test_file)
 
-    assert_includes collector.collect, "valid?"
-    assert_includes collector.collect, "save!"
-    assert_includes collector.collect, "process"
+    assert_includes collector.all, "valid?"
+    assert_includes collector.all, "save!"
+    assert_includes collector.all, "process"
   end
 
   test "TestedMethodsCollector finds setter methods ending with =" do
@@ -454,8 +454,8 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
 
     collector = self.class.cop_class::TestedMethodsCollector.new(test_file)
 
-    assert_includes collector.collect, "duration="
-    assert_includes collector.collect, "buffer="
+    assert_includes collector.all, "duration="
+    assert_includes collector.all, "buffer="
   end
 
   test "TestedMethodsCollector finds operator methods" do
@@ -468,8 +468,8 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
 
     collector = self.class.cop_class::TestedMethodsCollector.new(test_file)
 
-    assert_includes collector.collect, "=="
-    assert_includes collector.collect, "<=>"
+    assert_includes collector.all, "=="
+    assert_includes collector.all, "<=>"
   end
 
   test "skips lib files in non-gem projects" do
@@ -512,7 +512,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     def create_empty_file(relative_path)
       File.join(@temp_dir, relative_path).tap do |full_path|
         FileUtils.mkdir_p(File.dirname(full_path))
-        FileUtils.touch(full_path)
+        File.write(full_path, "")
       end
     end
 

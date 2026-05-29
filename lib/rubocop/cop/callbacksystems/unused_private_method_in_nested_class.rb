@@ -42,9 +42,9 @@ class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop:
   MESSAGE = "Private method `%<method>s` in nested class `%<class>s` is never called. Remove it."
 
   def on_class(node)
-    private_nested_classes(node).each do |nested_class|
-      UnusedMethodDetector.new(nested_class).detect.each do |method_node, klass_name|
-        add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: klass_name))
+    private_nested_classes_in(node).each do |nested_class|
+      UnusedMethodDetector.new(nested_class).each_offense do |offense_node, message|
+        add_offense(offense_node, message: message)
       end
     end
   end
@@ -60,21 +60,29 @@ class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop:
         @class_name = nested_class.identifier.short_name
       end
 
-      def detect
-        private_methods_in(nested_class).filter_map do |method_node|
-          [ method_node, class_name ] if called_methods.exclude?(method_node.method_name) && macro_referenced_methods.exclude?(method_node.method_name)
+      def each_offense(&block)
+        if block
+          unused_methods.each { yield it, format(MESSAGE, method: it.method_name, class: class_name) }
+        else
+          to_enum(__method__)
         end
       end
 
       private
         attr_reader :nested_class, :class_name
 
+        def unused_methods
+          private_methods_in(nested_class).reject do |method_node|
+            called_methods.include?(method_node.method_name) || macro_referenced_methods.include?(method_node.method_name)
+          end
+        end
+
         def called_methods
-          @called_methods ||= nested_class.body ? Set.new(nested_class.body.each_node(:send).filter_map { it.method_name if it.receiver.nil? }) : Set.new
+          @called_methods ||= Set.new(receiverless_method_names_in(nested_class.body))
         end
 
         def macro_referenced_methods
-          @macro_referenced_methods ||= nested_class.body ? RuboCop::Callbacksystems::MacroReferencedMethods.new(nested_class.body).collect : Set.new
+          @macro_referenced_methods ||= RuboCop::Callbacksystems::MacroReferencedMethods.for(nested_class.body)
         end
     end
 end

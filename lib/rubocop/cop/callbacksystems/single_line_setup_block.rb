@@ -40,8 +40,6 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
 
   private
     def single_line_body?(node)
-      node.body &&
-        !(node.body.begin_type? && node.body.children.many?) &&
-        node.body.single_line?
+      node.body&.single_line? && statements_in(node.body).one?
     end
 end

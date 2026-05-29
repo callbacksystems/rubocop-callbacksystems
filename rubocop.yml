@@ -17,7 +17,12 @@ AllCops:
     - app/controllers/concerns/authentication.rb
     - "app/channels/application_cable/**/*"
     - "bin/**/*"
-    - "config/**/*"
+    - "config/environments/**/*"
+    - "config/initializers/**/*"
+    - "config/application.rb"
+    - "config/boot.rb"
+    - "config/environment.rb"
+    - "config/puma.rb"
     - "db/**/*"
     - "gems/**/*"
     - "node_modules/**/*"
@@ -485,6 +490,7 @@ Style/ClassAndModuleChildren:
   EnforcedStyle: compact
 
 Style/ClassMethodsDefinitions:
+  Enabled: true
   EnforcedStyle: self_class
 
 Style/CollectionCompact:

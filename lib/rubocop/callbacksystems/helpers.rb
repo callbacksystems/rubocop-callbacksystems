@@ -15,10 +15,10 @@ module RuboCop::Callbacksystems::Helpers
       end
 
       def perform
-        return unless helper_module?(submodule)
-
-        siblings.each { extend_mutually(it) }
-        helpers.include(submodule)
+        if helper_module?(submodule)
+          siblings.each { extend_mutually(it) }
+          helpers.include(submodule)
+        end
       end
 
       private

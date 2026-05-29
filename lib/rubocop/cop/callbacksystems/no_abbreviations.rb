@@ -22,7 +22,6 @@
 #   USER_ATTRIBUTES = %i[name email]
 #
 class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Callbacksystems::Base
-  # Common abbreviations mapped to their full forms
   # Excluded: params (Rails), args (Ruby), id/ids (standard),
   #           config/env/info/lib/max/min/proc/temp/sync (common and clear)
   ABBREVIATIONS = {
@@ -86,23 +85,23 @@ class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Callbacksys
   alias on_defs on_def
 
   def on_lvasgn(node)
-    check_abbreviations(node, node.children.first.to_s)
+    check_abbreviations(node, node.name.to_s)
   end
 
   def on_ivasgn(node)
-    check_abbreviations(node, node.children.first.to_s.delete_prefix("@"))
+    check_abbreviations(node, node.name.to_s.delete_prefix("@"))
   end
 
   def on_cvasgn(node)
-    check_abbreviations(node, node.children.first.to_s.delete_prefix("@@"))
+    check_abbreviations(node, node.name.to_s.delete_prefix("@@"))
   end
 
   def on_casgn(node)
-    check_abbreviations(node, node.children.second.to_s.downcase)
+    check_abbreviations(node, node.name.to_s.downcase)
   end
 
   def on_arg(node)
-    check_abbreviations(node, node.children.first.to_s)
+    check_abbreviations(node, node.name.to_s)
   end
 
   alias on_optarg on_arg
@@ -111,12 +110,12 @@ class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Callbacksys
 
   private
     def check_abbreviations(node, name)
-      found_abbreviations(name).each do |abbreviation|
+      abbreviations_in(name).each do |abbreviation|
         add_offense(node, message: format(MESSAGE, abbrev: abbreviation, full: ABBREVIATIONS[abbreviation]))
       end
     end
 
-    def found_abbreviations(name)
+    def abbreviations_in(name)
       name.split("_").select { ABBREVIATIONS.key?(it) }
     end
 end

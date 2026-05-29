@@ -68,4 +68,24 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulationTest < CopTestCase
       end
     RUBY
   end
+
+  test "allows each with a side effect besides the mutation" do
+    assert_no_offense <<~RUBY
+      def names
+        results = []
+        items.each { |x| log(x); results << x.name }
+        results
+      end
+    RUBY
+  end
+
+  test "registers offense for a guarded mutation in each" do
+    assert_offense <<~RUBY
+      def names
+        results = []
+        items.each { |x| results << x.name if x.valid? }
+        results
+      end
+    RUBY
+  end
 end

@@ -36,21 +36,41 @@ class RuboCop::Cop::Callbacksystems::InlineMemoizedComputation < RuboCop::Cop::C
   MESSAGE = "Inline the computation from `%<method>s` instead of delegating."
 
   def on_def(node)
-    return unless node.body&.or_asgn_type?
-
-    expression = node.body.children.last
-    add_offense(node, message: format(MESSAGE, method: expression.method_name)) if delegates_to_own_method?(node, expression)
+    memoization = Memoization.new(node)
+    add_offense(node, message: format(MESSAGE, method: memoization.delegated_method)) if memoization.delegates_to_own_method?
   end
 
-  private
-    def delegates_to_own_method?(node, expression)
-      expression.send_type? && expression.receiver.nil? && expression.arguments.empty? && method_exists_in_class?(node, expression.method_name)
-    end
+  alias on_defs on_def
 
-    def method_exists_in_class?(node, method_name)
-      enclosing = node.each_ancestor(:class, :module).first
-      enclosing&.each_descendant(:def)&.any? do |def_node|
-        def_node.method?(method_name) && direct_child_of_class?(def_node, enclosing)
+  private
+    class Memoization
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node)
+        @node = node
       end
+
+      def delegates_to_own_method?
+        node.body&.or_asgn_type? && delegating_call? && enclosing_defines?
+      end
+
+      def delegated_method
+        node.body.expression.method_name
+      end
+
+      private
+        attr_reader :node
+
+        def delegating_call?
+          bare_send?(expression) && expression.arguments.empty?
+        end
+
+        def expression
+          node.body.expression
+        end
+
+        def enclosing_defines?
+          direct_method_nodes_in(enclosing_class_or_module_of(node)&.body).any? { it.method?(delegated_method) }
+        end
     end
 end

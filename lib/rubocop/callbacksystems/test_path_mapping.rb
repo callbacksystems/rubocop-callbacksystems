@@ -1,6 +1,4 @@
 class RuboCop::Callbacksystems::TestPathMapping
-  attr_reader :path
-
   def initialize(path)
     @path = path
   end
@@ -22,12 +20,8 @@ class RuboCop::Callbacksystems::TestPathMapping
     end
   end
 
-  def test_path
-    @test_path ||= if path.include?("/app/")
-      path.sub("/app/", "/test/").sub(".rb", "_test.rb")
-    elsif path.include?("/lib/") && gem_project?
-      path.sub("/lib/", "/test/").sub(".rb", "_test.rb")
-    end
+  def gem_project?
+    Dir.glob("#{project_root}/*.gemspec").any?
   end
 
   def find_test_file
@@ -35,8 +29,10 @@ class RuboCop::Callbacksystems::TestPathMapping
   end
 
   private
-    def gem_project?
-      Dir.glob("#{path.split("/lib/").first}/*.gemspec").any?
+    attr_reader :path
+
+    def project_root
+      path.split("/lib/").first
     end
 
     def candidate_test_paths
@@ -44,17 +40,22 @@ class RuboCop::Callbacksystems::TestPathMapping
     end
 
     def lib_test_paths
-      return [] unless path.match?(%r{(^|/)lib/})
+      test_paths_for("lib")
+    end
 
-      [
-        path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/lib/#{Regexp.last_match(2)}_test.rb" },
-        path.sub(%r{(^|/)lib/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
-      ]
+    def test_paths_for(root)
+      if path.match?(%r{(^|/)#{root}/})
+        [ rewrite(root, "test/#{root}/"), rewrite(root, "test/") ]
+      else
+        []
+      end
+    end
+
+    def rewrite(root, prefix)
+      path.sub(%r{(^|/)#{root}/(.+)\.rb$}) { "#{Regexp.last_match(1)}#{prefix}#{Regexp.last_match(2)}_test.rb" }
     end
 
     def app_test_paths
-      return [] unless path.match?(%r{(^|/)app/})
-
-      [ path.sub(%r{(^|/)app/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" } ]
+      test_paths_for("app").last(1)
     end
 end

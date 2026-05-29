@@ -5,18 +5,26 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
     node && BLOCK_NODE_TYPES.include?(node.type)
   end
 
-  def constant_name(node)
-    return unless node
+  def bare_send?(node)
+    node&.send_type? && node.receiver.nil?
+  end
 
-    case node.type
-    when :const
-      if node.namespace
-        "#{constant_name(node.namespace)}::#{node.short_name}"
-      else
-        node.short_name.to_s
+  def reads_variable?(node, variable_name)
+    node&.type?(:lvar, :ivar) && node.name == variable_name
+  end
+
+  def constant_name_of(node)
+    if node
+      case node.type
+      when :const
+        if node.namespace
+          "#{constant_name_of(node.namespace)}::#{node.short_name}"
+        else
+          node.short_name.to_s
+        end
+      when :cbase
+        ""
       end
-    when :cbase
-      ""
     end
   end
 end

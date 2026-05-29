@@ -24,22 +24,46 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
   MESSAGE = "Sort mixin arguments alphabetically: `%<sorted>s`."
 
   def on_send(node)
-    return unless mixin_call?(node) && node.arguments.many?
-
-    names = node.arguments.map(&:source)
-    sorted = names.sort
-    add_offense(node, message: format(MESSAGE, sorted: sorted.join(", "))) { correct_order(it, node, sorted) } if names != sorted
+    mixin = MixinCall.new(node)
+    add_offense(node, message: mixin.offense_message) { mixin.reorder(it) } if mixin.unsorted?
   end
 
   alias on_csend on_send
 
   private
-    def mixin_call?(node)
-      node.receiver.nil? && MIXIN_METHODS.include?(node.method_name)
-    end
+    class MixinCall
+      include RuboCop::Callbacksystems::Helpers
 
-    def correct_order(corrector, node, sorted)
-      args = node.arguments
-      corrector.replace(args.first.source_range.join(args.last.source_range), sorted.join(", "))
+      def initialize(node)
+        @node = node
+      end
+
+      def unsorted?
+        mixin_call? && node.arguments.many? && names != sorted_names
+      end
+
+      def offense_message
+        format(MESSAGE, sorted: sorted_names.join(", "))
+      end
+
+      def reorder(corrector)
+        corrector.replace(arguments.first.source_range.join(arguments.last.source_range), sorted_names.join(", "))
+      end
+
+      private
+        attr_reader :node
+        delegate :arguments, to: :node, private: true
+
+        def mixin_call?
+          bare_send?(node) && MIXIN_METHODS.include?(node.method_name)
+        end
+
+        def names
+          @names ||= arguments.map(&:source)
+        end
+
+        def sorted_names
+          @sorted_names ||= names.sort
+        end
     end
 end

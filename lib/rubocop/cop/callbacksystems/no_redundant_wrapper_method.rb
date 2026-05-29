@@ -28,26 +28,21 @@ class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Ca
   MESSAGE = "Method `%<wrapper>s` only wraps `%<target>s` without adding value. Consider removing the indirection."
 
   def on_def(node)
-    return unless checkable_method?(node)
-
-    wrapper = WrapperMethod.new(node)
-    add_offense(node, message: wrapper.offense_message) if wrapper.redundant?
+    if single_send_private_non_predicate?(node)
+      wrapper = WrapperMethod.new(node)
+      add_offense(node, message: wrapper.offense_message) if wrapper.offense?
+    end
   end
 
+  alias on_defs on_def
+
   private
-    def checkable_method?(node)
-      return false unless node.body&.send_type?
-
-      private_non_predicate?(node)
-    end
-
     class WrapperMethod
       def initialize(node)
         @node = node
-        @body = node.body
       end
 
-      def redundant?
+      def offense?
         simple_method_call? && arguments_are_pass_through?
       end
 
@@ -56,7 +51,8 @@ class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Ca
       end
 
       private
-        attr_reader :node, :body
+        attr_reader :node
+        delegate :body, to: :node, private: true
 
         def simple_method_call?
           body.receiver.nil? || body.receiver.self_type?
@@ -65,13 +61,13 @@ class RuboCop::Cop::Callbacksystems::NoRedundantWrapperMethod < RuboCop::Cop::Ca
         def arguments_are_pass_through?
           return true if body.arguments.empty?
 
-          (body.arguments.map { argument_source(it) } -
+          (body.arguments.map { source_of(it) } -
             node.arguments.map { it.name.to_s } -
             body.arguments.select(&:ivar_type?).map(&:source)).empty?
         end
 
-        def argument_source(arg)
-          arg.lvar_type? ? arg.children.first.to_s : arg.source
+        def source_of(arg)
+          arg.lvar_type? ? arg.name.to_s : arg.source
         end
     end
 end

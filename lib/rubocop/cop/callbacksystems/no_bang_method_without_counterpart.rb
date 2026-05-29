@@ -25,18 +25,24 @@ class RuboCop::Cop::Callbacksystems::NoBangMethodWithoutCounterpart < RuboCop::C
   MESSAGE = "Method `%<method>s` has no non-bang counterpart. Only use `!` when a version without `!` exists."
 
   def on_class(node)
-    return unless node.body
-
-    methods = direct_method_nodes(node.body)
-    names = methods.to_set(&:method_name)
-
-    names.select { it.to_s.end_with?("!") }.each do |bang_method|
-      next if names.include?(bang_method.to_s.chomp("!").to_sym)
-
-      method_node = methods.find { it.method?(bang_method) }
-      add_offense(method_node, message: format(MESSAGE, method: bang_method)) if method_node
-    end
+    each_offense(node) { |method_node, message| add_offense(method_node, message: message) }
   end
 
   alias on_module on_class
+
+  private
+    def each_offense(node, &block)
+      if block
+        orphan_bang_methods_in(node).each { yield it, format(MESSAGE, method: it.method_name) }
+      else
+        to_enum(__method__, node)
+      end
+    end
+
+    def orphan_bang_methods_in(node)
+      methods = direct_method_nodes_in(node.body)
+      names = methods.to_set(&:method_name)
+
+      methods.select { it.bang_method? && !names.include?(it.method_name.to_s.chomp("!").to_sym) }
+    end
 end

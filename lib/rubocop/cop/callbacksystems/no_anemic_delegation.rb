@@ -22,39 +22,35 @@
 #     Validator.new(self).valid?
 #   end
 #
-class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Callbacksystems::Base
+class RuboCop::Cop::Callbacksystems::NoAnemicDelegation < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Method `%<method>s` only delegates to `%<class>s.new(...).%<target>s`. Consider inlining or removing this method."
 
   def on_def(node)
-    return unless checkable_method?(node)
-
-    delegation = MethodDelegation.new(node)
-    add_offense(node, message: delegation.offense_message) if delegation.anemic?
+    if single_send_private_non_predicate?(node)
+      delegation = MethodDelegation.new(node)
+      add_offense(node, message: delegation.offense_message) if delegation.offense?
+    end
   end
 
+  alias on_defs on_def
+
   private
-    def checkable_method?(node)
-      return false unless node.body&.send_type?
-
-      private_non_predicate?(node)
-    end
-
     class MethodDelegation
       def initialize(node)
         @node = node
-        @body = node.body
       end
 
-      def anemic?
+      def offense?
         receiver_is_new_instance? && uses_method_params_only?
       end
 
       def offense_message
-        format MESSAGE, method: node.method_name, class: body.receiver.receiver.short_name, target: body.method_name
+        format(MESSAGE, method: node.method_name, class: body.receiver.receiver.short_name, target: body.method_name)
       end
 
       private
-        attr_reader :node, :body
+        attr_reader :node
+        delegate :body, to: :node, private: true
 
         def receiver_is_new_instance?
           body.receiver&.send_type? &&
@@ -63,9 +59,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod < RuboCop::Cop::Ca
         end
 
         def uses_method_params_only?
-          body.receiver.arguments.map(&:source).all? do |argument|
-            node.arguments.map { it.name.to_s }.include?(argument)
-          end
+          param_names = node.arguments.map { it.name.to_s }
+          body.receiver.arguments.map(&:source).all? { param_names.include?(it) }
         end
     end
 end

@@ -65,4 +65,20 @@ class ComplexConditionalTest < CopTestCase
 
     assert_equal 1, offenses.count
   end
+
+  test "flags a complex while condition" do
+    offenses = assert_offense <<~RUBY
+      while a && b && c
+        work
+      end
+    RUBY
+
+    assert_equal 1, offenses.count
+  end
+
+  test "counts only top-level operators, not those nested in arguments" do
+    assert_no_offense <<~RUBY
+      do_something if process(a || b) && c
+    RUBY
+  end
 end

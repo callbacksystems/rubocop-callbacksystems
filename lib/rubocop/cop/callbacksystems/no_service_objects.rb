@@ -44,10 +44,10 @@ class RuboCop::Cop::Callbacksystems::NoServiceObjects < RuboCop::Cop::Callbacksy
   MESSAGE = "Files in `app/%<directory>s/` are not allowed. Use models or POROs in `app/models/` instead."
 
   def on_new_investigation
-    return unless processed_source.file_path && processed_source.ast
-
-    directory = forbidden_directory
-    add_offense(processed_source.ast, message: format(MESSAGE, directory: directory)) if directory
+    if processed_source.file_path && processed_source.ast
+      directory = forbidden_directory
+      add_offense(processed_source.ast, message: format(MESSAGE, directory: directory)) if directory
+    end
   end
 
   private

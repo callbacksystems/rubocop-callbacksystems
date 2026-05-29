@@ -47,16 +47,24 @@ class RuboCop::Cop::Callbacksystems::SingleTopLevelClassOrModule < RuboCop::Cop:
   MESSAGE = "Only one top-level class or module is allowed per file."
 
   def on_new_investigation
-    top_level_definitions.drop(1).each do |node|
-      add_offense(node, message: MESSAGE)
-    end
+    each_offense { |node, message| add_offense(node, message: message) }
   end
 
   private
-    def top_level_definitions
-      return [] unless processed_source.ast
+    def each_offense(&block)
+      if block
+        top_level_definitions_in.drop(1).each { yield it, MESSAGE }
+      else
+        to_enum(__method__)
+      end
+    end
 
-      definitions_from(processed_source.ast)
+    def top_level_definitions_in
+      if processed_source.ast
+        definitions_from(processed_source.ast)
+      else
+        []
+      end
     end
 
     def definitions_from(node)

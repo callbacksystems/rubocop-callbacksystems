@@ -68,4 +68,50 @@ class NoExplicitPublicModifierTest < CopTestCase
 
     assert_equal 1, offenses.count
   end
+
+  test "leaves a public that reopens visibility after private for a human" do
+    assert_correction <<~RUBY, <<~SAME, file: "app/models/foo.rb"
+      class Foo
+        private
+          def private_method; end
+
+        public
+          def public_method; end
+      end
+    RUBY
+      class Foo
+        private
+          def private_method; end
+
+        public
+          def public_method; end
+      end
+    SAME
+  end
+
+  test "removes a redundant public with no preceding private" do
+    assert_correction <<~RUBY, <<~CORRECTED, file: "app/models/foo.rb"
+      class Foo
+        public
+        def public_method; end
+      end
+    RUBY
+      class Foo
+        def public_method; end
+      end
+    CORRECTED
+  end
+
+  test "removes a redundant public with a method name" do
+    assert_correction <<~RUBY, <<~CORRECTED, file: "app/models/foo.rb"
+      class Foo
+        def some_method; end
+        public :some_method
+      end
+    RUBY
+      class Foo
+        def some_method; end
+      end
+    CORRECTED
+  end
 end

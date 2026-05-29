@@ -14,11 +14,11 @@ module RuboCop::Callbacksystems::Helpers::Rails
   ].freeze
 
   def controller_superclass?(superclass_node)
-    name = constant_name(superclass_node)
+    name = constant_name_of(superclass_node)
     name && (CONTROLLER_SUPERCLASSES.include?(name) || name.end_with?("Controller"))
   end
 
   def rails_test_base_class?(superclass_node)
-    RAILS_TEST_BASE_CLASSES.include?(constant_name(superclass_node))
+    RAILS_TEST_BASE_CLASSES.include?(constant_name_of(superclass_node))
   end
 end

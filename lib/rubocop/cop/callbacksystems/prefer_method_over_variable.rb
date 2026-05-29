@@ -48,27 +48,27 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
   FINDER_MESSAGE = "Variable `%<var>s` assigned from finder. Consider extracting a `%<var>s` method."
 
   def on_lvasgn(node)
-    offense = Assignment.new(node).offense
-    add_offense(node, message: offense) if offense
+    message = Assignment.new(node).offense_message
+    add_offense(node, message: message) if message
   end
 
   private
     class Assignment
-      attr_reader :node
-
       def initialize(node)
         @node = node
       end
 
-      def offense
+      def offense_message
         return if skip_assignment?
 
-        Value.new(node, node.children.first, node.children.second).offense
+        Value.new(node, node.name, node.expression).offense_message
       end
 
       private
+        attr_reader :node
+
         def skip_assignment?
-          !node.children.second&.send_type? || inside_conditional?
+          !node.expression&.send_type? || inside_conditional?
         end
 
         def inside_conditional?
@@ -77,15 +77,13 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
     end
 
     class Value
-      attr_reader :node, :variable_name, :value_node
-
       def initialize(node, variable_name, value_node)
         @node = node
         @variable_name = variable_name
         @value_node = value_node
       end
 
-      def offense
+      def offense_message
         if same_name_with_simple_receiver?
           format(DELEGATE_MESSAGE, var: variable_name, receiver: Receiver.new(value_node).receiver_name)
         elsif FinderPattern.new(variable_name, value_node).matches?
@@ -94,6 +92,8 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
       end
 
       private
+        attr_reader :node, :variable_name, :value_node
+
         def same_name_with_simple_receiver?
           value_node.method?(variable_name) && delegatable_receiver?
         end
@@ -103,7 +103,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
         end
 
         def parameter_receiver?
-          value_node.receiver.lvar_type? && parameter?(value_node.receiver.children.first)
+          value_node.receiver.lvar_type? && parameter?(value_node.receiver.name)
         end
 
         def parameter?(receiver_variable_name)
@@ -114,8 +114,6 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
     end
 
     class Receiver
-      attr_reader :value_node
-
       def initialize(value_node)
         @value_node = value_node
       end
@@ -126,21 +124,18 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
 
       def receiver_name
         case value_node.receiver.type
-        when :send
-          value_node.receiver.method_name
-        when :lvar
-          value_node.receiver.children.first
-        when :ivar
-          value_node.receiver.children.first.to_s.delete_prefix("@")
-        else
-          "receiver"
+        when :send then value_node.receiver.method_name
+        when :lvar then value_node.receiver.name
+        when :ivar then value_node.receiver.name.to_s.delete_prefix("@")
+        else "receiver"
         end
       end
+
+      private
+        attr_reader :value_node
     end
 
     class FinderPattern
-      attr_reader :variable_name, :value_node
-
       def initialize(variable_name, value_node)
         @variable_name = variable_name
         @value_node = value_node
@@ -151,6 +146,8 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
       end
 
       private
+        attr_reader :variable_name, :value_node
+
         def matches_finder_method?
           %w[find_ get_ fetch_ load_].any? do |prefix|
             value_node.method_name.to_s == "#{prefix}#{variable_name}"
@@ -160,7 +157,7 @@ class RuboCop::Cop::Callbacksystems::PreferMethodOverVariable < RuboCop::Cop::Ca
         def matches_class_finder?
           value_node.receiver&.const_type? &&
             %w[find find_by find_by!].include?(value_node.method_name.to_s) &&
-            variable_name.to_s == value_node.receiver.children.last.to_s.underscore
+            variable_name.to_s == value_node.receiver.short_name.to_s.underscore
         end
     end
 end

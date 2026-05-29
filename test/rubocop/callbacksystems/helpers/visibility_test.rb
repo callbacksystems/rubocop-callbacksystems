@@ -1,8 +1,8 @@
 require "helpers_test_case"
 
 class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
-  test "method_visibility returns public for methods before private" do
-    method = find_method(<<~RUBY, :foo)
+  test "public_method? returns true for methods before private" do
+    method = method_named(<<~RUBY, :foo)
       class Bar
         def foo; end
 
@@ -11,11 +11,22 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
       end
     RUBY
 
-    assert_equal :public, Helpers.method_visibility(method)
+    assert Helpers.public_method?(method)
   end
 
-  test "method_visibility returns private for methods after private" do
-    method = find_method(<<~RUBY, :baz)
+  test "public_method? returns false for methods after private" do
+    method = method_named(<<~RUBY, :baz)
+      class Bar
+        private
+          def baz; end
+      end
+    RUBY
+
+    assert_not Helpers.public_method?(method)
+  end
+
+  test "visibility_of returns public for methods before private" do
+    method = method_named(<<~RUBY, :foo)
       class Bar
         def foo; end
 
@@ -24,42 +35,35 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
       end
     RUBY
 
-    assert_equal :private, Helpers.method_visibility(method)
+    assert_equal :public, Helpers.visibility_of(method)
   end
 
-  test "method_visibility returns protected for methods after protected" do
-    method = find_method(<<~RUBY, :baz)
+  test "visibility_of returns private for methods after private" do
+    method = method_named(<<~RUBY, :baz)
+      class Bar
+        def foo; end
+
+        private
+          def baz; end
+      end
+    RUBY
+
+    assert_equal :private, Helpers.visibility_of(method)
+  end
+
+  test "visibility_of returns protected for methods after protected" do
+    method = method_named(<<~RUBY, :baz)
       class Bar
         protected
           def baz; end
       end
     RUBY
 
-    assert_equal :protected, Helpers.method_visibility(method)
-  end
-
-  test "visibility_modifier returns the modifier symbol" do
-    body = parse_class_body(<<~RUBY)
-      class Foo
-        private
-      end
-    RUBY
-
-    assert_equal :private, Helpers.visibility_modifier(body)
-  end
-
-  test "visibility_modifier returns nil for non-modifier sends" do
-    body = parse_class_body(<<~RUBY)
-      class Foo
-        attr_reader :name
-      end
-    RUBY
-
-    assert_nil Helpers.visibility_modifier(body)
+    assert_equal :protected, Helpers.visibility_of(method)
   end
 
   test "enclosing_body_for returns class body" do
-    method = find_method(<<~RUBY, :foo)
+    method = method_named(<<~RUBY, :foo)
       class Bar
         def foo; end
         def baz; end
@@ -70,7 +74,7 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
   end
 
   test "enclosing_body_for returns nil for method outside class" do
-    method = parse("def foo; end").ast
+    method = processed_source("def foo; end").ast
 
     assert_nil Helpers.enclosing_body_for(method)
   end
@@ -82,7 +86,7 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
         def baz; end
       end
     RUBY
-    ast = parse(source).ast
+    ast = processed_source(source).ast
     body = ast.body
     method = body.children.first
 
@@ -96,15 +100,174 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
           def bar; end
       end
     RUBY
-    ast = parse(source).ast
+    ast = processed_source(source).ast
     body = ast.body
     method = body.children.last
 
     assert_equal :private, Helpers.visibility_at(method, body)
   end
 
+  test "visibility_modifier_of returns the modifier symbol" do
+    body = class_body(<<~RUBY)
+      class Foo
+        private
+      end
+    RUBY
+
+    assert_equal :private, Helpers.visibility_modifier_of(body)
+  end
+
+  test "visibility_modifier_of returns nil for non-modifier sends" do
+    body = class_body(<<~RUBY)
+      class Foo
+        attr_reader :name
+      end
+    RUBY
+
+    assert_nil Helpers.visibility_modifier_of(body)
+  end
+
+  test "private_method? returns true for methods after private" do
+    method = method_named(<<~RUBY, :baz)
+      class Bar
+        private
+          def baz; end
+      end
+    RUBY
+
+    assert Helpers.private_method?(method)
+  end
+
+  test "private_method? returns false for protected methods" do
+    method = method_named(<<~RUBY, :baz)
+      class Bar
+        protected
+          def baz; end
+      end
+    RUBY
+
+    assert_not Helpers.private_method?(method)
+  end
+
+  test "private_non_predicate? returns true for private non-predicate method" do
+    method = method_named(<<~RUBY, :process)
+      class Foo
+        private
+          def process; end
+      end
+    RUBY
+
+    assert Helpers.private_non_predicate?(method)
+  end
+
+  test "private_non_predicate? returns false for predicate method" do
+    method = method_named(<<~RUBY, :valid?)
+      class Foo
+        private
+          def valid?; end
+      end
+    RUBY
+
+    assert_not Helpers.private_non_predicate?(method)
+  end
+
+  test "private_non_predicate? returns false for public method" do
+    method = method_named(<<~RUBY, :process)
+      class Foo
+        def process; end
+      end
+    RUBY
+
+    assert_not Helpers.private_non_predicate?(method)
+  end
+
+  test "private_nested_class? returns true for class in private section" do
+    ast = processed_source(<<~RUBY).ast
+      class Outer
+        private
+          class Inner; end
+      end
+    RUBY
+    inner = ast.body.children.last
+
+    assert Helpers.private_nested_class?(inner)
+  end
+
+  test "private_nested_class? returns false for top-level class" do
+    ast = processed_source(<<~RUBY).ast
+      class Outer
+      end
+    RUBY
+
+    assert_not Helpers.private_nested_class?(ast)
+  end
+
+  test "private_nested_class? returns false for public nested class" do
+    ast = processed_source(<<~RUBY).ast
+      class Outer
+        class Inner; end
+      end
+    RUBY
+    inner = ast.body
+
+    assert_not Helpers.private_nested_class?(inner)
+  end
+
+  test "enclosing_class_or_module_of returns the surrounding class" do
+    method = method_named(<<~RUBY, :foo)
+      class Bar
+        def foo; end
+      end
+    RUBY
+
+    assert_equal :Bar, Helpers.enclosing_class_or_module_of(method).identifier.short_name
+  end
+
+  test "enclosing_class_or_module_of returns the surrounding module" do
+    method = method_named(<<~RUBY, :foo)
+      module Bar
+        def foo; end
+      end
+    RUBY
+
+    assert_equal :Bar, Helpers.enclosing_class_or_module_of(method).identifier.short_name
+  end
+
+  test "enclosing_class_or_module_of returns nil at the top level" do
+    method = processed_source("def foo; end").ast
+
+    assert_nil Helpers.enclosing_class_or_module_of(method)
+  end
+
+  test "private_nested_classes_in returns classes after private" do
+    ast = processed_source(<<~RUBY).ast
+      class Outer
+        def foo; end
+
+        private
+          class Inner; end
+          class Other; end
+      end
+    RUBY
+
+    classes = Helpers.private_nested_classes_in(ast)
+
+    assert_equal 2, classes.size
+    assert_equal :Inner, classes.first.identifier.short_name
+  end
+
+  test "private_nested_classes_in returns empty for no private classes" do
+    ast = processed_source(<<~RUBY).ast
+      class Outer
+        def foo; end
+      end
+    RUBY
+
+    assert_empty Helpers.private_nested_classes_in(ast)
+  end
+
   test "each_child_with_visibility yields children with private status" do
-    ast = parse(<<~RUBY).ast
+    ast = processed_source(<<~RUBY).ast
       class Foo
         def bar; end
 
@@ -118,35 +281,8 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     assert_equal [ [ :def, false ], [ :send, true ], [ :def, true ] ], results
   end
 
-  test "private_nested_classes returns classes after private" do
-    ast = parse(<<~RUBY).ast
-      class Outer
-        def foo; end
-
-        private
-          class Inner; end
-          class Other; end
-      end
-    RUBY
-
-    classes = Helpers.private_nested_classes(ast)
-
-    assert_equal 2, classes.size
-    assert_equal :Inner, classes.first.identifier.short_name
-  end
-
-  test "private_nested_classes returns empty for no private classes" do
-    ast = parse(<<~RUBY).ast
-      class Outer
-        def foo; end
-      end
-    RUBY
-
-    assert_empty Helpers.private_nested_classes(ast)
-  end
-
   test "public_methods_in returns methods before private" do
-    ast = parse(<<~RUBY).ast
+    ast = processed_source(<<~RUBY).ast
       class Foo
         def bar; end
         def baz; end
@@ -162,7 +298,7 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
   end
 
   test "private_methods_in returns methods after private" do
-    ast = parse(<<~RUBY).ast
+    ast = processed_source(<<~RUBY).ast
       class Foo
         def bar; end
 
@@ -175,64 +311,5 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     methods = Helpers.private_methods_in(ast)
 
     assert_equal [ :baz, :qux ], methods.map(&:method_name)
-  end
-
-  test "direct_child_of_class? returns true for direct method" do
-    source = <<~RUBY
-      class Outer
-        def foo; end
-      end
-    RUBY
-    ast = parse(source).ast
-    method = ast.body
-
-    assert Helpers.direct_child_of_class?(method, ast)
-  end
-
-  test "direct_child_of_class? returns false for nested method" do
-    source = <<~RUBY
-      class Outer
-        class Inner
-          def foo; end
-        end
-      end
-    RUBY
-    ast = parse(source).ast
-    inner_class = ast.body
-    method = inner_class.body
-
-    assert_not Helpers.direct_child_of_class?(method, ast)
-  end
-
-  test "private_non_predicate? returns true for private non-predicate method" do
-    method = find_method(<<~RUBY, :process)
-      class Foo
-        private
-          def process; end
-      end
-    RUBY
-
-    assert Helpers.private_non_predicate?(method)
-  end
-
-  test "private_non_predicate? returns false for predicate method" do
-    method = find_method(<<~RUBY, :valid?)
-      class Foo
-        private
-          def valid?; end
-      end
-    RUBY
-
-    assert_not Helpers.private_non_predicate?(method)
-  end
-
-  test "private_non_predicate? returns false for public method" do
-    method = find_method(<<~RUBY, :process)
-      class Foo
-        def process; end
-      end
-    RUBY
-
-    assert_not Helpers.private_non_predicate?(method)
   end
 end

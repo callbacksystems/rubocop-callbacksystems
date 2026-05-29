@@ -5,6 +5,10 @@ class RuboCop::Callbacksystems::TestCopHelpersTest < CopTestCase
     assert_respond_to TestCop.new, :test_block?
   end
 
+  test "included defines setup_block? matcher on including class" do
+    assert_respond_to TestCop.new, :setup_block?
+  end
+
   private
     class TestCop < RuboCop::Cop::Base
       include RuboCop::Callbacksystems::TestCopHelpers

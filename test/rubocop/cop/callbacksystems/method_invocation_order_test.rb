@@ -58,6 +58,45 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
     RUBY
   end
 
+  test "autocorrects by moving the caller before the callee" do
+    assert_correction <<~BAD, <<~GOOD
+      class Example
+        def helper
+        end
+
+        def process
+          helper
+        end
+      end
+    BAD
+      class Example
+        def process
+          helper
+        end
+
+        def helper
+        end
+      end
+    GOOD
+  end
+
+  test "registers offense when sibling callees are defined out of invocation order" do
+    assert_offense <<~RUBY
+      class Example
+        def process
+          helper_b
+          helper_a
+        end
+
+        def helper_a
+        end
+
+        def helper_b
+        end
+      end
+    RUBY
+  end
+
   test "registers offense for multiple callees in wrong order" do
     assert_offense <<~RUBY
       class Example

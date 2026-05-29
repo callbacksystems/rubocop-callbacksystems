@@ -51,7 +51,7 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Cal
       end
 
       def offense?
-        tap_on_empty_collection? && has_mutation_in_block?
+        tap_on_empty_collection? && mutation_in_block?
       end
 
       private
@@ -61,20 +61,20 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Cal
           node.method?(:tap) && CollectionReceiver.new(node.receiver).empty_collection?
         end
 
-        def has_mutation_in_block?
+        def mutation_in_block?
           node.body&.each_node(:send)&.any? { MUTATION_METHODS.include?(it.method_name) }
         end
     end
 
     class CollectionReceiver
+      include RuboCop::Callbacksystems::Helpers
+
       def initialize(receiver)
         @receiver = receiver
       end
 
       def empty_collection?
-        return false unless receiver
-
-        literal_empty_collection? || collection_class_constructor?
+        receiver && (literal_empty_collection? || collection_class_constructor?)
       end
 
       private
@@ -94,7 +94,7 @@ class RuboCop::Cop::Callbacksystems::NoTapCollectionBuilding < RuboCop::Cop::Cal
         def constructor_send
           return receiver if receiver.send_type?
 
-          receiver.send_node if receiver.block_type?
+          receiver.send_node if any_block_type?(receiver)
         end
     end
 end

@@ -34,70 +34,48 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
   MESSAGE = "Method `%<method>s` in private nested class `%<class>s` is never called from outside. Make it private."
 
   def on_class(node)
-    private_nested_classes(node).each do |nested_class|
-      report_visibility_violations(node, nested_class)
+    private_nested_classes_in(node).each do |nested_class|
+      VisibilityCheck.new(node, nested_class).each_offense do |offense_node, message|
+        add_offense(offense_node, message: message)
+      end
     end
   end
 
   alias on_module on_class
 
   private
-    def report_visibility_violations(node, nested_class)
-      class_name = nested_class.identifier.short_name
-      external_calls = ExternalCallCollector.new(node, nested_class, class_name).collect
+    class VisibilityCheck
+      include RuboCop::Callbacksystems::Helpers
 
-      public_methods_in(nested_class).each do |method_node|
-        next if external_calls.include?(method_node.method_name)
-
-        add_offense(method_node, message: format(MESSAGE, method: method_node.method_name, class: class_name))
-      end
-    end
-
-    class ExternalCallCollector
-      def initialize(parent_node, nested_class, class_name)
+      def initialize(parent_node, nested_class)
         @parent_node = parent_node
         @nested_class = nested_class
-        @class_name = class_name
+        @class_name = nested_class.identifier.short_name
       end
 
-      def collect
-        @collect ||= Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
+      def each_offense(&block)
+        if block
+          unused_public_methods.each { yield it, format(MESSAGE, method: it.method_name, class: class_name) }
+        else
+          to_enum(__method__)
+        end
       end
 
       private
         attr_reader :parent_node, :nested_class, :class_name
 
+        def unused_public_methods
+          public_methods_in(nested_class).reject { external_calls.include?(it.method_name) }
+        end
+
+        def external_calls
+          @external_calls ||= Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
+        end
+
         def direct_calls
           external_sends.filter_map do |send_node|
             send_node.method_name if instance_method_call?(send_node.receiver)
           end
-        end
-
-        def variable_calls
-          parent_node.body.each_node(:lvasgn).flat_map { calls_on_assigned_variable(it) }
-        end
-
-        def calls_on_assigned_variable(assignment)
-          return [] unless instance_method_call?(assignment.children.second)
-
-          variable_name = assignment.children.first
-          external_sends.filter_map do |send_node|
-            send_node.method_name if call_on_variable?(send_node, variable_name)
-          end
-        end
-
-        def block_pass_calls
-          parent_node.body.each_node(:block_pass).filter_map do |node|
-            next if inside_nested_class?(node)
-
-            node.children.first.value if node.children.first&.sym_type?
-          end
-        end
-
-        def macro_referenced_methods
-          return [] unless nested_class.body
-
-          RuboCop::Callbacksystems::MacroReferencedMethods.new(nested_class.body).collect.to_a
         end
 
         def external_sends
@@ -115,8 +93,34 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
             node.receiver.short_name == class_name
         end
 
+        def variable_calls
+          parent_node.body.each_node(:lvasgn, :ivasgn).flat_map { calls_on_assigned_variable(it) }
+        end
+
+        def calls_on_assigned_variable(assignment)
+          if instance_method_call?(assignment.expression)
+            external_sends.filter_map do |send_node|
+              send_node.method_name if call_on_variable?(send_node, assignment.name)
+            end
+          else
+            []
+          end
+        end
+
         def call_on_variable?(send_node, variable_name)
-          send_node.receiver&.lvar_type? && send_node.receiver.children.first == variable_name
+          reads_variable?(send_node.receiver, variable_name)
+        end
+
+        def block_pass_calls
+          parent_node.body.each_node(:block_pass).filter_map do |node|
+            next if inside_nested_class?(node)
+
+            node.children.first.value if node.children.first&.sym_type?
+          end
+        end
+
+        def macro_referenced_methods
+          @macro_referenced_methods ||= RuboCop::Callbacksystems::MacroReferencedMethods.for(nested_class.body).to_a
         end
     end
 end

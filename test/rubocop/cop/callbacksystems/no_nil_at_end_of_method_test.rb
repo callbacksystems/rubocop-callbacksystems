@@ -83,4 +83,38 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethodTest < CopTestCase
       end
     RUBY
   end
+
+  test "removes the trailing nil" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        do_something
+        nil
+      end
+    RUBY
+      def process
+        do_something
+      end
+    CORRECTED
+  end
+
+  test "removes the trailing nil after a conditional" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        if condition
+          do_something
+        end
+        nil
+      end
+    RUBY
+      def process
+        if condition
+          do_something
+        end
+      end
+    CORRECTED
+  end
+
+  test "removes the trailing nil in a one-line method" do
+    assert_correction "def process; do_something; nil; end", "def process; do_something; end"
+  end
 end

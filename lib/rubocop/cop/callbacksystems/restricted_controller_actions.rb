@@ -34,16 +34,13 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
   MESSAGE = "Only standard Rails actions (index, show, new, create, edit, update, destroy) are allowed in controllers. Extract `%<method>s` to a new controller."
 
   def on_def(node)
-    return unless Action.new(node).offense?
-
-    add_offense(node, message: format(MESSAGE, method: node.method_name))
+    action = Action.new(node)
+    add_offense(node, message: action.offense_message) if action.offense?
   end
 
   private
     class Action
       include RuboCop::Callbacksystems::Helpers
-
-      attr_reader :node
 
       def initialize(node)
         @node = node
@@ -52,36 +49,22 @@ class RuboCop::Cop::Callbacksystems::RestrictedControllerActions < RuboCop::Cop:
       def offense?
         return false if STANDARD_CONTROLLER_ACTIONS.include?(node.method_name)
 
-        enclosing_class&.then { ControllerClassCheck.new(it, node).offense? }
+        enclosing_controller_class? && public_method?(node)
+      end
+
+      def offense_message
+        format(MESSAGE, method: node.method_name)
       end
 
       private
-        def enclosing_class
-          node.each_ancestor(:class, :module).first&.then { it.class_type? ? it : nil }
+        attr_reader :node
+
+        def enclosing_controller_class?
+          enclosing_class&.then { controller_superclass?(it.parent_class) }
         end
 
-        class ControllerClassCheck
-          include RuboCop::Callbacksystems::Helpers
-
-          attr_reader :class_node, :method_node
-
-          def initialize(class_node, method_node)
-            @class_node = class_node
-            @method_node = method_node
-          end
-
-          def offense?
-            controller_class? && public_method?
-          end
-
-          private
-            def controller_class?
-              controller_superclass?(class_node.parent_class)
-            end
-
-            def public_method?
-              method_visibility(method_node) == :public
-            end
+        def enclosing_class
+          enclosing_class_or_module_of(node)&.then { it if it.class_type? }
         end
     end
 end

@@ -37,11 +37,13 @@ class RuboCop::Cop::Callbacksystems::TooManyInstanceVariables < RuboCop::Cop::Ca
     "Consider splitting into separate methods."
 
   def on_def(node)
-    return if node.method?(:initialize) || method_visibility(node) == :public
+    return if node.method?(:initialize) || public_method?(node)
 
     count = assignment_count(node.body, :ivasgn)
     add_offense(node, message: format(MESSAGE, count: count, max: max_assignments)) if count > max_assignments
   end
+
+  alias on_defs on_def
 
   private
     def max_assignments

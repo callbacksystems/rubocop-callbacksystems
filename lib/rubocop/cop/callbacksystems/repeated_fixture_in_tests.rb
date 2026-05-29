@@ -32,29 +32,36 @@ class RuboCop::Cop::Callbacksystems::RepeatedFixtureInTests < RuboCop::Cop::Call
   MESSAGE = "Fixture `%<fixture>s` is used in multiple tests. Move it to `setup`."
 
   def on_new_investigation
-    return unless processed_source.ast
-
-    fixture_usages.each do |fixture_key, calls|
-      next unless calls.many?
-
-      calls.drop(1).each do |call|
-        add_offense(call, message: format(MESSAGE, fixture: fixture_key))
-      end
-    end
+    each_offense { |node, message| add_offense(node, message: message) }
   end
 
   private
-    def fixture_usages
-      test_blocks.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |test_block, usages|
-        collect_fixture_calls(test_block).each { usages[it.signature] << it.node }
+    def each_offense(&block)
+      if block
+        repeated_fixture_calls.each do |signature, calls|
+          calls.drop(1).each { yield it, format(MESSAGE, fixture: signature) }
+        end
+      else
+        to_enum(__method__)
       end
     end
 
-    def test_blocks
-      processed_source.ast.each_node(:block).select { test_block?(it) }
+    def repeated_fixture_calls
+      fixture_usages.select { |_, calls| calls.many? }
     end
 
-    def collect_fixture_calls(test_block)
+    def fixture_usages
+      if processed_source.ast
+        test_blocks
+          .flat_map { fixture_calls_in(it) }
+          .group_by(&:signature)
+          .transform_values { it.map(&:node) }
+      else
+        {}
+      end
+    end
+
+    def fixture_calls_in(test_block)
       test_block.each_node(:send).filter_map do |node|
         fixture = RuboCop::Callbacksystems::FixtureCall.new(node)
         fixture if fixture.valid?

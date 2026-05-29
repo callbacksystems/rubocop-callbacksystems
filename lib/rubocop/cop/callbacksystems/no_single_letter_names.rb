@@ -24,7 +24,7 @@ class RuboCop::Cop::Callbacksystems::NoSingleLetterNames < RuboCop::Cop::Callbac
   MESSAGE = "Avoid single-letter name `%<name>s`. Use a descriptive name instead."
 
   def on_lvasgn(node)
-    name = node.children.first.to_s
+    name = node.name.to_s
     add_offense(node, message: format(MESSAGE, name: name)) if name.length == 1 && !name.start_with?("_")
   end
 

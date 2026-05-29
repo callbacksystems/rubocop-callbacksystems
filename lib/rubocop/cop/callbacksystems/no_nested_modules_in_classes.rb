@@ -46,13 +46,11 @@ class RuboCop::Cop::Callbacksystems::NoNestedModulesInClasses < RuboCop::Cop::Ca
   MESSAGE = "Do not nest modules inside classes. Use a nested class or define the module at the top level."
 
   def on_module(node)
-    return unless enclosing_class?(node)
-
-    add_offense(node, message: MESSAGE)
+    add_offense(node, message: MESSAGE) if enclosing_class?(node)
   end
 
   private
     def enclosing_class?(node)
-      node.each_ancestor(:class, :module).first&.class_type?
+      enclosing_class_or_module_of(node)&.class_type?
     end
 end

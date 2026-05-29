@@ -44,30 +44,36 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Callback
   MESSAGE = "Memoization should be the entire method body. Extract other statements to separate methods."
 
   def on_def(node)
-    checker = MemoizationBody.new(node.body)
-    memo_node = checker.memoization_node
-    add_offense(memo_node, message: MESSAGE) if memo_node && !checker.memoization_is_entire_body?
+    memoization = MemoizationBody.new(node.body)
+    add_offense(memoization.memoization_node, message: MESSAGE) if memoization.offense?
   end
+
+  alias on_defs on_def
 
   private
     class MemoizationBody
-      attr_reader :body
-
       def initialize(body)
         @body = body
       end
 
-      def memoization_node
-        body&.each_node(:or_asgn)&.find { ivar_memoization?(it) }
+      def offense?
+        memoization_node && !entire_body_is_memoization?
       end
 
-      def memoization_is_entire_body?
-        simple_memoization? || multiple_memoizations? || conditional_memoization? || memoization_with_rescue?
+      def memoization_node
+        @memoization_node ||= body&.each_node(:or_asgn)&.find { ivar_memoization?(it) }
       end
 
       private
+        attr_reader :body
+
         def ivar_memoization?(node)
           node&.or_asgn_type? && node.children.first.ivasgn_type?
+        end
+
+        def entire_body_is_memoization?
+          simple_memoization? || multiple_memoizations? || conditional_memoization? ||
+            memoization_with_rescue? || memoization_then_field_return?
         end
 
         def simple_memoization?
@@ -79,7 +85,7 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Callback
         end
 
         def conditional_memoization?
-          body&.if_type? && ivar_memoization?(body.children.second)
+          body&.if_type? && body.else_branch.nil? && ivar_memoization?(body.if_branch)
         end
 
         def memoization_with_rescue?
@@ -92,6 +98,18 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Callback
           elsif body&.kwbegin_type? && body.children.first&.rescue_type?
             body.children.first
           end
+        end
+
+        # `@user ||= load; @user` (or `; return @user`) reads back the field it just
+        # memoized: still a single concern, so it is allowed.
+        def memoization_then_field_return?
+          body&.begin_type? && body.children.size == 2 &&
+            ivar_memoization?(body.children.first) && returns_memoized_ivar?(body.children.last)
+        end
+
+        def returns_memoized_ivar?(node)
+          read = node.return_type? ? node.children.first : node
+          read&.ivar_type? && read.name == memoization_node.lhs.name
         end
     end
 end

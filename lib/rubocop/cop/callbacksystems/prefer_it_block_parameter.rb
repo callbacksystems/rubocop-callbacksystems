@@ -30,10 +30,10 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
   MESSAGE = "Use `it` instead of explicit block parameter `|%<param>s|`."
 
   def on_block(node)
-    return unless single_param_inline_block?(node)
-
-    add_offense(node, message: format(MESSAGE, param: node.first_argument.source)) do |corrector|
-      Correction.new(corrector, node).apply
+    if single_param_inline_block?(node)
+      add_offense(node, message: format(MESSAGE, param: node.first_argument.source)) do |corrector|
+        Correction.new(corrector, node).apply
+      end
     end
   end
 
@@ -42,10 +42,10 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
 
   private
     def single_param_inline_block?(node)
-      node.body && node.braces? && node.single_line? && node.arguments.size == 1 && !nested_in_it_block?(node)
+      node.body && node.braces? && node.single_line? && node.arguments.size == 1 && !nested_in_convertible_block?(node)
     end
 
-    def nested_in_it_block?(node)
+    def nested_in_convertible_block?(node)
       node.each_ancestor(:any_block).any? { it.arguments.size == 1 && it.braces? && it.single_line? }
     end
 
@@ -69,7 +69,7 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
         end
 
         def references_parameter?(lvar_node)
-          lvar_node.children.first.to_s == node.first_argument.source
+          lvar_node.name.to_s == node.first_argument.source
         end
 
         def remove_arguments

@@ -40,30 +40,36 @@ class RuboCop::Cop::Callbacksystems::BuilderMethodParentheses < RuboCop::Cop::Ca
   def on_send(node)
     return if METHODS.exclude?(node.method_name)
 
-    if missing_parentheses?(node)
-      add_offense(node, message: format(MESSAGE, method: node.method_name)) do |corrector|
-        corrector.replace(gap_range(node), "(")
-        corrector.insert_after(node.last_argument, ")")
-      end
-    end
+    call = BuilderCall.new(node)
+    add_offense(node, message: format(MESSAGE, method: node.method_name)) { call.parenthesize(it) } if call.missing_parentheses?
   end
 
   alias on_csend on_send
 
   private
-    def missing_parentheses?(node)
-      node.arguments? && !node.parenthesized? && !backslash_continuation?(node)
-    end
+    class BuilderCall
+      def initialize(node)
+        @node = node
+      end
 
-    def backslash_continuation?(node)
-      gap_source(node).include?("\\")
-    end
+      def missing_parentheses?
+        node.arguments? && !node.parenthesized? && !backslash_continuation?
+      end
 
-    def gap_range(node)
-      Parser::Source::Range.new(node.source_range.source_buffer, node.loc.selector.end_pos, node.first_argument.source_range.begin_pos)
-    end
+      def parenthesize(corrector)
+        corrector.replace(gap_range, "(")
+        corrector.insert_after(node.last_argument, ")")
+      end
 
-    def gap_source(node)
-      gap_range(node).source
+      private
+        attr_reader :node
+
+        def backslash_continuation?
+          gap_range.source.include?("\\")
+        end
+
+        def gap_range
+          Parser::Source::Range.new(node.source_range.source_buffer, node.loc.selector.end_pos, node.first_argument.source_range.begin_pos)
+        end
     end
 end

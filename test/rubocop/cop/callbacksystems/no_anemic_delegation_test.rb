@@ -1,7 +1,7 @@
 require "test_helper"
 
-class NoAnemicDelegationMethodTest < CopTestCase
-  self.cop_class = RuboCop::Cop::Callbacksystems::NoAnemicDelegationMethod
+class NoAnemicDelegationTest < CopTestCase
+  self.cop_class = RuboCop::Cop::Callbacksystems::NoAnemicDelegation
 
   test "registers offense for private method that only delegates to new instance" do
     offenses = assert_offense <<~RUBY

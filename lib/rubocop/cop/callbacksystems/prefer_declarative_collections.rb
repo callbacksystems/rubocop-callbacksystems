@@ -43,7 +43,7 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
 
   private
     class ImperativeEachBlock
-      attr_reader :node
+      include RuboCop::Callbacksystems::Helpers
 
       def initialize(node)
         @node = node
@@ -54,48 +54,43 @@ class RuboCop::Cop::Callbacksystems::PreferDeclarativeCollections < RuboCop::Cop
       end
 
       private
+        attr_reader :node
+
         def each_block?
           node.method?(:each) && node.receiver
         end
 
         def imperative_pattern?
-          assignment = find_empty_array_assignment
-          assignment && contains_push_to?(node.body, assignment.children.first)
+          assignment = empty_array_assignment
+          assignment && contains_push_to?(node.body, assignment.name)
         end
 
-        def find_empty_array_assignment
-          node.parent&.begin_type? && find_preceding_assignment
+        def empty_array_assignment
+          node.parent&.begin_type? && preceding_assignment
         end
 
-        def find_preceding_assignment
+        def preceding_assignment
           siblings = node.parent.children
           siblings[0...siblings.index(node)].rfind { empty_assignment?(it) }
         end
 
         def empty_assignment?(sibling)
-          sibling && [ :lvasgn, :ivasgn ].include?(sibling.type) &&
-            sibling.children.last&.array_type? && sibling.children.last.children.empty?
+          sibling&.type?(:lvasgn, :ivasgn) && sibling.expression&.array_type? && sibling.expression.children.empty?
         end
 
         def contains_push_to?(target_node, variable_name)
           case target_node.type
           when :send
             push_to_variable?(target_node, variable_name)
-          when :if, :case
+          when :if, :case, :begin
             target_node.each_child_node.any? { contains_push_to?(it, variable_name) }
-          when :begin
-            target_node.children.any? { contains_push_to?(it, variable_name) }
           else
             false
           end
         end
 
         def push_to_variable?(send_node, variable_name)
-          send_node.method?(:<<) && receiver_matches?(send_node.receiver, variable_name)
-        end
-
-        def receiver_matches?(receiver, variable_name)
-          receiver && [ :lvar, :ivar ].include?(receiver.type) && receiver.children.first == variable_name
+          send_node.method?(:<<) && reads_variable?(send_node.receiver, variable_name)
         end
     end
 end

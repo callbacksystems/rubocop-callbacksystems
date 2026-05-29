@@ -42,8 +42,6 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
     class MethodCall
       include RuboCop::Callbacksystems::Helpers
 
-      attr_reader :node
-
       def initialize(node)
         @node = node
       end
@@ -53,12 +51,14 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
       end
 
       private
-        def allowed?
-          nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
-        end
+        attr_reader :node
 
         def multiline_send?(send_node)
           send_node.arguments? && send_node.loc.begin && send_node.loc.end && send_node.loc.begin.line != send_node.loc.end.line
+        end
+
+        def allowed?
+          nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
         end
 
         def nested_in_call?
@@ -80,7 +80,7 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
         end
 
         def nested_block_in_arguments?
-          node.arguments.flat_map { it.each_descendant(:any_block).to_a }.any?
+          node.arguments.any? { it.each_descendant(:any_block).any? }
         end
 
         def contains_multiline_call?
@@ -88,8 +88,11 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
         end
 
         def inside_backslash_continuation?
-          line_number = node.loc.begin.line - 1
-          line_number.positive? && node.source_range.source_buffer.source.lines[line_number - 1]&.rstrip&.end_with?("\\")
+          previous_line(node.loc.begin.line)&.rstrip&.end_with?("\\")
+        end
+
+        def previous_line(line)
+          node.source_range.source_buffer.source.lines[line - 2] if line > 1
         end
 
         def chained_method_receiver?

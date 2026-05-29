@@ -1,8 +1,8 @@
 require "test_helper"
 
 class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
-  test "collect returns public method names" do
-    assert_equal %i[name email], collect_from(<<~RUBY)
+  test "all returns public method names" do
+    assert_equal %i[name email], method_names(<<~RUBY)
       class User
         def name; end
         def email; end
@@ -11,7 +11,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "excludes private methods" do
-    assert_equal %i[name], collect_from(<<~RUBY)
+    assert_equal %i[name], method_names(<<~RUBY)
       class User
         def name; end
 
@@ -22,7 +22,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "collects scopes" do
-    assert_equal %i[published name], collect_from(<<~RUBY)
+    assert_equal %i[published name], method_names(<<~RUBY)
       class Article
         scope :published, -> { where(published: true) }
         def name; end
@@ -31,7 +31,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "collects methods from class_methods block" do
-    assert_equal %i[build_with_listing some_method], collect_from(<<~RUBY)
+    assert_equal %i[build_with_listing some_method], method_names(<<~RUBY)
       module Publishable
         extend ActiveSupport::Concern
 
@@ -47,7 +47,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "collects methods from class << self" do
-    assert_equal %i[sync retrieve name], collect_from(<<~RUBY)
+    assert_equal %i[sync retrieve name], method_names(<<~RUBY)
       class Charge
         class << self
           def sync; end
@@ -60,7 +60,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "collects def self.method_name" do
-    assert_equal %i[find_by_email name], collect_from(<<~RUBY)
+    assert_equal %i[find_by_email name], method_names(<<~RUBY)
       class User
         def self.find_by_email(email); end
         def name; end
@@ -69,7 +69,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "excludes methods from nested classes" do
-    assert_equal %i[process], collect_from(<<~RUBY)
+    assert_equal %i[process], method_names(<<~RUBY)
       class Outer
         def process; end
 
@@ -82,7 +82,7 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   test "collects methods from included block" do
-    assert_equal %i[setup_method instance_method], collect_from(<<~RUBY)
+    assert_equal %i[setup_method instance_method], method_names(<<~RUBY)
       module Concern
         included do
           def setup_method; end
@@ -94,8 +94,8 @@ class RuboCop::Callbacksystems::MethodCollectorTest < ActiveSupport::TestCase
   end
 
   private
-    def collect_from(source)
+    def method_names(source)
       processed = RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f)
-      RuboCop::Callbacksystems::MethodCollector.new(processed.ast).collect.map(&:second)
+      RuboCop::Callbacksystems::MethodCollector.new(processed.ast).all.map(&:second)
     end
 end

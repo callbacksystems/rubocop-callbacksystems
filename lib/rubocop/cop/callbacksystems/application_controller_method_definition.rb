@@ -35,9 +35,9 @@ class RuboCop::Cop::Callbacksystems::ApplicationControllerMethodDefinition < Rub
   MESSAGE = "Don't define methods in ApplicationController. Extract to a concern and include it."
 
   def on_def(node)
-    return unless inside_application_controller?(node)
-
-    add_offense(node, message: MESSAGE)
+    if inside_application_controller?(node)
+      add_offense(node, message: MESSAGE)
+    end
   end
 
   alias on_defs on_def
@@ -49,7 +49,6 @@ class RuboCop::Cop::Callbacksystems::ApplicationControllerMethodDefinition < Rub
     end
 
     def application_controller?(class_node)
-      class_name = class_node.identifier
-      class_name.const_type? && class_name.children.last == :ApplicationController
+      class_node.identifier.short_name == :ApplicationController
     end
 end

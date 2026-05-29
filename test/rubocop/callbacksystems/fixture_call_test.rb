@@ -2,45 +2,45 @@ require "test_helper"
 
 class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
   test "valid? returns true for pluralized method with symbol argument" do
-    fixture_call = build_fixture_call("users(:john)")
+    fixture_call = fixture_call_for("users(:john)")
 
     assert fixture_call.valid?
   end
 
   test "valid? returns true for other pluralized fixture methods" do
     %w[accounts orders items posts comments].each do |method|
-      fixture_call = build_fixture_call("#{method}(:name)")
+      fixture_call = fixture_call_for("#{method}(:name)")
 
       assert fixture_call.valid?, "Expected #{method}(:name) to be valid"
     end
   end
 
   test "valid? returns false for singular method name" do
-    fixture_call = build_fixture_call("user(:john)")
+    fixture_call = fixture_call_for("user(:john)")
 
     assert_not fixture_call.valid?
   end
 
   test "valid? returns false for method without symbol argument" do
-    fixture_call = build_fixture_call("users(john)")
+    fixture_call = fixture_call_for("users(john)")
 
     assert_not fixture_call.valid?
   end
 
   test "valid? returns false for method with string argument" do
-    fixture_call = build_fixture_call('users("john")')
+    fixture_call = fixture_call_for('users("john")')
 
     assert_not fixture_call.valid?
   end
 
   test "valid? returns false for method with multiple arguments" do
-    fixture_call = build_fixture_call("users(:john, :jane)")
+    fixture_call = fixture_call_for("users(:john, :jane)")
 
     assert_not fixture_call.valid?
   end
 
   test "valid? returns false for method with receiver" do
-    fixture_call = build_fixture_call("self.users(:john)")
+    fixture_call = fixture_call_for("self.users(:john)")
 
     assert_not fixture_call.valid?
   end
@@ -52,7 +52,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
   end
 
   test "signature returns method name with symbol" do
-    fixture_call = build_fixture_call("users(:john)")
+    fixture_call = fixture_call_for("users(:john)")
 
     assert_equal "users(:john)", fixture_call.signature
   end
@@ -61,7 +61,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
     { "accounts(:callback)" => "accounts(:callback)",
       "orders(:first)" => "orders(:first)",
       "items(:product)" => "items(:product)" }.each do |source, expected|
-      fixture_call = build_fixture_call(source)
+      fixture_call = fixture_call_for(source)
 
       assert_equal expected, fixture_call.signature
     end
@@ -75,7 +75,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
   end
 
   private
-    def build_fixture_call(source)
+    def fixture_call_for(source)
       node = NodeParser.new(source).send_node
       RuboCop::Callbacksystems::FixtureCall.new(node)
     end
@@ -86,7 +86,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
       end
 
       def send_node
-        ast.send_type? ? ast : find_send_node(ast)
+        ast.send_type? ? ast : descendant_send_node(ast)
       end
 
       private
@@ -96,7 +96,7 @@ class RuboCop::Callbacksystems::FixtureCallTest < ActiveSupport::TestCase
           RuboCop::ProcessedSource.new(source, RUBY_VERSION.to_f).ast
         end
 
-        def find_send_node(node)
+        def descendant_send_node(node)
           node.each_descendant(:send).first
         end
     end

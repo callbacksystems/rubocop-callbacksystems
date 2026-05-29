@@ -34,7 +34,7 @@ class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Callb
 
   private
     class EachBlock
-      attr_reader :node
+      include RuboCop::Callbacksystems::Helpers
 
       def initialize(node)
         @node = node
@@ -45,8 +45,14 @@ class RuboCop::Cop::Callbacksystems::NoEachWithEarlyReturn < RuboCop::Cop::Callb
       end
 
       private
+        attr_reader :node
+
         def has_conditional_return?
-          node.body&.each_node(:return)&.any? { it.parent&.if_type? }
+          node.body&.each_node(:return)&.any? { conditional_return_of_this_block?(it) }
+        end
+
+        def conditional_return_of_this_block?(return_node)
+          return_node.parent&.if_type? && return_node.each_ancestor(*BLOCK_NODE_TYPES).first.equal?(node)
         end
     end
 end

@@ -3,70 +3,73 @@ class RuboCop::Callbacksystems::MethodCollector
 
   def initialize(ast)
     @ast = ast
-    @results = []
   end
 
-  def collect
-    @top_level = true
-    @public_section = true
-    traverse(ast)
-    results
+  def all
+    top_level_definitions_in(ast).flat_map { Body.new(it.body).entries }
   end
 
   private
-    attr_reader :ast, :results
+    attr_reader :ast
 
-    def traverse(node)
-      return unless node
-
-      add_method(node) || traverse_children(node)
-    end
-
-    def add_method(node)
-      return unless @public_section
-
-      if node.type?(:def, :defs)
-        results << [ node, node.method_name ]
-      elsif scope_definition?(node)
-        results << [ node, node.first_argument.value ]
+    def top_level_definitions_in(node)
+      case node&.type
+      when :class, :module then [ node ]
+      when :begin then node.children.flat_map { top_level_definitions_in(it) }
+      else []
       end
     end
 
-    def scope_definition?(node)
-      node.send_type? && node.method?(:scope) && node.first_argument&.sym_type?
-    end
+    # The body of a class, module, or scope-defining construct.
+    class Body
+      include RuboCop::Callbacksystems::Helpers
 
-    def traverse_children(node)
-      case node.type
-      when :class, :module
-        in_scope { traverse(node.body) } if @top_level
-      when :begin
-        traverse_begin(node)
-      when :sclass, :block
-        in_scope { traverse(node.body) }
+      def initialize(node)
+        @node = node
       end
-    end
 
-    def traverse_begin(node)
-      node.children.each do |child|
-        @public_section = false if leaves_public_section?(child)
-        saved_top_level = @top_level
-        @top_level &&= child.type?(:class, :module)
-        traverse(child)
-        @top_level = saved_top_level
+      def entries
+        node&.begin_type? ? public_children.flat_map { Member.new(it).entries } : Member.new(node).entries
       end
+
+      private
+        attr_reader :node
+
+        def public_children
+          node.children.take_while { !leaves_public_section?(it) }
+        end
+
+        def leaves_public_section?(child)
+          %i[private protected].include?(visibility_modifier_of(child))
+        end
     end
 
-    def in_scope
-      saved_top_level, saved_public_section = @top_level, @public_section
-      @top_level = false
-      @public_section = true
-      yield
-    ensure
-      @top_level, @public_section = saved_top_level, saved_public_section
-    end
+    # One node within a body, resolved to the method or scope entries it defines.
+    class Member
+      include RuboCop::Callbacksystems::Helpers
 
-    def leaves_public_section?(node)
-      %i[private protected].include?(visibility_modifier(node))
+      def initialize(node)
+        @node = node
+      end
+
+      def entries
+        case node&.type
+        when :def, :defs then [ [ node, node.method_name ] ]
+        when :sclass, :block then Body.new(node.body).entries
+        when :send then scope_entry
+        else []
+        end
+      end
+
+      private
+        attr_reader :node
+
+        def scope_entry
+          scope_definition? ? [ [ node, node.first_argument.value ] ] : []
+        end
+
+        def scope_definition?
+          bare_send?(node) && node.method?(:scope) && node.first_argument&.sym_type?
+        end
     end
 end

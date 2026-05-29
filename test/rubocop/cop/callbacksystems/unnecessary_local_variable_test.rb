@@ -24,7 +24,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
   test "registers offense for variable aliasing a method call with arguments" do
     assert_offense <<~RUBY
       def process
-        first_stmt = first_statement(body)
+        first_stmt = first_statement_in(body)
         first_stmt&.if_type?
       end
     RUBY
@@ -212,5 +212,47 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
         log_failure(data, e)
       end
     RUBY
+  end
+
+  test "inlines a variable read in the next statement" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        directory = forbidden_directory
+        add_offense(node) if directory
+      end
+    RUBY
+      def process
+        add_offense(node) if forbidden_directory
+      end
+    CORRECTED
+  end
+
+  test "inlines a method call with a receiver" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        memo_node = checker.memoization_node
+        add_offense(memo_node)
+      end
+    RUBY
+      def process
+        add_offense(checker.memoization_node)
+      end
+    CORRECTED
+  end
+
+  test "leaves a variable read two statements later for a human" do
+    assert_correction <<~RUBY, <<~SAME
+      def process
+        directory = forbidden_directory
+        log_something
+        add_offense(node) if directory
+      end
+    RUBY
+      def process
+        directory = forbidden_directory
+        log_something
+        add_offense(node) if directory
+      end
+    SAME
   end
 end

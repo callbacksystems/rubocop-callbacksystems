@@ -1,9 +1,9 @@
 class RuboCop::Callbacksystems::FixtureCall
+  attr_reader :node
+
   def initialize(node)
     @node = node
   end
-
-  attr_reader :node
 
   def valid?
     node&.send_type? &&

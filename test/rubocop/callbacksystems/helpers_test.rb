@@ -19,9 +19,9 @@ class RuboCop::Callbacksystems::HelpersTest < ActiveSupport::TestCase
     submodule = Module.new do
       extend self
 
-      def parsed_constant_name = constant_name(parse("Foo"))
+      def parsed_constant_name = constant_name_of(ast("Foo"))
 
-      def parse(source)
+      def ast(source)
         RuboCop::AST::ProcessedSource.new(source, RUBY_VERSION.to_f).ast
       end
     end

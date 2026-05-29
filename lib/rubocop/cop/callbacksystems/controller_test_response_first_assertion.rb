@@ -53,56 +53,64 @@ class RuboCop::Cop::Callbacksystems::ControllerTestResponseFirstAssertion < Rubo
   ].freeze
 
   def on_block(node)
-    return unless test_block?(node)
-
-    find_offenses(node).each { |offense_node, method_name| add_offense(offense_node, message: format(MESSAGE, method: method_name)) }
+    if test_block?(node)
+      each_offense(node) { |offense_node, message| add_offense(offense_node, message: message) }
+    end
   end
 
   alias on_numblock on_block
   alias on_itblock on_block
 
   private
-    def find_offenses(node)
-      return [] unless node.body
-
-      statements = top_level_statements(node)
-      statements.each_index.filter_map { offense_at(statements, it) }
+    def each_offense(node, &block)
+      if block
+        FirstAssertion.new(node).each_offense { yield it, format(MESSAGE, method: it.method_name) }
+      else
+        to_enum(__method__, node)
+      end
     end
 
-    def top_level_statements(node)
-      node.body.type?(:begin, :kwbegin) ? node.body.children.to_a : [ node.body ]
-    end
+    class FirstAssertion
+      extend RuboCop::AST::NodePattern::Macros
+      include RuboCop::Callbacksystems::TestCopHelpers
+      include RuboCop::Callbacksystems::Helpers
 
-    def offense_at(statements, index)
-      return unless http_request_statement?(statements[index])
+      def initialize(node)
+        @node = node
+      end
 
-      first_assertion = statements[(index + 1)..].find { assertion?(it) && !side_effect_assertion?(it) }
-      [ first_assertion, first_assertion.method_name ] if first_assertion && !response_assertion?(first_assertion)
-    end
+      def each_offense
+        statements.each_index.filter_map { offense_at(it) }.each { yield it }
+      end
 
-    def http_request_statement?(statement)
-      direct_http_request?(statement) || contains_http_request_in_block?(statement)
-    end
+      private
+        attr_reader :node
 
-    def direct_http_request?(statement)
-      statement.send_type? && http_request?(statement)
-    end
+        def statements
+          @statements ||= statements_in(node.body)
+        end
 
-    def contains_http_request_in_block?(statement)
-      return false unless any_block_type?(statement)
+        def offense_at(index)
+          if http_request_statement?(statements[index])
+            first = statements[(index + 1)..].find { assertion?(it) && !side_effect_assertion?(it) }
+            first if first && !response_assertion?(first)
+          end
+        end
 
-      statement.body&.each_node(:send)&.any? { http_request?(it) }
-    end
+        def http_request_statement?(statement)
+          (statement.send_type? && http_request?(statement)) || contains_http_request_in_block?(statement)
+        end
 
-    def assertion?(statement)
-      bare_send?(statement) && statement.method_name.to_s.start_with?("assert", "refute")
-    end
+        def contains_http_request_in_block?(statement)
+          any_block_type?(statement) && statement.body&.each_node(:send)&.any? { http_request?(it) }
+        end
 
-    def side_effect_assertion?(statement)
-      bare_send?(statement) && SIDE_EFFECT_ASSERTIONS.include?(statement.method_name)
-    end
+        def assertion?(statement)
+          bare_send?(statement) && statement.method_name.to_s.start_with?("assert", "refute")
+        end
 
-    def bare_send?(statement)
-      statement.send_type? && statement.receiver.nil?
+        def side_effect_assertion?(statement)
+          bare_send?(statement) && SIDE_EFFECT_ASSERTIONS.include?(statement.method_name)
+        end
     end
 end

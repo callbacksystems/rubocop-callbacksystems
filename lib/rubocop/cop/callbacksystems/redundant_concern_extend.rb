@@ -44,44 +44,44 @@
 class RuboCop::Cop::Callbacksystems::RedundantConcernExtend < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
+  CONCERN_CONSTANTS = %w[ActiveSupport::Concern Concern].freeze
   CONCERN_METHODS = %i[included class_methods prepended].freeze
   MESSAGE = "Unnecessary `extend ActiveSupport::Concern`. " \
     "Remove it or use `included`, `class_methods`, or `prepended` blocks."
 
   def on_module(node)
     concern = ConcernModule.new(node)
-    extend_node = concern.find_concern_extend
-    add_offense(extend_node, message: MESSAGE) { it.remove(line_removal_range(extend_node)) } if extend_node && !concern.uses_concern_features?
+    add_offense(concern.offense_node, message: MESSAGE) { it.remove(line_removal_range_for(concern.offense_node)) } if concern.offense?
   end
 
   private
     class ConcernModule
-      attr_reader :node
+      include RuboCop::Callbacksystems::Helpers
 
       def initialize(node)
         @node = node
       end
 
-      def find_concern_extend
-        return unless node.body
-
-        body = node.body.begin_type? ? node.body.children : [ node.body ]
-        body.find { concern_extend?(it) }
+      def offense?
+        offense_node && !uses_concern_features?
       end
 
-      def uses_concern_features?
-        return false unless node.body
-
-        node.body.each_descendant(:any_block).any? do |block|
-          send_node = block.send_node
-          send_node.receiver.nil? && CONCERN_METHODS.include?(send_node.method_name)
-        end
+      def offense_node
+        @offense_node ||= statements_in(node.body).find { concern_extend?(it) }
       end
 
       private
+        attr_reader :node
+
         def concern_extend?(target_node)
           target_node.send_type? && target_node.method?(:extend) &&
-            target_node.arguments.any? { it.const_type? && [ "ActiveSupport::Concern", "Concern" ].include?(it.source) }
+            target_node.arguments.any? { it.const_type? && CONCERN_CONSTANTS.include?(it.source) }
+        end
+
+        def uses_concern_features?
+          node.body&.each_descendant(:any_block)&.any? do |block|
+            bare_send?(block.send_node) && CONCERN_METHODS.include?(block.method_name)
+          end || false
         end
     end
 end

@@ -2,7 +2,7 @@
 #
 # Testing HTML content couples tests to markup implementation details.
 # Tests should verify behavior through response status, redirects, and
-# data changes—not by inspecting HTML structure.
+# data changes, not by inspecting HTML structure.
 #
 # @example
 #   # bad - testing HTML content
@@ -24,9 +24,7 @@ class RuboCop::Cop::Callbacksystems::NoAssertSelect < RuboCop::Cop::Callbacksyst
   PATTERN
 
   def on_send(node)
-    return unless assert_select_call?(node)
-
-    add_offense(node, message: MESSAGE)
+    add_offense(node, message: MESSAGE) if assert_select_call?(node)
   end
 
   alias on_csend on_send

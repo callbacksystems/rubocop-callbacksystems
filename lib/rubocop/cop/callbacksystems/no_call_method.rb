@@ -27,9 +27,7 @@ class RuboCop::Cop::Callbacksystems::NoCallMethod < RuboCop::Cop::Callbacksystem
   MESSAGE = "Avoid defining `call` methods. Use descriptive method names instead."
 
   def on_def(node)
-    return unless node.method?(:call)
-
-    add_offense(node, message: MESSAGE)
+    add_offense(node, message: MESSAGE) if node.method?(:call)
   end
 
   alias on_defs on_def

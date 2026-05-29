@@ -46,9 +46,9 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
   BLOCK_MESSAGE = "Avoid early next/break. Only a single guard clause on the first line is allowed."
 
   def on_def(node)
-    return unless node.body
-
-    illegal_exits(node.body, :return, walk_blocks: true).each { add_offense(it, message: MESSAGE) }
+    if node.body
+      illegal_exits(node.body, :return, walk_blocks: true).each { add_offense(it, message: MESSAGE) }
+    end
   end
 
   alias on_defs on_def
@@ -65,13 +65,13 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
   alias on_itblock on_block
 
   private
-    def loop_block?(node)
-      node.method?(:loop)
-    end
-
     def illegal_exits(body, type, walk_blocks:)
       allowed = Guard.new(body, type).allowed_exit
-      ExitFinder.new(body, type, walk_blocks: walk_blocks).find_all.reject { it.equal?(allowed) }
+      ExitFinder.new(body, type, walk_blocks: walk_blocks).exits.reject { it.equal?(allowed) }
+    end
+
+    def loop_block?(node)
+      node.method?(:loop)
     end
 
     class Guard
@@ -83,7 +83,7 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
       end
 
       def allowed_exit
-        stmt = first_statement(body)
+        stmt = first_statement_in(body)
         stmt&.if_type? && allowed_from_if(stmt)
       end
 
@@ -104,24 +104,21 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
     end
 
     class ExitFinder
+      block_statements = ->(node, finder) { node.children.flat_map { finder.call(it) } }
+
       FINDERS = {
         if: ->(node, finder) { finder.call(node.if_branch) + finder.call(node.else_branch) },
-        begin: ->(node, finder) do
-          node.children.flat_map { finder.call(it) }
-        end,
-        kwbegin: ->(node, finder) do
-          node.children.flat_map { finder.call(it) }
-        end,
+        begin: block_statements,
+        kwbegin: block_statements,
         case: ->(node, finder) do
           node.when_branches.flat_map { finder.call(it.body) } + finder.call(node.else_branch)
         end,
         case_match: ->(node, finder) do
-          node.each_child_node(:in_pattern).flat_map { it.body ? finder.call(it.body) : [] } +
-            (node.else_branch ? finder.call(node.else_branch) : [])
+          node.each_child_node(:in_pattern).flat_map { finder.call(it.body) } + finder.call(node.else_branch)
         end,
-        in_pattern: ->(node, finder) { node.body ? finder.call(node.body) : [] },
+        in_pattern: ->(node, finder) { finder.call(node.body) },
         rescue: ->(node, finder) do
-          finder.call(node.body) + node.resbody_branches.flat_map { finder.call(it.body) } + (node.else_branch ? finder.call(node.else_branch) : [])
+          finder.call(node.body) + node.resbody_branches.flat_map { finder.call(it.body) } + finder.call(node.else_branch)
         end,
         resbody: ->(node, finder) { finder.call(node.body) },
         when: ->(node, finder) { finder.call(node.body) },
@@ -134,15 +131,17 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
         @walk_blocks = walk_blocks
       end
 
-      def find_all(current = node)
-        return [] unless current
-
-        if current.type == target_type
-          [ current ]
-        elsif current.type?(:any_block)
-          walk_block(current)
+      def exits(current = node)
+        if current
+          if current.type == target_type
+            [ current ]
+          elsif current.type?(:any_block)
+            walk_block(current)
+          else
+            FINDERS.fetch(current.type, ->(_, _) { [] }).call(current, method(:exits))
+          end
         else
-          FINDERS.fetch(current.type, ->(_, _) { [] }).call(current, method(:find_all))
+          []
         end
       end
 
@@ -150,19 +149,15 @@ class RuboCop::Cop::Callbacksystems::EarlyReturn < RuboCop::Cop::Callbacksystems
         attr_reader :node, :target_type, :walk_blocks
 
         def walk_block(current)
-          walkable_block?(current) ? find_all(current.body) : []
+          walkable_block?(current) ? exits(current.body) : []
         end
 
         def walkable_block?(current)
-          walk_blocks && !lambda?(current) && !loop_block?(current) && current.body
+          walk_blocks && !current.lambda? && !loop_block?(current) && current.body
         end
 
-        def lambda?(current)
-          current.respond_to?(:lambda?) && current.lambda?
-        end
-
-        def loop_block?(current)
-          current.respond_to?(:method?) && current.method?(:loop)
+        def loop_block?(node)
+          node.method?(:loop)
         end
     end
 end

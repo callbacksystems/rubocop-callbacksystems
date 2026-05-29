@@ -28,24 +28,38 @@
 #   current = current.next while current
 #
 class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Callbacksystems::Base
+  extend RuboCop::Cop::AutoCorrector
+
   MESSAGE = "Variable `%<name>s` is unnecessary. Call the method directly or extract a well-named declarative method."
 
   def on_lvasgn(node)
-    return unless Assignment.new(node).unnecessary?
-
-    add_offense(node, message: format(MESSAGE, name: node.children.first))
+    assignment = Assignment.new(node)
+    add_offense(node, message: assignment.offense_message) { assignment.inline(it) } if assignment.offense?
   end
 
   private
     class Assignment
       def initialize(node)
         @node = node
-        @variable_name = node.children.first
-        @value = node.children.second
+        @variable_name = node.name
+        @value = node.expression
       end
 
-      def unnecessary?
+      def offense?
         method_call_value? && !conditional? && single_use? && !used_inside_nested_block? && !used_for_restoration?
+      end
+
+      def offense_message
+        format(MESSAGE, name: variable_name)
+      end
+
+      # Inline only when the single read sits in the very next statement: nothing
+      # runs between the call and its use, so its evaluation order cannot change.
+      def inline(corrector)
+        if inlineable?
+          corrector.remove(node.source_range.with(end_pos: next_statement.source_range.begin_pos))
+          corrector.replace(reference, value.source)
+        end
       end
 
       private
@@ -63,20 +77,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           enclosing_scope && !reassigned? && references.size == 1
         end
 
-        def used_inside_nested_block?
-          references.first.each_ancestor(:any_block).any? { it != enclosing_scope }
-        end
-
-        def used_for_restoration?
-          references.first.each_ancestor(:ensure, :resbody).any?
-        end
-
         def enclosing_scope
           @enclosing_scope ||= node.each_ancestor(:any_def, :any_block).first
-        end
-
-        def references
-          @references ||= other_occurrences.select(&:lvar_type?)
         end
 
         def reassigned?
@@ -85,8 +87,35 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
 
         def other_occurrences
           @other_occurrences ||= enclosing_scope.each_descendant(:lvar, :lvasgn).select do |descendant|
-            descendant.children.first == variable_name && descendant != node
+            descendant.name == variable_name && descendant != node
           end
+        end
+
+        def references
+          @references ||= other_occurrences.select(&:lvar_type?)
+        end
+
+        def used_inside_nested_block?
+          references.first.each_ancestor(:any_block).any? { it != enclosing_scope }
+        end
+
+        def used_for_restoration?
+          references.first.each_ancestor(:ensure, :resbody).any?
+        end
+
+        def inlineable?
+          next_statement&.each_node(:lvar)&.any? { it.equal?(reference) }
+        end
+
+        def next_statement
+          if node.parent&.begin_type?
+            siblings = node.parent.children
+            siblings[siblings.index(node) + 1]
+          end
+        end
+
+        def reference
+          references.first
         end
     end
 end

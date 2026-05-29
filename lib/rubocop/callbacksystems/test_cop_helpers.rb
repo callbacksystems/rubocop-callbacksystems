@@ -9,11 +9,20 @@ module RuboCop::Callbacksystems::TestCopHelpers
     def_node_matcher :test_block?, <<~PATTERN
       (block (send nil? :test (str $_)) ...)
     PATTERN
+
+    # @!method setup_block?(node)
+    def_node_matcher :setup_block?, <<~PATTERN
+      (block (send nil? :setup) ...)
+    PATTERN
   end
 
   private
-    def http_request?(send_node)
-      send_node.receiver.nil? && HTTP_METHODS.include?(send_node.method_name)
+    def test_blocks(scope = processed_source.ast)
+      scope ? scope.each_node(:block).select { test_block?(it) } : []
+    end
+
+    def setup_blocks(scope = processed_source.ast)
+      scope ? scope.each_node(:block).select { setup_block?(it) } : []
     end
 
     def response_assertion?(send_node)
@@ -22,5 +31,9 @@ module RuboCop::Callbacksystems::TestCopHelpers
 
     def body_has_http_request?(node)
       node.body&.each_node(:send)&.any? { http_request?(it) }
+    end
+
+    def http_request?(send_node)
+      send_node.receiver.nil? && HTTP_METHODS.include?(send_node.method_name)
     end
 end
