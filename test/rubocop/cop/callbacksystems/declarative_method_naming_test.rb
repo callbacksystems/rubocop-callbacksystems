@@ -94,15 +94,20 @@ class DeclarativeMethodNamingTest < CopTestCase
     assert_includes offenses.first.message, "Rename `parse_config` for the value, related to its argument"
   end
 
-  test "registers offense for a bare producer verb with no noun" do
-    offenses = assert_offense <<~RUBY
+  test "allows a bare producer verb: there is no noun to rename it to" do
+    assert_no_offense <<~RUBY
       def compute
         heavy_work
       end
     RUBY
+  end
 
-    assert_equal 1, offenses.count
-    assert_includes offenses.first.message, "Rename `compute`: it names the imperative `compute` action"
+  test "allows the bare verb itself, like fetch or get in a client" do
+    assert_no_offense <<~RUBY
+      def fetch
+        store.read
+      end
+    RUBY
   end
 
   test "registers offense for a producer verb followed by a connector, with no suggestion" do

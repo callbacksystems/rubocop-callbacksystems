@@ -1,11 +1,13 @@
 # A method that returns a value should be named for the value it hands back
 # (`total`, `user_by_id`), not for the imperative action it performs
 # (`compute_total`, `get_user`). The imperative name reads as a command when the
-# thing is really a query. We flag a method whose name leads with a producer verb.
-# With no arguments we suggest the bare noun (`total`); with arguments we only
-# flag it, because a bare noun beside an argument (`user(id)`) relates nothing and
-# the relator, a suffix (`_for`/`_of`/`_at`/...), is the author's call, too
-# contextual to pick.
+# thing is really a query. We flag a method whose name leads with a producer verb,
+# unless the name is the bare verb itself (`fetch`, `get`): with no noun there is
+# nothing to rename it to, so only compounds (`fetch_data`) and phrases
+# (`find_in_block`) are flagged. With no arguments we suggest the bare noun
+# (`total`); with arguments we only flag it, because a bare noun beside an argument
+# (`user(id)`) relates nothing and the relator, a suffix (`_for`/`_of`/`_at`/...),
+# is the author's call, too contextual to pick.
 #
 # The verb list is curated, not taken from a lexicon: `get`/`find`/`build` are not
 # dropped from any dictionary, but are bad as method prefixes by code convention.
@@ -37,7 +39,7 @@
 #     users[id]
 #   end
 #
-#   # bad - bare producer verb names nothing
+#   # good - the bare verb is allowed: there is no noun to rename it to
 #   def compute
 #     heavy_work
 #   end
@@ -111,7 +113,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
       end
 
       def offense?
-        eligible? && PRODUCER_VERBS.include?(verb) && delivers_only?
+        eligible? && imperative_producer? && delivers_only?
       end
 
       def offense_message
@@ -128,12 +130,23 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
             !node.operator_method? && !node.method?(:initialize)
         end
 
+        # Leads with a producer verb but is not the bare verb itself: a compound
+        # (`fetch_data`) or phrase (`find_in_block`). The bare verb (`fetch`) is
+        # allowed: there is no noun to rename it to.
+        def imperative_producer?
+          PRODUCER_VERBS.include?(verb) && rest.any?
+        end
+
         def verb
           segments.first
         end
 
         def segments
           @segments ||= node.method_name.to_s.split("_")
+        end
+
+        def rest
+          segments.drop(1)
         end
 
         # Ruby always returns its last expression, so "delivers" is the absence of
@@ -165,10 +178,6 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
         # nothing on its own (`find_in_block`).
         def noun
           rest.join("_") if rest.any? && !CONNECTORS.include?(rest.first)
-        end
-
-        def rest
-          segments.drop(1)
         end
 
         # A value built from an argument should relate to it; a bare noun
