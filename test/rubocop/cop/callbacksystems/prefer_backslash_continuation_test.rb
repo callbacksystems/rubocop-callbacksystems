@@ -180,4 +180,111 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
       )
     RUBY
   end
+
+  test "allows multiline call whose first argument is a braced hash" do
+    assert_no_offense <<~RUBY
+      assert_equal(
+        {
+          mon: { "09:00" => "18:00" },
+          tue: { "09:00" => "18:00" }
+        },
+        config.hours
+      )
+    RUBY
+  end
+
+  test "allows call whose first argument shares the opening parenthesis line" do
+    assert_no_offense <<~RUBY
+      selections.add(rule: rule, params: {
+        starts_at: starts_at,
+        ends_at: ends_at
+      })
+    RUBY
+  end
+
+  test "corrects multiline constructor to backslash continuation" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      claim = Account::Invitation::Claim.new(
+        invitation: invitations(:bruno),
+        name: "Test User"
+      )
+    RUBY
+      claim = Account::Invitation::Claim.new \\
+        invitation: invitations(:bruno),
+        name: "Test User"
+    CORRECTED
+  end
+
+  test "corrects positional arguments" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      assert_equal(
+        expected,
+        actual
+      )
+    RUBY
+      assert_equal \\
+        expected,
+        actual
+    CORRECTED
+  end
+
+  test "corrects and drops a trailing comma" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      some_method(
+        arg1: value1,
+        arg2: value2,
+      )
+    RUBY
+      some_method \\
+        arg1: value1,
+        arg2: value2
+    CORRECTED
+  end
+
+  test "does not correct when a comment precedes the closing parenthesis" do
+    code = <<~RUBY
+      some_method(
+        arg1: value1,
+        arg2: value2
+        # keep this note
+      )
+    RUBY
+
+    assert_correction code, code
+  end
+
+  test "does not correct a trailing comment on the last argument" do
+    code = <<~RUBY
+      some_method(
+        arg1: value1,
+        arg2: value2 # keep this note
+      )
+    RUBY
+
+    assert_correction code, code
+  end
+
+  test "does not correct when a comment trails the closing parenthesis" do
+    code = <<~RUBY
+      some_method(
+        arg1: value1,
+        arg2: value2
+      ) # keep this note
+    RUBY
+
+    assert_correction code, code
+  end
+
+  test "does not correct when the last argument is a heredoc" do
+    code = <<~RUBY
+      execute(
+        name: "report",
+        body: <<~SQL
+          select 1
+        SQL
+      )
+    RUBY
+
+    assert_correction code, code
+  end
 end

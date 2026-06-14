@@ -29,11 +29,19 @@
 #     content
 #   end)
 #
+#   # good - first argument shares the opening line (only the trailing hash wraps)
+#   selections.add(rule: rule, params: {
+#     starts_at: starts_at
+#   })
+#
 class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop::Callbacksystems::Base
+  extend RuboCop::Cop::AutoCorrector
+
   MESSAGE = "Use `\\` for line continuation instead of wrapping arguments in parentheses."
 
   def on_send(node)
-    add_offense(node.loc.begin, message: MESSAGE) if MethodCall.new(node).offense?
+    call = MethodCall.new(node, processed_source)
+    add_offense(node.loc.begin, message: MESSAGE) { call.autocorrect(it) } if call.offense?
   end
 
   alias on_csend on_send
@@ -42,29 +50,61 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
     class MethodCall
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, processed_source)
         @node = node
+        @processed_source = processed_source
       end
 
       def offense?
         node.parenthesized? && multiline_send?(node) && !allowed?
       end
 
+      def autocorrect(corrector)
+        if correctable?
+          corrector.replace(node.loc.begin, " \\")
+          corrector.remove(trailing_parenthesis_range)
+        end
+      end
+
       private
-        attr_reader :node
+        attr_reader :node, :processed_source
 
         def multiline_send?(send_node)
           send_node.arguments? && send_node.loc.begin && send_node.loc.end && send_node.loc.begin.line != send_node.loc.end.line
         end
 
         def allowed?
-          nested_in_call? || argument_has_block? || contains_multiline_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
+          inside_other_expression? || unconvertible_arguments?
+        end
+
+        def inside_other_expression?
+          nested_in_call? || inside_backslash_continuation? || chained_method_receiver? || inside_collection_literal?
         end
 
         def nested_in_call?
           node.each_ancestor(:send).any? do |ancestor|
             ancestor.arguments.any? { it == node || it.each_descendant.include?(node) }
           end
+        end
+
+        def inside_backslash_continuation?
+          previous_line(node.loc.begin.line)&.rstrip&.end_with?("\\")
+        end
+
+        def previous_line(line)
+          node.source_range.source_buffer.source.lines[line - 2] if line > 1
+        end
+
+        def chained_method_receiver?
+          node.parent&.call_type? && node.parent.receiver == node
+        end
+
+        def inside_collection_literal?
+          node.each_ancestor(:hash, :array).any?
+        end
+
+        def unconvertible_arguments?
+          argument_has_block? || contains_multiline_call? || leading_braced_hash? || first_argument_on_opening_line?
         end
 
         def argument_has_block?
@@ -87,20 +127,36 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
           node.each_descendant(:send).any? { multiline_send?(it) }
         end
 
-        def inside_backslash_continuation?
-          previous_line(node.loc.begin.line)&.rstrip&.end_with?("\\")
+        def leading_braced_hash?
+          node.first_argument.hash_type? && node.first_argument.braces?
         end
 
-        def previous_line(line)
-          node.source_range.source_buffer.source.lines[line - 2] if line > 1
+        def first_argument_on_opening_line?
+          node.first_argument.source_range.line == node.loc.begin.line
         end
 
-        def chained_method_receiver?
-          node.parent&.call_type? && node.parent.receiver == node
+        def correctable?
+          comments_undisturbed? && !last_argument_has_heredoc?
         end
 
-        def inside_collection_literal?
-          node.each_ancestor(:hash, :array).any?
+        def comments_undisturbed?
+          processed_source.comments.none? { removed?(it) || orphaned?(it) }
+        end
+
+        def removed?(comment)
+          trailing_parenthesis_range.contains?(comment.source_range)
+        end
+
+        def trailing_parenthesis_range
+          node.last_argument.source_range.end.join(node.loc.end)
+        end
+
+        def orphaned?(comment)
+          comment.source_range.line == node.loc.end.line && comment.source_range.begin_pos >= node.loc.end.end_pos
+        end
+
+        def last_argument_has_heredoc?
+          node.last_argument.each_node(:any_str).any?(&:heredoc?)
         end
     end
 end
