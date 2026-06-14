@@ -35,18 +35,24 @@
 #
 class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Callbacksystems::Base
   include RuboCop::Callbacksystems::TestCopHelpers
+  extend RuboCop::Cop::AutoCorrector
 
   USED_ONCE_MESSAGE = "Instance variable `%<variable>s` is only used in one test. Inline it instead of assigning in `setup`."
   UNUSED_MESSAGE = "Instance variable `%<variable>s` assigned in `setup` is not used by any test. Remove it."
 
   def on_new_investigation
-    each_offense { |node, message| add_offense(node, message: message) }
+    each_offense do |assignment, message, inline_target, removal_range|
+      add_offense(assignment, message: message) do |corrector|
+        corrector.replace(inline_target, assignment.expression.source) if inline_target
+        corrector.remove(removal_range) if removal_range
+      end
+    end
   end
 
   private
     def each_offense(&block)
       if block
-        yield_offenses(&block) if investigable?
+        setup_blocks.each { yield_block_offenses(it, &block) } if investigable?
       else
         to_enum(__method__)
       end
@@ -65,23 +71,197 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
       rails_test_base_class?(class_node.parent_class) && test_blocks(class_node).empty?
     end
 
-    def yield_offenses(&block)
-      tests = test_blocks
-      setup_assignments.each do |assignment|
-        message = offense_message_for(assignment, tests)
-        yield assignment, message if message
-      end
+    def yield_block_offenses(setup, &block)
+      SetupBlock.new(setup, processed_source.ast, test_blocks).each_offense(&block)
     end
 
-    def setup_assignments
-      setup_blocks.filter_map(&:body).flat_map { it.each_node(:ivasgn).to_a }
+    # One setup block. Yields an offense per assignment whose variable is unused or
+    # used once, and decides how each rewrites away: inline the single reference,
+    # drop its line, or drop the whole block once nothing else is left in it.
+    class SetupBlock
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(setup, ast, tests)
+        @setup = setup
+        @ast = ast
+        @tests = tests
+      end
+
+      def each_offense
+        offenses.each { yield it[:node], it[:message], it[:inline_target], removal_range_for(it) }
+      end
+
+      private
+        attr_reader :setup, :ast, :tests
+
+        def offenses
+          @offenses ||= assignments.filter_map { offense_for(it) }
+        end
+
+        def assignments
+          setup.body ? setup.body.each_node(:ivasgn).to_a : []
+        end
+
+        def offense_for(assignment)
+          SetupAssignment.new(assignment, ast, tests).offense
+        end
+
+        def removal_range_for(offense)
+          range_for_removable(offense[:node]) if offense[:removable]
+        end
+
+        def range_for_removable(node)
+          if cleared?
+            node.equal?(first_removable) ? block_range : nil
+          else
+            line_removal_range_for(node)
+          end
+        end
+
+        def cleared?
+          removable_nodes.size == statements_in(setup.body).size
+        end
+
+        def removable_nodes
+          offenses.filter_map { it[:node] if it[:removable] }
+        end
+
+        def first_removable
+          removable_nodes.min_by { it.source_range.begin_pos }
+        end
+
+        def block_range
+          range = setup.source_range
+          range.with(begin_pos: range.begin_pos - range.column, end_pos: after_trailing_blank(range))
+        end
+
+        def after_trailing_blank(range)
+          source = range.source_buffer.source
+          skip_newline(source, skip_newline(source, range.end_pos))
+        end
+
+        def skip_newline(source, position)
+          source[position] == "\n" ? position + 1 : position
+        end
     end
 
-    def offense_message_for(assignment, tests)
-      case IvarUsage.new(processed_source.ast, assignment.name, tests).classify
-      when :unused then format(UNUSED_MESSAGE, variable: assignment.name)
-      when :single_use then format(USED_ONCE_MESSAGE, variable: assignment.name)
+    # A single `@name = value` inside a setup block, classified by how its variable
+    # is used across the tests. Reports itself as an offense and works out the target
+    # to inline into and whether its line can be removed.
+    class SetupAssignment
+      include RuboCop::Callbacksystems::Helpers
+
+      OFFENDING_KINDS = %i[unused single_use].freeze
+      INLINABLE_TYPES = %i[int float rational complex str dstr sym dsym regexp true false nil self array hash const lvar ivar cvar gvar].freeze
+
+      def initialize(node, ast, tests)
+        @node = node
+        @ast = ast
+        @tests = tests
       end
+
+      def offense
+        { node: node, message: message, inline_target: inline_target, removable: removable? } if offending?
+      end
+
+      private
+        attr_reader :node, :ast, :tests
+
+        def offending?
+          OFFENDING_KINDS.include?(kind)
+        end
+
+        def kind
+          @kind ||= IvarUsage.new(ast, node.name, tests).classify
+        end
+
+        def message
+          format(unused? ? UNUSED_MESSAGE : USED_ONCE_MESSAGE, variable: node.name)
+        end
+
+        def unused?
+          kind == :unused
+        end
+
+        def inline_target
+          sole_reference if inlinable_single_use?
+        end
+
+        def inlinable_single_use?
+          single_use? && inlinable?
+        end
+
+        def single_use?
+          kind == :single_use
+        end
+
+        def inlinable?
+          inlinable_value? && sole_reference_outside_blocks?
+        end
+
+        def inlinable_value?
+          INLINABLE_TYPES.include?(value.type) || primary_call?
+        end
+
+        def value
+          node.expression
+        end
+
+        def primary_call?
+          value.call_type? && plain_method? && primary_shape?
+        end
+
+        def plain_method?
+          !value.operator_method? && !value.comparison_method?
+        end
+
+        def primary_shape?
+          value.receiver || bare_arguments_absent?
+        end
+
+        def bare_arguments_absent?
+          value.arguments.empty? || value.parenthesized?
+        end
+
+        def sole_reference_outside_blocks?
+          sole_reference && inner_blocks.none? { it.source_range.contains?(sole_reference.source_range) }
+        end
+
+        def sole_reference
+          references.first if references.one?
+        end
+
+        def references
+          using_test ? variable_references_in(using_test) : []
+        end
+
+        def using_test
+          @using_test ||= tests.find { variable_references_in(it).any? }
+        end
+
+        def variable_references_in(scope)
+          scope.each_node(:ivar).select { it.name == node.name }
+        end
+
+        def inner_blocks
+          using_test.each_node(:any_block).reject { it.equal?(using_test) }
+        end
+
+        def removable?
+          direct_statement? && deletable?
+        end
+
+        def direct_statement?
+          statements_in(setup_block.body).any? { it.equal?(node) }
+        end
+
+        def setup_block
+          node.each_ancestor(:block).find { it.method?(:setup) }
+        end
+
+        def deletable?
+          unused? || !inline_target.nil?
+        end
     end
 
     class IvarUsage

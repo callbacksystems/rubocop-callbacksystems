@@ -171,4 +171,261 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
       end
     RUBY
   end
+
+  test "autocorrects a single-use variable by inlining it and removing the setup block" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "something else" do
+          assert true
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "order is valid" do
+          assert orders(:one).valid?
+        end
+
+        test "something else" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "autocorrects an unused variable by removing the setup block" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+        end
+
+        test "something" do
+          assert true
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "something" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "autocorrects a single-use variable while keeping a setup block with other statements" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+          travel_to Time.zone.now
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "something else" do
+          assert true
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          travel_to Time.zone.now
+        end
+
+        test "order is valid" do
+          assert orders(:one).valid?
+        end
+
+        test "something else" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "autocorrects single-use variables across multiple setup blocks" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+        end
+
+        setup do
+          @user = users(:john)
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "user is valid" do
+          assert @user.valid?
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "order is valid" do
+          assert orders(:one).valid?
+        end
+
+        test "user is valid" do
+          assert users(:john).valid?
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "autocorrects every variable in a setup block without leaving it empty" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+          @user = users(:john)
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "user is valid" do
+          assert @user.valid?
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "order is valid" do
+          assert orders(:one).valid?
+        end
+
+        test "user is valid" do
+          assert users(:john).valid?
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "removes only the cleared lines when one variable in the setup block stays" do
+    original = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+          @user = users(:john)
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "user is valid" do
+          assert @user.valid?
+          assert @user.persisted?
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @user = users(:john)
+        end
+
+        test "order is valid" do
+          assert orders(:one).valid?
+        end
+
+        test "user is valid" do
+          assert @user.valid?
+          assert @user.persisted?
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
+  end
+
+  test "does not autocorrect when the value is not a primary expression" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one) || build_order
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+        end
+
+        test "something else" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_offense code, file: "test/models/order_test.rb"
+    assert_correction code, code, file: "test/models/order_test.rb"
+  end
+
+  test "does not autocorrect when the variable is referenced more than once in the test" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+        end
+
+        test "order is valid" do
+          assert @order.valid?
+          assert @order.persisted?
+        end
+      end
+    RUBY
+
+    assert_offense code, file: "test/models/order_test.rb"
+    assert_correction code, code, file: "test/models/order_test.rb"
+  end
+
+  test "does not autocorrect when the reference is inside an iterator" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @order = orders(:one)
+        end
+
+        test "touches the order" do
+          3.times { @order.touch }
+        end
+      end
+    RUBY
+
+    assert_offense code, file: "test/models/order_test.rb"
+    assert_correction code, code, file: "test/models/order_test.rb"
+  end
 end

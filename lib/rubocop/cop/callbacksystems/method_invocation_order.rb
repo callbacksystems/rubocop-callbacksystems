@@ -136,10 +136,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           processed_source.comments.find { it.loc.line == line && own_line_comment?(it) }
         end
 
-        def own_line_comment?(comment)
-          processed_source.lines[comment.loc.line - 1].slice(0, comment.loc.column).strip.empty?
-        end
-
         def join_blocks(members)
           members.map { block_source_of(it) }.join("\n\n")
         end

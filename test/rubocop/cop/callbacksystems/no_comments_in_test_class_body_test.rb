@@ -80,4 +80,69 @@ class NoCommentsInTestClassBodyTest < CopTestCase
       end
     RUBY
   end
+
+  test "autocorrects by removing a full-line comment" do
+    original = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        # This is a bad comment
+        setup do
+          @user = users(:john)
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        setup do
+          @user = users(:john)
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/user_test.rb"
+  end
+
+  test "autocorrects by removing several stacked comments" do
+    original = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        # First comment
+        # Second comment
+        setup do
+          @user = users(:john)
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        setup do
+          @user = users(:john)
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/user_test.rb"
+  end
+
+  test "autocorrects a trailing comment while keeping the code" do
+    original = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        include AuthHelpers # trailing comment
+        test "validates name" do
+          assert true
+        end
+      end
+    RUBY
+
+    corrected = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        include AuthHelpers
+        test "validates name" do
+          assert true
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/user_test.rb"
+  end
 end

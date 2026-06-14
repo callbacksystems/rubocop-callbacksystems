@@ -29,10 +29,16 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::NoCommentsInTestClassBody < RuboCop::Cop::Callbacksystems::Base
+  extend RuboCop::Cop::AutoCorrector
+
   MESSAGE = "Avoid comments in test class body. Tests should be self-documenting through descriptive names."
 
   def on_new_investigation
-    each_offense { |node, message| add_offense(node, message: message) }
+    each_offense do |comment, message|
+      add_offense(comment, message: message) do |corrector|
+        corrector.remove(comment_removal_range_for(comment))
+      end
+    end
   end
 
   private

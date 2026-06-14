@@ -14,7 +14,6 @@
 #
 class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
-  include RuboCop::Cop::RangeHelp
 
   PURE_MESSAGE = "Section-divider comments add no information. Remove."
   WRAPPED_MESSAGE = "Strip the divider decorations; keep the inner text as a normal comment."
@@ -30,19 +29,17 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
 
   private
     def report(comment)
-      divider = DividerComment.new(comment, processed_source)
+      divider = DividerComment.new(comment)
       add_offense(comment, message: PURE_MESSAGE) { divider.remove(it) } if divider.pure?
       add_offense(comment, message: WRAPPED_MESSAGE) { divider.rewrite(it) } if divider.wrapped?
     end
 
-    # One comment under inspection, with its source context.
+    # One comment under inspection.
     class DividerComment
       include RuboCop::Callbacksystems::Helpers
-      include RuboCop::Cop::RangeHelp
 
-      def initialize(comment, processed_source)
+      def initialize(comment)
         @comment = comment
-        @processed_source = processed_source
       end
 
       def wrapped?
@@ -54,7 +51,7 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
       end
 
       def remove(corrector)
-        corrector.remove(removal_range)
+        corrector.remove(comment_removal_range_for(comment))
       end
 
       def rewrite(corrector)
@@ -62,7 +59,7 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
       end
 
       private
-        attr_reader :comment, :processed_source
+        attr_reader :comment
 
         def present?
           !trimmed.empty?
@@ -101,18 +98,6 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
           if run.size >= 2
             side == :leading ? text[run.size..].lstrip : text[0...(text.size - run.size)].rstrip
           end
-        end
-
-        def removal_range
-          own_line? ? line_removal_range_for(comment) : trailing_removal_range
-        end
-
-        def own_line?
-          processed_source.lines[comment.loc.line - 1].slice(0, comment.loc.column).strip.empty?
-        end
-
-        def trailing_removal_range
-          range_with_surrounding_space(range: comment.source_range, side: :left, newlines: false)
         end
     end
 end
