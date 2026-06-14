@@ -1,6 +1,7 @@
 # Ensures all public methods in classes and modules have corresponding tests.
 # Private nested class methods are excluded since they are implementation details.
 # Methods referenced by macros (callbacks, delegates) are excluded.
+# Methods returning a plain literal are excluded since a test would only restate the literal.
 # Scopes and methods in class_methods blocks are included.
 #
 # Test files are located based on the source file path:
@@ -25,6 +26,13 @@
 #     end
 #   end
 #   # test "full_name returns concatenated names" do ... end
+#
+#   # good - method returning a plain literal needs no test
+#   class User
+#     def role
+#       "member"
+#     end
+#   end
 #
 class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Public method `%<method>s` has no test. " \
@@ -78,7 +86,15 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
         end
 
         def testable_public_methods
-          RuboCop::Callbacksystems::MethodCollector.new(node).all.reject { |_, name| EXCLUDED_METHODS.include?(name) }
+          RuboCop::Callbacksystems::MethodCollector.new(node).all.reject { |method_node, name| exempt?(method_node, name) }
+        end
+
+        def exempt?(method_node, name)
+          EXCLUDED_METHODS.include?(name) || returns_literal?(method_node)
+        end
+
+        def returns_literal?(method_node)
+          method_node.type?(:any_def) && (method_node.body&.recursive_literal? || false)
         end
 
         def tested_methods

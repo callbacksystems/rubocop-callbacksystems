@@ -111,7 +111,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("app/models/user.rb", <<~RUBY)
       class User
         def untested_method
-          "no test file"
+          compute_value
         end
       end
     RUBY
@@ -141,7 +141,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       module Utils
         class StringHelper
           def capitalize_words
-            "words"
+            text.upcase
           end
         end
       end
@@ -165,11 +165,11 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("app/models/user.rb", <<~RUBY)
       class User
         def method_one
-          1
+          first_name
         end
 
         def method_two
-          2
+          last_name
         end
       end
     RUBY
@@ -190,7 +190,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("lib/utils/helper.rb", <<~RUBY)
       class Helper
         def process
-          "done"
+          perform_work
         end
       end
     RUBY
@@ -210,7 +210,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("app/models/user.rb", <<~RUBY)
       class User
         def valid?
-          true
+          errors.empty?
         end
       end
     RUBY
@@ -230,7 +230,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("app/models/user.rb", <<~RUBY)
       class User
         def save!
-          true
+          persist_record
         end
       end
     RUBY
@@ -400,6 +400,72 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     assert_includes offenses.first.message, "index"
   end
 
+  test "no offense for methods returning a scalar literal" do
+    source_file = create_file("app/models/plan.rb", <<~RUBY)
+      class Plan
+        def role
+          "member"
+        end
+
+        def per_page
+          25
+        end
+
+        def enabled?
+          true
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "no offense for methods returning a recursively literal array or hash" do
+    source_file = create_file("app/models/palette.rb", <<~RUBY)
+      class Palette
+        def colors
+          ["red", "green", "blue"]
+        end
+
+        def defaults
+          { size: 10, nested: [1, 2, { deep: true }] }
+        end
+      end
+    RUBY
+
+    assert_no_offense_in(source_file)
+  end
+
+  test "registers offense for interpolated string return" do
+    source_file = create_file("app/models/user.rb", <<~RUBY)
+      class User
+        def full_name
+          "\#{first_name} \#{last_name}"
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "full_name"
+  end
+
+  test "registers offense for collection holding a non-literal element" do
+    source_file = create_file("app/models/palette.rb", <<~RUBY)
+      class Palette
+        def colors
+          ["red", default_color]
+        end
+      end
+    RUBY
+
+    offenses = assert_offense_in(source_file)
+
+    assert_equal 1, offenses.count
+    assert_includes offenses.first.message, "colors"
+  end
+
   test "find_test_file resolves relative lib path to test/lib" do
     Dir.chdir(@temp_dir) do
       mapping = RuboCop::Callbacksystems::TestPathMapping.new("lib/foo/bar.rb")
@@ -476,7 +542,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("lib/constraints/internal.rb", <<~RUBY)
       class Internal
         def matches?(request)
-          true
+          request.local?
         end
       end
     RUBY
@@ -490,7 +556,7 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
     source_file = create_file("lib/constraints/internal.rb", <<~RUBY)
       class Internal
         def matches?(request)
-          true
+          request.local?
         end
       end
     RUBY
