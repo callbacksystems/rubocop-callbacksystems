@@ -98,4 +98,28 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameterTest < CopTestCase
   test "does not crash on a single-parameter block with no body" do
     assert_no_offense "items.map { |x| }"
   end
+
+  test "does not register offense for lambda literal" do
+    assert_no_offense <<~RUBY
+      double = ->(number) { number * 2 }
+    RUBY
+  end
+
+  test "does not register offense for lambda" do
+    assert_no_offense <<~RUBY
+      double = lambda { |number| number * 2 }
+    RUBY
+  end
+
+  test "does not register offense for proc" do
+    assert_no_offense <<~RUBY
+      greet = proc { |name| puts name }
+    RUBY
+  end
+
+  test "does not register offense for Proc.new" do
+    assert_no_offense <<~RUBY
+      greet = Proc.new { |name| puts name }
+    RUBY
+  end
 end

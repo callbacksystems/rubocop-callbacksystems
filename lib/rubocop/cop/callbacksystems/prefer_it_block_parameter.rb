@@ -24,6 +24,10 @@
 #   # good - multiple parameters
 #   hash.each { |key, value| puts key }
 #
+#   # good - lambda or proc, where the parameter name documents the signature
+#   double = ->(number) { number * 2 }
+#   greet = proc { |name| puts name }
+#
 class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
@@ -42,7 +46,8 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
 
   private
     def single_param_inline_block?(node)
-      node.body && node.braces? && node.single_line? && node.arguments.size == 1 && !nested_in_convertible_block?(node)
+      node.body && node.braces? && node.single_line? && node.arguments.size == 1 &&
+        !node.lambda_or_proc? && !nested_in_convertible_block?(node)
     end
 
     def nested_in_convertible_block?(node)
