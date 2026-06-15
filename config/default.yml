@@ -212,6 +212,11 @@ Callbacksystems/PreferStringifyKeys:
 Callbacksystems/PreferSymbolizeKeys:
   Enabled: true
 
+Callbacksystems/PreferTurboPageRefreshBroadcasts:
+  Enabled: true
+  Include:
+    - "app/**/*"
+
 Callbacksystems/PrivateMethodArgumentClump:
   Enabled: true
   MinParams: 2
