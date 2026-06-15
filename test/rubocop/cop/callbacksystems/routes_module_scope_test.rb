@@ -11,6 +11,7 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScopeTest < CopTestCase
       end
     RUBY
     assert_equal 2, offenses.size
+    assert_includes offenses.first.message, "Extract repeated `module: :admin` to a `scope module: :admin do` block."
   end
 
   test "registers offense for three repeated module options" do
@@ -80,5 +81,59 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScopeTest < CopTestCase
       end
     RUBY
     assert_equal 2, offenses.size
+  end
+
+  test "consolidates contiguous routes into a scope block" do
+    assert_correction <<~RUBY, <<~CORRECTED, file: "config/routes.rb"
+      Rails.application.routes.draw do
+        resources :users, module: :admin
+        resources :posts, module: :admin
+      end
+    RUBY
+      Rails.application.routes.draw do
+        scope module: :admin do
+          resources :users
+          resources :posts
+        end
+      end
+    CORRECTED
+  end
+
+  test "preserves other route options when consolidating" do
+    assert_correction <<~RUBY, <<~CORRECTED, file: "config/routes.rb"
+      Rails.application.routes.draw do
+        resources :users, module: :admin, only: [:index]
+        get "/dashboard", to: "dashboard#index", module: :admin
+      end
+    RUBY
+      Rails.application.routes.draw do
+        scope module: :admin do
+          resources :users, only: [:index]
+          get "/dashboard", to: "dashboard#index"
+        end
+      end
+    CORRECTED
+  end
+
+  test "does not autocorrect when routes are not contiguous" do
+    unchanged = <<~RUBY
+      Rails.application.routes.draw do
+        resources :users, module: :admin
+        resources :sessions
+        resources :posts, module: :admin
+      end
+    RUBY
+    assert_correction unchanged, unchanged, file: "config/routes.rb"
+  end
+
+  test "does not autocorrect across an intervening comment" do
+    unchanged = <<~RUBY
+      Rails.application.routes.draw do
+        resources :users, module: :admin
+        # keep these apart
+        resources :posts, module: :admin
+      end
+    RUBY
+    assert_correction unchanged, unchanged, file: "config/routes.rb"
   end
 end
