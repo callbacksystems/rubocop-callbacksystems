@@ -1,5 +1,7 @@
-# Detects local variables that just alias a method call.
+# Detects local variables that alias a method call that already reads as a name.
 # Call the method directly or extract a well-named declarative method instead.
+# A variable that names a computed expression (operator, block-pass, literal
+# receiver) or a multiline call is left alone: there the name does real work.
 #
 # @example
 #   # bad - variable just aliases a method call
@@ -8,6 +10,16 @@
 #
 #   # good - call the method directly
 #   add_offense(node) if forbidden_directory
+#
+#   # ok - variable names a computed expression
+#   valid_values = options.map(&:value)
+#   answer.errors.add(:base) if (submitted_values - valid_values).any?
+#
+#   # ok - call spans multiple lines
+#   record = relation.create! \
+#     type: "Report",
+#     data: {}
+#   record.deliver
 #
 #   # ok - variable used multiple times
 #   user = find_user
@@ -46,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
       end
 
       def offense?
-        method_call_value? && !conditional? && single_use? && !used_inside_nested_block? && !used_for_restoration?
+        aliases_named_call? && !conditional? && single_use? && !used_inside_nested_block? && !used_for_restoration?
       end
 
       def offense_message
@@ -65,8 +77,12 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
       private
         attr_reader :node, :variable_name, :value
 
-        def method_call_value?
-          value&.type?(:call)
+        def aliases_named_call?
+          value&.type?(:call) && !computed_expression? && !value.multiline?
+        end
+
+        def computed_expression?
+          value.operator_method? || value.arguments.any?(&:block_pass_type?) || value.receiver&.type?(:array, :hash)
         end
 
         def conditional?

@@ -163,6 +163,53 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
     RUBY
   end
 
+  test "allows variable naming an expression with an operator" do
+    assert_no_offense <<~RUBY
+      def validate(answer)
+        invalid_values = answer.selected_values - valid_values
+        answer.errors.add(:base) if invalid_values.any?
+      end
+    RUBY
+  end
+
+  test "allows variable naming a collection mapped with a block-pass" do
+    assert_no_offense <<~RUBY
+      def validate(answer)
+        valid_values = options.map(&:value)
+        answer.errors.add(:base) if (answer.selected_values - valid_values).any?
+      end
+    RUBY
+  end
+
+  test "allows variable naming a value computed from an array literal" do
+    assert_no_offense <<~RUBY
+      def merge(segment, other)
+        new_end_time = [ segment.end_time, other.end_time ].max
+        Segment.new(segment.start_time, new_end_time)
+      end
+    RUBY
+  end
+
+  test "allows variable naming a value computed from a hash literal" do
+    assert_no_offense <<~RUBY
+      def configure(options)
+        settings = { locale: :en }.merge(options)
+        apply(settings)
+      end
+    RUBY
+  end
+
+  test "allows variable aliasing a multiline call" do
+    assert_no_offense <<~RUBY
+      def connect
+        record = relation.create! \\
+          type: "Report",
+          data: {}
+        record.deliver
+      end
+    RUBY
+  end
+
   test "allows assignment in parenthesized if condition" do
     assert_no_offense <<~RUBY
       def process
