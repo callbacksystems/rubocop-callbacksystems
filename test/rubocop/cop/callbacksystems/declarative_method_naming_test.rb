@@ -83,15 +83,15 @@ class DeclarativeMethodNamingTest < CopTestCase
     assert_includes offenses.first.message, "not the action `get`"
   end
 
-  test "registers offense for a class method named with a producer verb" do
+  test "registers offense for a method named with a producer verb" do
     offenses = assert_offense <<~RUBY
-      def self.parse_config(text)
-        JSON.parse(text)
+      def build_label(values)
+        Label.new(values.join)
       end
     RUBY
 
     assert_equal 1, offenses.count
-    assert_includes offenses.first.message, "Rename `parse_config` for the value, related to its argument"
+    assert_includes offenses.first.message, "Rename `build_label` for the value, related to its argument"
   end
 
   test "allows a bare producer verb: there is no noun to rename it to" do
@@ -110,15 +110,80 @@ class DeclarativeMethodNamingTest < CopTestCase
     RUBY
   end
 
-  test "registers offense for a producer verb followed by a connector, with no suggestion" do
-    offenses = assert_offense <<~RUBY
-      def find_in_scope
-        scope.lookup
+  test "allows a producer verb that appends to state with <<" do
+    assert_no_offense <<~RUBY
+      def build_log
+        @entries << current
+        @entries
       end
     RUBY
+  end
 
-    assert_equal 1, offenses.count
-    assert_includes offenses.first.message, "Rename `find_in_scope`: it names the imperative `find` action"
+  test "allows a producer verb that mutates a set with add" do
+    assert_no_offense <<~RUBY
+      def build_tags
+        @tags.add(tag)
+        @tags
+      end
+    RUBY
+  end
+
+  test "allows a producer verb followed straight by a connector: no noun to rename to" do
+    assert_no_offense <<~RUBY
+      def find_in_scope
+        scope.detect(&:match?)
+      end
+    RUBY
+  end
+
+  test "allows a producer verb glued to a connector even with arguments" do
+    assert_no_offense <<~RUBY
+      def load_for(person)
+        events_for(person) + blocks_for(person)
+      end
+    RUBY
+  end
+
+  test "allows a method that delegates within its own verb family" do
+    assert_no_offense <<~RUBY
+      def format_money(money)
+        Worldwide.currency(money).format_short(money)
+      end
+    RUBY
+  end
+
+  test "allows a producer verb wrapping the same verb, like a find wrapper" do
+    assert_no_offense <<~RUBY
+      def find_account_by_cookie
+        accounts.find_by(id: cookie)
+      end
+    RUBY
+  end
+
+  test "allows a builder whose suggested noun already names a reader sibling" do
+    assert_no_offense <<~RUBY
+      class Plan
+        attr_reader :prices
+
+        def build_prices
+          properties.to_h { |currency, cents| [ currency, Money.new(cents) ] }
+        end
+      end
+    RUBY
+  end
+
+  test "allows a builder whose suggested noun already names a method sibling" do
+    assert_no_offense <<~RUBY
+      class Plan
+        def key
+          @key
+        end
+
+        def lookup_key
+          "prefix_\#{key}"
+        end
+      end
+    RUBY
   end
 
   test "registers offense suggesting the noun when the noun already carries a connector" do
