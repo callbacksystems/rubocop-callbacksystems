@@ -575,18 +575,18 @@ class PublicMethodsMustHaveTestsTest < CopTestCase
       end
     end
 
-    def create_empty_file(relative_path)
-      File.join(@temp_dir, relative_path).tap do |full_path|
-        FileUtils.mkdir_p(File.dirname(full_path))
-        File.write(full_path, "")
-      end
-    end
-
     def assert_offense_in(source_file)
       assert_offense(File.read(source_file), file: source_file)
     end
 
     def assert_no_offense_in(source_file)
       assert_no_offense(File.read(source_file), file: source_file)
+    end
+
+    def create_empty_file(relative_path)
+      File.join(@temp_dir, relative_path).tap do |full_path|
+        FileUtils.mkdir_p(File.dirname(full_path))
+        File.write(full_path, "")
+      end
     end
 end

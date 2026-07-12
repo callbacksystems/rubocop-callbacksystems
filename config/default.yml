@@ -67,9 +67,6 @@ Callbacksystems/MaxSafeNavigationDepth:
 
 Callbacksystems/MethodInvocationOrder:
   Enabled: true
-  Include:
-    - "app/models/**/*"
-    - "lib/**/*"
 
 Callbacksystems/NestedClassesAtEndOfPrivateSection:
   Enabled: true

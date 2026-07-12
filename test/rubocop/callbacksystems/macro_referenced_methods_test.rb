@@ -82,6 +82,55 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
     assert_includes result, :bar
   end
 
+  test "does not treat an attribute writer or accessor name as a reference" do
+    body = ast <<~RUBY
+      attr_writer :logo
+      attr_reader :name
+      attr_accessor :title
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_not_includes result, :logo
+    assert_not_includes result, :name
+    assert_not_includes result, :title
+  end
+
+  test "treats only a delegate's target as a reference, not its own method names" do
+    body = ast <<~RUBY
+      delegate :name, :email, to: :person
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_not_includes result, :name
+    assert_not_includes result, :email
+    assert_includes result, :person
+  end
+
+  test "does not treat store_accessor or attribute names as references" do
+    body = ast <<~RUBY
+      store_accessor :settings, :min, :max
+      attribute :status, :string
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_not_includes result, :settings
+    assert_not_includes result, :status
+  end
+
+  test "ordered returns referenced names in source order, guard before action" do
+    body = ast <<~RUBY
+      after_commit :second, if: :first?
+      before_save :third
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).ordered
+
+    assert_equal %i[first? second third], result
+  end
+
   test "collects lambda callback method calls" do
     body = ast <<~RUBY
       before_action -> { load_record }

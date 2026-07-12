@@ -12,17 +12,24 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
   end
 
   def all
-    Set.new(collect_from(body))
+    Set.new(ordered)
+  end
+
+  # References in source order, so a caller ordering these methods can lead with
+  # them in the order the macros mention them.
+  def ordered
+    collect(body).uniq
   end
 
   private
     attr_reader :body
 
-    # Macros live at the class/module body level, never inside a method body; skipping
-    # methods keeps ordinary symbol arguments and block calls from looking like macros.
-    def collect_from(node)
+    # Macros live at the class/module body level, never inside a method body;
+    # skipping bodies keeps ordinary symbol arguments and calls from looking like
+    # macro uses.
+    def collect(node)
       if node.is_a?(RuboCop::AST::Node) && !node.type?(:def, :defs)
-        Node.new(node).references + node.children.flat_map { collect_from(it) }
+        Node.new(node).references + node.children.flat_map { collect(it) }
       else
         []
       end
@@ -33,6 +40,19 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       include RuboCop::Callbacksystems::Helpers
 
       CALLBACK_OPTIONS = %i[if unless].freeze
+
+      # Macros that define a method named after their symbol argument instead of
+      # referencing an existing one. Their symbol is the method's name, not a call
+      # to a `def` elsewhere (and `attr_writer :x` names `x=`, not `x`), so it must
+      # not count as a reference. `delegate` is here for its leading names; its
+      # `to:` target still counts through the hash options.
+      DEFINING_MACROS = %i[
+        attr_reader attr_writer attr_accessor
+        mattr_reader mattr_writer mattr_accessor
+        cattr_reader cattr_writer cattr_accessor
+        thread_mattr_accessor thread_cattr_accessor
+        class_attribute store_accessor attribute delegate
+      ].freeze
 
       def initialize(node)
         @node = node
@@ -49,24 +69,18 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       private
         attr_reader :node
 
+        # A callback condition (`if:`/`unless:`) is evaluated before the action it
+        # guards, so it comes first, keeping guard-then-action in the order.
         def from_send
-          first_symbol_argument + lambda_argument_calls + hash_option_references
-        end
-
-        def first_symbol_argument
-          symbol = node.arguments.find(&:sym_type?)
-          symbol ? [ symbol.value ] : []
-        end
-
-        def lambda_argument_calls
-          node.arguments.select(&:block_type?).flat_map { receiverless_method_names_in(it.body) }
+          hash_option_references + first_symbol_argument + lambda_argument_calls
         end
 
         def hash_option_references
-          node.arguments
-            .select(&:hash_type?)
-            .flat_map(&:pairs)
-            .flat_map { option_reference(it.key, it.value) }
+          hash_pairs.flat_map { option_reference(it.key, it.value) }
+        end
+
+        def hash_pairs
+          node.arguments.select(&:hash_type?).flat_map(&:pairs)
         end
 
         def option_reference(key, value)
@@ -95,6 +109,17 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
           when :block then receiverless_method_names_in(value.body)
           else []
           end
+        end
+
+        def first_symbol_argument
+          return [] if DEFINING_MACROS.include?(node.method_name)
+
+          symbol = node.arguments.find(&:sym_type?)
+          symbol ? [ symbol.value ] : []
+        end
+
+        def lambda_argument_calls
+          node.arguments.select(&:block_type?).flat_map { receiverless_method_names_in(it.body) }
         end
     end
 end

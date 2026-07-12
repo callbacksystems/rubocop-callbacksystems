@@ -1,7 +1,11 @@
 # Ensures methods are ordered by invocation: callers before callees, and a
 # caller's callees in the order it first invokes them (depth-first). Public
-# methods are ordered before private ones. Methods referenced by macros
-# (callbacks, delegates, etc.) are pinned and may be defined anywhere.
+# methods are ordered before private ones. A macro, block, or lambda that names a
+# method (a callback, a delegate target, a validation) calls it too, and it reads
+# at the top of the class, so a method reached only that way leads its visibility
+# group in the order the macros mention it (a guard before its action, since the
+# guard is evaluated first). A method a real method body calls follows that caller
+# instead.
 #
 # @example
 #   # bad - called method defined before caller
@@ -45,13 +49,18 @@
 #     def helper
 #     end
 #
-#   # good - method referenced by callback can be defined anywhere
-#   included do
-#     after_commit :notify_later
-#   end
+#   # good - a callback method leads: its macro calls it and reads at the top
+#   after_commit :notify_later
 #
 #   def notify_later
 #     NotifyJob.perform_later(self)
+#   end
+#
+#   def process
+#     compute
+#   end
+#
+#   def compute
 #   end
 #
 class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callbacksystems::Base
@@ -71,8 +80,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
 
   private
     # Rewrites each contiguous run of method definitions into canonical order,
-    # carrying leading comments with their method. Macro-pinned methods (absent
-    # from the canonical order) are left in place.
+    # carrying leading comments with their method. A non-method statement between
+    # methods (a `private`, a macro) keeps the runs on either side separate.
     class Reorder
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers
@@ -183,44 +192,50 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         # The first position where the methods as written diverge from the order
         # callers-before-callees would put them in.
         def divergence_index
-          actual_order.each_index.find { actual_order[it] != canonical_order[it] }
-        end
-
-        def actual_order
-          @actual_order ||= method_names.reject { macro_referenced.include?(it) }
+          method_names.each_index.find { method_names[it] != canonical_order[it] }
         end
 
         def method_names
           @method_names ||= methods.map(&:method_name)
         end
 
-        def macro_referenced
-          @macro_referenced ||= RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body).all
-        end
-
         def ordered_by_visibility(visibility)
-          dfs_order.select { visibilities[it] == visibility }
+          full_order.select { visibilities[it] == visibility }
         end
 
-        # One depth-first pass collects every non-macro method in invocation
-        # order; the two visibility groups are partitioned from it afterwards, so
-        # visibility no longer travels through the traversal.
-        def dfs_order
-          @dfs_order ||= begin
-            seeds.each { visit(it) }
+        # One depth-first pass in reading priority: a method referenced by a macro
+        # is called by that macro, which reads at the top, so those methods lead
+        # their group in the order the macros mention them (a guard before its
+        # action). Then the plain entry points and everything they reach, then any
+        # cycle. Visibility groups are partitioned afterwards. A method a real
+        # method body calls is placed by that call, not hoisted here.
+        def full_order
+          @full_order ||= begin
+            ordering_seeds.each { visit(it) }
             collected
           end
         end
 
-        # DFS seeds in reading priority: roots (called by nobody) first, then every
-        # method in source order as a fallback for cycles. Macro-pinned methods are
-        # never seeds: they may sit anywhere, so they must not drive the order.
-        def seeds
-          @seeds ||= root_names + method_names
+        def ordering_seeds
+          macro_led + real_roots + method_names
         end
 
-        def root_names
-          method_names.reject { called_methods.include?(it) }
+        # Macro-referenced methods that no method body calls: the macro is their
+        # caller and it reads at the top, so they lead, in reference order.
+        def macro_led
+          reference_order.reject { called_methods.include?(it) }
+        end
+
+        def reference_order
+          @reference_order ||= macro_methods.ordered.select { known_method_names.include?(it) }
+        end
+
+        def macro_methods
+          @macro_methods ||= RuboCop::Callbacksystems::MacroReferencedMethods.new(node.body)
+        end
+
+        def known_method_names
+          @known_method_names ||= Set.new(method_names)
         end
 
         def called_methods
@@ -239,15 +254,15 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           end
         end
 
-        def known_method_names
-          @known_method_names ||= Set.new(method_names)
+        def real_roots
+          method_names.reject { called_methods.include?(it) }
         end
 
         def visit(name)
           return if visited.include?(name) || !known_method_names.include?(name)
 
           visited << name
-          collected << name unless macro_referenced.include?(name)
+          collected << name
           call_graph.fetch(name, []).each { visit(it) }
         end
 
@@ -272,7 +287,7 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         end
 
         def offense_message(index)
-          format(MESSAGE, expected: canonical_order[index], actual: actual_order[index])
+          format(MESSAGE, expected: canonical_order[index], actual: method_names[index])
         end
     end
 end

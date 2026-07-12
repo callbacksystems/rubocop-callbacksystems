@@ -230,17 +230,13 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
     RUBY
   end
 
-  test "allows method referenced by delegate to: to be defined anywhere" do
-    assert_no_offense <<~RUBY
+  test "orders a delegate target after the method that really calls it" do
+    assert_correction <<~BAD, <<~GOOD
       class Source
         delegate :present?, to: :object
 
         def prefix
-          case stamp.prefix
-          when false then nil
-          when nil then inferred_prefix
-          else stamp.prefix
-          end
+          inferred_prefix
         end
 
         private
@@ -252,7 +248,24 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
             object.model_name.element
           end
       end
-    RUBY
+    BAD
+      class Source
+        delegate :present?, to: :object
+
+        def prefix
+          inferred_prefix
+        end
+
+        private
+          def inferred_prefix
+            object.model_name.element
+          end
+
+          def object
+            @object ||= record.send(stamp.from)
+          end
+      end
+    GOOD
   end
 
   test "allows method referenced by callback symbol" do
@@ -287,61 +300,208 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
     RUBY
   end
 
-  test "allows method referenced in if: option" do
-    assert_no_offense <<~RUBY
+  test "a callback method leads its group; its macro calls it from the top" do
+    assert_correction <<~BAD, <<~GOOD
+      class Report
+        after_commit :deliver
+
+        def generate
+          format
+        end
+
+        def format
+        end
+
+        def deliver
+        end
+      end
+    BAD
+      class Report
+        after_commit :deliver
+
+        def deliver
+        end
+
+        def generate
+          format
+        end
+
+        def format
+        end
+      end
+    GOOD
+  end
+
+  test "a guard is ordered before the action it guards" do
+    assert_correction <<~BAD, <<~GOOD
       class Order
-        before_action :load_order, if: :order_present?
+        before_save :normalize, unless: :skip?
+
+        def normalize
+        end
+
+        def skip?
+        end
+      end
+    BAD
+      class Order
+        before_save :normalize, unless: :skip?
+
+        def skip?
+        end
+
+        def normalize
+        end
+      end
+    GOOD
+  end
+
+  test "a lambda guard leads like a symbol guard" do
+    assert_correction <<~BAD, <<~GOOD
+      class Order
+        before_save :normalize, if: -> { changed? }
+
+        def normalize
+        end
+
+        def changed?
+        end
+      end
+    BAD
+      class Order
+        before_save :normalize, if: -> { changed? }
+
+        def changed?
+        end
+
+        def normalize
+        end
+      end
+    GOOD
+  end
+
+  test "callback methods lead in guard-then-action order per concern" do
+    assert_correction <<~BAD, <<~GOOD
+      class Event
+        after_update :notify_time, if: :should_notify_time?
+        after_update :notify_status, if: :should_notify_status?
+
+        private
+          def should_notify_time?
+            saved_change_to_starts_at?
+          end
+
+          def should_notify_status?
+            saved_change_to_status?
+          end
+
+          def notify_time
+            deliver(:time)
+          end
+
+          def notify_status
+            deliver(:status)
+          end
+      end
+    BAD
+      class Event
+        after_update :notify_time, if: :should_notify_time?
+        after_update :notify_status, if: :should_notify_status?
+
+        private
+          def should_notify_time?
+            saved_change_to_starts_at?
+          end
+
+          def notify_time
+            deliver(:time)
+          end
+
+          def should_notify_status?
+            saved_change_to_status?
+          end
+
+          def notify_status
+            deliver(:status)
+          end
+      end
+    GOOD
+  end
+
+  test "a macro-referenced method a def calls follows that caller, not the macro" do
+    assert_correction <<~BAD, <<~GOOD
+      class Order
+        after_commit :sync
+
+        def sync
+        end
 
         def process
-          order_present?
+          sync
+        end
+      end
+    BAD
+      class Order
+        after_commit :sync
+
+        def process
+          sync
         end
 
-        def load_order
+        def sync
+        end
+      end
+    GOOD
+  end
+
+  test "a delegation target leads like any macro reference" do
+    assert_no_offense <<~RUBY
+      class Collection
+        delegate_missing_to :items
+
+        def items
+          @items ||= build
         end
 
-        def order_present?
-          params[:order_id].present?
+        def build
+          []
         end
       end
     RUBY
   end
 
-  test "allows method referenced in unless: option" do
-    assert_no_offense <<~RUBY
+  test "a private callback leads within the private section" do
+    assert_correction <<~BAD, <<~GOOD
       class Order
-        before_action :load_order, unless: :skip_loading?
+        after_commit :notify
 
-        def process
-          skip_loading?
+        def total
+          compute
         end
 
-        def load_order
-        end
+        private
+          def compute
+          end
 
-        def skip_loading?
-          request.format.json?
-        end
+          def notify
+          end
       end
-    RUBY
-  end
-
-  test "allows method referenced in lambda if: option" do
-    assert_no_offense <<~RUBY
+    BAD
       class Order
-        before_action :load_order, if: -> { should_load? }
+        after_commit :notify
 
-        def process
-          should_load?
+        def total
+          compute
         end
 
-        def load_order
-        end
+        private
+          def notify
+          end
 
-        def should_load?
-          true
-        end
+          def compute
+          end
       end
-    RUBY
+    GOOD
   end
 
   test "allows private method to call public method defined above" do

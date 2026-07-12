@@ -79,6 +79,9 @@ Layout/ClassStructure:
       - has_and_belongs_to_many
       - accepts_nested_attributes_for
     macros:
+      - test
+      - setup
+      - teardown
       - normalizes
       - scope
       - positioned
