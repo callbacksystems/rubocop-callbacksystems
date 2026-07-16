@@ -83,6 +83,18 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameterTest < CopTestCase
     RUBY
   end
 
+  test "does not register offense for a splat parameter" do
+    assert_no_offense <<~RUBY
+      messages.each { |*message| reports << message }
+    RUBY
+  end
+
+  test "does not register offense for an optional parameter" do
+    assert_no_offense <<~RUBY
+      values.each { |value = nil| results << value }
+    RUBY
+  end
+
   test "does not register offense for block with no parameters" do
     assert_no_offense <<~RUBY
       items.each { puts "hello" }

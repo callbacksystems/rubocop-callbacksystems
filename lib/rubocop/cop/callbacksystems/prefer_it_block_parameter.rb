@@ -47,7 +47,7 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
   private
     def single_param_inline_block?(node)
       node.body && node.braces? && node.single_line? && node.arguments.size == 1 &&
-        !node.lambda_or_proc? && !nested_in_convertible_block?(node)
+        node.first_argument.arg_type? && !node.lambda_or_proc? && !nested_in_convertible_block?(node)
     end
 
     def nested_in_convertible_block?(node)
