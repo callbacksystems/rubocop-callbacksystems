@@ -102,4 +102,23 @@ class RuboCop::Cop::Callbacksystems::PreferOrdinalArrayAccessTest < CopTestCase
       items[1..3]
     RUBY
   end
+
+  test "does not register offense for a string receiver" do
+    assert_no_offense <<~RUBY
+      "value"[2]
+    RUBY
+  end
+
+  test "does not register offense for an integer-keyed hash receiver" do
+    assert_no_offense <<~RUBY
+      { 2 => "value" }[2]
+    RUBY
+  end
+
+  test "does not register offense for a MatchData receiver" do
+    assert_no_offense <<~RUBY
+      value.match(/pattern/)[2]
+      Regexp.last_match[2]
+    RUBY
+  end
 end

@@ -196,6 +196,7 @@ Callbacksystems/PreferMethodOverVariable:
 
 Callbacksystems/PreferOrdinalArrayAccess:
   Enabled: true
+  SafeAutoCorrect: false
 
 Callbacksystems/PreferPositiveWrap:
   Enabled: true

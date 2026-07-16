@@ -33,16 +33,24 @@ class RuboCop::Callbacksystems::TestPathMapping
   private
     attr_reader :path
 
-  def project_root
-    path.match(%r{\A(.*?)(?:/)?(?:app|lib|test)/})&.captures&.first || path
-  end
+    def namespaced_gem_source_path
+      if gem_project? && path.match?(%r{(^|/)test/.+_test\.rb$})
+        relative_source = path.match(%r{(^|/)test/(.+)_test\.rb$}).captures.second
+        candidates = Dir.glob(File.join(project_root_path, "lib", "*", "#{relative_source}.rb"))
+        candidates.one? ? candidates.first : nil
+      end
+    end
 
-  def project_root_path
-    project_root.empty? ? "." : project_root
-  end
+    def project_root_path
+      project_root.empty? ? "." : project_root
+    end
 
-  def candidate_test_paths
-    lib_test_paths + flat_gem_test_paths + app_test_paths
+    def project_root
+      path.match(%r{\A(.*?)(?:/)?(?:app|lib|test)/})&.captures&.first || path
+    end
+
+    def candidate_test_paths
+      lib_test_paths + flat_gem_test_paths + app_test_paths
     end
 
     def lib_test_paths
@@ -61,22 +69,16 @@ class RuboCop::Callbacksystems::TestPathMapping
       path.sub(%r{(^|/)#{root}/(.+)\.rb$}) { "#{Regexp.last_match(1)}#{prefix}#{Regexp.last_match(2)}_test.rb" }
     end
 
-  def app_test_paths
-    test_paths_for("app").last(1)
-  end
+    def flat_gem_test_paths
+      if gem_project?
+        candidate = path.sub(%r{(^|/)lib/[^/]+/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
+        candidate == path ? [] : [ candidate ]
+      else
+        []
+      end
+    end
 
-  def flat_gem_test_paths
-    return [] unless gem_project?
-
-    candidate = path.sub(%r{(^|/)lib/[^/]+/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
-    candidate == path ? [] : [ candidate ]
-  end
-
-  def namespaced_gem_source_path
-    return unless gem_project? && path.match?(%r{(^|/)test/.+_test\.rb$})
-
-    relative_source = path.match(%r{(^|/)test/(.+)_test\.rb$})[2]
-    candidates = Dir.glob(File.join(project_root_path, "lib", "*", "#{relative_source}.rb"))
-    candidates.one? ? candidates.first : nil
-  end
+    def app_test_paths
+      test_paths_for("app").last(1)
+    end
 end
