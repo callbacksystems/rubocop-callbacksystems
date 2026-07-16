@@ -14,14 +14,16 @@ class RuboCop::Callbacksystems::TestPathMapping
 
       if app_path != path && File.exist?(app_path)
         app_path
-      elsif lib_path != path
+      elsif lib_path != path && File.exist?(lib_path)
         lib_path
+      else
+        namespaced_gem_source_path
       end
     end
   end
 
   def gem_project?
-    Dir.glob("#{project_root}/*.gemspec").any?
+    Dir.glob(File.join(project_root_path, "*.gemspec")).any?
   end
 
   def find_test_file
@@ -31,12 +33,16 @@ class RuboCop::Callbacksystems::TestPathMapping
   private
     attr_reader :path
 
-    def project_root
-      path.split("/lib/").first
-    end
+  def project_root
+    path.match(%r{\A(.*?)(?:/)?(?:app|lib|test)/})&.captures&.first || path
+  end
 
-    def candidate_test_paths
-      lib_test_paths + app_test_paths
+  def project_root_path
+    project_root.empty? ? "." : project_root
+  end
+
+  def candidate_test_paths
+    lib_test_paths + flat_gem_test_paths + app_test_paths
     end
 
     def lib_test_paths
@@ -55,7 +61,22 @@ class RuboCop::Callbacksystems::TestPathMapping
       path.sub(%r{(^|/)#{root}/(.+)\.rb$}) { "#{Regexp.last_match(1)}#{prefix}#{Regexp.last_match(2)}_test.rb" }
     end
 
-    def app_test_paths
-      test_paths_for("app").last(1)
-    end
+  def app_test_paths
+    test_paths_for("app").last(1)
+  end
+
+  def flat_gem_test_paths
+    return [] unless gem_project?
+
+    candidate = path.sub(%r{(^|/)lib/[^/]+/(.+)\.rb$}) { "#{Regexp.last_match(1)}test/#{Regexp.last_match(2)}_test.rb" }
+    candidate == path ? [] : [ candidate ]
+  end
+
+  def namespaced_gem_source_path
+    return unless gem_project? && path.match?(%r{(^|/)test/.+_test\.rb$})
+
+    relative_source = path.match(%r{(^|/)test/(.+)_test\.rb$})[2]
+    candidates = Dir.glob(File.join(project_root_path, "lib", "*", "#{relative_source}.rb"))
+    candidates.one? ? candidates.first : nil
+  end
 end
