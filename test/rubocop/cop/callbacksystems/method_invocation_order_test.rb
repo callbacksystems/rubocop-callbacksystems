@@ -214,6 +214,85 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
     RUBY
   end
 
+  test "registers and autocorrects class methods inside class << self" do
+    assert_correction <<~BAD, <<~GOOD
+      class Example
+        class << self
+          def helper
+          end
+
+          def process
+            helper
+          end
+        end
+      end
+    BAD
+      class Example
+        class << self
+          def process
+            helper
+          end
+
+          def helper
+          end
+        end
+      end
+    GOOD
+  end
+
+  test "analyzes instance and singleton method visibility independently" do
+    assert_no_offense <<~RUBY
+      class Example
+        class << self
+          private
+            def inherited(subclass)
+              super
+            end
+        end
+
+        def initialize
+        end
+      end
+    RUBY
+  end
+
+  test "registers and autocorrects direct singleton method definitions" do
+    assert_correction <<~BAD, <<~GOOD
+      class Example
+        def self.helper
+        end
+
+        def self.process
+          helper
+        end
+      end
+    BAD
+      class Example
+        def self.process
+          helper
+        end
+
+        def self.helper
+        end
+      end
+    GOOD
+  end
+
+  test "does not treat a singleton method as an instance method callee" do
+    assert_no_offense <<~RUBY
+      class Example
+        class << self
+          def helper
+          end
+        end
+
+        def process
+          helper
+        end
+      end
+    RUBY
+  end
+
   test "handles single method class" do
     assert_no_offense <<~RUBY
       class Example
@@ -645,7 +724,7 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
   end
 
   test "computes visibilities per class instead of memoizing across the file" do
-    offenses = assert_offense <<~RUBY
+    assert_equal 2, assert_offense(<<~RUBY).size, "Both classes should report the same out-of-order call"
       class A
         private
           def helper
@@ -670,7 +749,5 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
         end
       end
     RUBY
-
-    assert_equal 2, offenses.size, "Both classes should report the same out-of-order call"
   end
 end

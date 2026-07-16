@@ -69,16 +69,29 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
   extend RuboCop::Cop::AutoCorrector
 
   def on_class(node)
-    graph = CallGraph.new(node)
-    order = graph.canonical_order
-    graph.each_offense do |offense_node, message|
-      add_offense(offense_node, message: message) { Reorder.new(processed_source, node, order, it).rewrite }
-    end
+    analyze(node, direct_methods_in(node, :def), macro_references: true)
+    analyze(node, direct_methods_in(node, :defs), macro_references: false)
   end
 
   alias on_module on_class
 
+  def on_sclass(node)
+    analyze(node, direct_methods_in(node, :def), macro_references: true)
+  end
+
   private
+    def analyze(node, methods, macro_references:)
+      graph = CallGraph.new(node, methods, macro_references:)
+      order = graph.canonical_order
+      graph.each_offense do |offense_node, message|
+        add_offense(offense_node, message: message) { Reorder.new(processed_source, node, methods, order, it).rewrite }
+      end
+    end
+
+    def direct_methods_in(node, type)
+      statements_in(node.body).select { it.type == type }
+    end
+
     # Rewrites each contiguous run of method definitions into canonical order,
     # carrying leading comments with their method. A non-method statement between
     # methods (a `private`, a macro) keeps the runs on either side separate.
@@ -86,9 +99,10 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(processed_source, node, order, corrector)
+      def initialize(processed_source, node, methods, order, corrector)
         @processed_source = processed_source
         @node = node
+        @methods = methods
         @order = order
         @corrector = corrector
       end
@@ -98,12 +112,12 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
       end
 
       private
-        attr_reader :processed_source, :node, :order, :corrector
+        attr_reader :processed_source, :node, :methods, :order, :corrector
 
         def method_runs
           method_statements
-            .slice_when { |left, right| !(left.def_type? && right.def_type?) }
-            .select { it.first.def_type? }
+            .slice_when { |left, right| methods.exclude?(left) || methods.exclude?(right) }
+            .select { methods.include?(it.first) }
         end
 
         def method_statements
@@ -157,8 +171,10 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
     class CallGraph
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, methods, macro_references:)
         @node = node
+        @methods = methods
+        @macro_references = macro_references
       end
 
       def each_offense(&block)
@@ -174,14 +190,10 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
       end
 
       private
-        attr_reader :node
+        attr_reader :node, :methods, :macro_references
 
         def analyzable?
           node.body && methods.size >= 2
-        end
-
-        def methods
-          @methods ||= direct_method_nodes_in(node.body)
         end
 
         def report_divergence
@@ -223,7 +235,11 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         # Macro-referenced methods that no method body calls: the macro is their
         # caller and it reads at the top, so they lead, in reference order.
         def macro_led
-          reference_order.reject { called_methods.include?(it) }
+          if macro_references
+            reference_order.reject { called_methods.include?(it) }
+          else
+            []
+          end
         end
 
         def reference_order
