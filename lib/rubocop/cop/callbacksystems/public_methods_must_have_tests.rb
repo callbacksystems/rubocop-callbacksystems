@@ -39,6 +39,10 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
     "Convention: tests begin with the method name followed by what it does, " \
     "e.g. `test \"%<method>s returns the expected value\" do`"
 
+  def external_dependency_checksum
+    RuboCop::Callbacksystems::ProjectFilesChecksum.for("test/**/*_test.rb", root: project_root)
+  end
+
   def on_class(node)
     return if private_nested_class?(node)
 
@@ -50,6 +54,10 @@ class RuboCop::Cop::Callbacksystems::PublicMethodsMustHaveTests < RuboCop::Cop::
   alias on_module on_class
 
   private
+    def project_root
+      @config.base_dir_for_path_parameters
+    end
+
     class Analysis
       EXCLUDED_METHODS = %i[initialize].to_set.freeze
 

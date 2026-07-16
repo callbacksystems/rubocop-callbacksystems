@@ -33,14 +33,22 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksys
   GROUPING_MESSAGE = "Tests for `%<method>s` should be grouped together."
   ORDER_MESSAGE = "Test for `%<method>s` appears after `%<previous>s`, but `%<method>s` is defined first in source."
 
+  extend RuboCop::Cop::AutoCorrector
+
+  def external_dependency_checksum
+    RuboCop::Callbacksystems::ProjectFilesChecksum.for([ "app/**/*.rb", "lib/**/*.rb" ], root: project_root)
+  end
+
   def on_new_investigation
-    positions = method_positions
-    Ordering.new(test_list_for(positions), positions).each_offense do |node, message|
-      add_offense(node, message: message)
-    end
+    @investigation = Investigation.new(processed_source, test_blocks, method_positions)
+    register_offenses
   end
 
   private
+    def project_root
+      @config.base_dir_for_path_parameters
+    end
+
     def method_positions
       @method_positions ||= checkable? ? source_methods.each_with_index.to_a.uniq(&:first).to_h : {}
     end
@@ -67,24 +75,132 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksys
       end || []
     end
 
-    def test_list_for(method_positions)
-      test_blocks.filter_map { test_entry_for(it, method_positions) }
+    def register_offenses
+      @investigation.each_offense.to_a.each_with_index do |(node, message), index|
+        if index.zero?
+          add_offense(node, message: message) { @investigation.rewrite(it) }
+        else
+          add_offense(node, message: message)
+        end
+      end
     end
 
-    def test_entry_for(node, method_positions)
-      method_name = method_from_description_for(test_block?(node), method_positions)
-      [ node, method_name ] if method_name
+    class Investigation
+      def initialize(processed_source, test_nodes, method_positions)
+        @processed_source = processed_source
+        @test_nodes = test_nodes
+        @method_positions = method_positions
+      end
+
+      def each_offense(&block)
+        Ordering.new(tests, method_positions).each_offense(&block)
+      end
+
+      def rewrite(corrector)
+        Reorder.new(processed_source, test_nodes, tests, method_positions, corrector).rewrite
+      end
+
+      private
+        attr_reader :processed_source, :test_nodes, :method_positions
+
+        def tests
+          @tests ||= test_nodes.filter_map { test_entry_for(it) }
+        end
+
+        def test_entry_for(node)
+          method_name = method_from_description_for(node.send_node.first_argument.value)
+          [ node, method_name ] if method_name
+        end
+
+        def method_from_description_for(description)
+          words = description.split(/\s+/)
+          method_candidates(words.first, words.second).find { method_positions.key?(it) }
+        end
+
+        def method_candidates(first_word, second_word)
+          return [ first_word.to_sym ] if second_word == "scope"
+
+          [ first_word.to_sym, :"#{first_word}?", :"#{first_word}!" ]
+        end
     end
 
-    def method_from_description_for(description, method_positions)
-      words = description.split(/\s+/)
-      method_candidates(words.first, words.second).find { method_positions.key?(it) }
-    end
+    # Reorders recognized tests only within uninterrupted runs of `test` blocks.
+    # Unknown tests keep their slots, while comments directly above a test travel
+    # with it. Any executable class-body statement is a hard boundary so an
+    # autocorrection cannot move a test across setup or configuration.
+    class Reorder
+      include RuboCop::Cop::RangeHelp
+      include RuboCop::Callbacksystems::Helpers
 
-    def method_candidates(first_word, second_word)
-      return [ first_word.to_sym ] if second_word == "scope"
+      def initialize(processed_source, test_nodes, tests, method_positions, corrector)
+        @processed_source = processed_source
+        @test_nodes = test_nodes
+        @tests = tests
+        @method_positions = method_positions
+        @corrector = corrector
+      end
 
-      [ first_word.to_sym, :"#{first_word}?", :"#{first_word}!" ]
+      def rewrite
+        test_runs.each { reorder_run(it) }
+      end
+
+      private
+        attr_reader :processed_source, :test_nodes, :tests, :method_positions, :corrector
+
+        def test_runs
+          test_nodes.sort_by { it.source_range.begin_pos }.slice_when do |left, right|
+            interrupted_between?(left, right)
+          end
+        end
+
+        def interrupted_between?(left, right)
+          right_start = block_range_of(right).begin_pos
+          right_start < left.source_range.end_pos ||
+            !range_between(left.source_range.end_pos, right_start).source.strip.empty?
+        end
+
+        def block_range_of(node)
+          range_between(block_start_of(node), node.source_range.end_pos)
+        end
+
+        def block_start_of(node)
+          range = (leading_comments_of(node).first || node).source_range
+          range.begin_pos - range.column
+        end
+
+        def leading_comments_of(node)
+          contiguous_comments_above(node.first_line - 1, [])
+        end
+
+        def contiguous_comments_above(line, collected)
+          comment = own_line_comment_at(line)
+          comment ? contiguous_comments_above(line - 1, [ comment, *collected ]) : collected
+        end
+
+        def own_line_comment_at(line)
+          processed_source.comments.find { it.loc.line == line && own_line_comment?(it) }
+        end
+
+        def reorder_run(run)
+          replacements_for(run).each do |original, replacement|
+            corrector.replace(block_range_of(original), block_range_of(replacement).source) unless original.equal?(replacement)
+          end
+        end
+
+        def replacements_for(run)
+          recognized = run.select { tests_by_node.key?(it) }
+          recognized.zip(order(recognized))
+        end
+
+        def tests_by_node
+          @tests_by_node ||= tests.to_h
+        end
+
+        def order(nodes)
+          nodes.each_index
+            .sort_by { [ method_positions.fetch(tests_by_node.fetch(nodes[it])), it ] }
+            .map { nodes[it] }
+        end
     end
 
     class Ordering

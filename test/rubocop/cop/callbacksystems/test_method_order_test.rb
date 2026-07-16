@@ -77,6 +77,174 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrderTest < CopTestCase
     RUBY
   end
 
+  test "autocorrects tests into source method order" do
+    create_source_file "app/models/user.rb", <<~RUBY
+      class User
+        def name
+        end
+
+        def email
+        end
+      end
+    RUBY
+
+    assert_correction <<~BAD, <<~GOOD, file: "#{@temp_dir}/test/models/user_test.rb"
+      class UserTest < ActiveSupport::TestCase
+        test "email returns address" do
+          assert_equal "friend@example.com", user.email
+        end
+
+        test "name returns full name" do
+          assert_equal "Ada Lovelace", user.name
+        end
+      end
+    BAD
+      class UserTest < ActiveSupport::TestCase
+        test "name returns full name" do
+          assert_equal "Ada Lovelace", user.name
+        end
+
+        test "email returns address" do
+          assert_equal "friend@example.com", user.email
+        end
+      end
+    GOOD
+  end
+
+  test "autocorrect keeps multiple tests for one method together and stable" do
+    create_source_file "app/models/user.rb", <<~RUBY
+      class User
+        def name
+        end
+
+        def email
+        end
+      end
+    RUBY
+
+    assert_correction <<~BAD, <<~GOOD, file: "#{@temp_dir}/test/models/user_test.rb"
+      class UserTest < ActiveSupport::TestCase
+        test "email returns address" do
+        end
+
+        test "name returns full name" do
+        end
+
+        test "email returns nil when absent" do
+        end
+      end
+    BAD
+      class UserTest < ActiveSupport::TestCase
+        test "name returns full name" do
+        end
+
+        test "email returns address" do
+        end
+
+        test "email returns nil when absent" do
+        end
+      end
+    GOOD
+  end
+
+  test "autocorrect carries leading comments with their tests" do
+    create_source_file "app/models/user.rb", <<~RUBY
+      class User
+        def name
+        end
+
+        def email
+        end
+      end
+    RUBY
+
+    assert_correction <<~BAD, <<~GOOD, file: "#{@temp_dir}/test/models/user_test.rb"
+      class UserTest < ActiveSupport::TestCase
+        # Email behavior.
+        test "email returns address" do
+        end
+
+        # Name behavior.
+        test "name returns full name" do
+        end
+      end
+    BAD
+      class UserTest < ActiveSupport::TestCase
+        # Name behavior.
+        test "name returns full name" do
+        end
+
+        # Email behavior.
+        test "email returns address" do
+        end
+      end
+    GOOD
+  end
+
+  test "autocorrect leaves unmatched tests in their original slots" do
+    create_source_file "app/models/user.rb", <<~RUBY
+      class User
+        def name
+        end
+
+        def email
+        end
+      end
+    RUBY
+
+    assert_correction <<~BAD, <<~GOOD, file: "#{@temp_dir}/test/models/user_test.rb"
+      class UserTest < ActiveSupport::TestCase
+        test "email returns address" do
+        end
+
+        test "validates presence" do
+        end
+
+        test "name returns full name" do
+        end
+      end
+    BAD
+      class UserTest < ActiveSupport::TestCase
+        test "name returns full name" do
+        end
+
+        test "validates presence" do
+        end
+
+        test "email returns address" do
+        end
+      end
+    GOOD
+  end
+
+  test "does not autocorrect across a non-test class body statement" do
+    create_source_file "app/models/user.rb", <<~RUBY
+      class User
+        def name
+        end
+
+        def email
+        end
+      end
+    RUBY
+
+    source = <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        test "email returns address" do
+        end
+
+        setup do
+          @user = User.new
+        end
+
+        test "name returns full name" do
+        end
+      end
+    RUBY
+
+    assert_correction source, source, file: "#{@temp_dir}/test/models/user_test.rb"
+  end
+
   test "allows multiple tests for same method in sequence" do
     create_source_file "app/models/user.rb", <<~RUBY
       class User
