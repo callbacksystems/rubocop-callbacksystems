@@ -177,6 +177,9 @@ Callbacksystems/PreferClassForState:
   Enabled: true
   MinMethods: 4
 
+Callbacksystems/PreferClassNewForEmptyNestedClass:
+  Enabled: true
+
 Callbacksystems/PreferDeclarativeCollections:
   Enabled: true
 
