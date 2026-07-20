@@ -29,7 +29,7 @@
 class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
-  MESSAGE = "Define `%<name>s` as a class inheriting from `%<builder>s` instead of a block."
+  MESSAGE = "Define `%<name>s` as a class instead of a block given to `%<builder>s`."
 
   def on_casgn(node)
     builder = BuilderBlock.new(node)
@@ -49,17 +49,21 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop:
       end
 
       def offense_message
-        format(MESSAGE, name: class_name_of(node), builder: builder_call.source)
+        format(MESSAGE, name: class_name_of(node), builder: builder_name)
       end
 
       # Only the `do ... end` form is rewritten. Anything else would need the
       # body moved onto its own lines to stay valid.
       def rewrite(corrector)
-        corrector.replace(header, "class #{class_name_of(node)} < #{builder_call.source}") if rewritable?
+        corrector.replace(header, "class #{class_name_of(node)}#{inheritance}") if rewritable?
       end
 
       private
         attr_reader :node
+
+        def builder_name
+          "#{builder_call.receiver.source}.#{builder_call.method_name}"
+        end
 
         def builder_call
           block.send_node
@@ -75,6 +79,21 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop:
 
         def header
           node.source_range.with(end_pos: block.loc.begin.end_pos)
+        end
+
+        # `Class.new(Base)` is a subclass of `Base` and nothing more, so the
+        # definition inherits from `Base` itself. `Data.define` and `Struct.new`
+        # build the class they are given, so the call stays the superclass.
+        def inheritance
+          plain_subclass? ? argument_inheritance : " < #{builder_call.source}"
+        end
+
+        def plain_subclass?
+          builder_call.receiver.short_name == :Class
+        end
+
+        def argument_inheritance
+          " < #{builder_call.first_argument.source}" if builder_call.first_argument
         end
     end
 end

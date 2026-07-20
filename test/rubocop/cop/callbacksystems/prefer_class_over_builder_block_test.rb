@@ -13,7 +13,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlockTest < CopTestCa
     RUBY
 
     assert_includes offenses.first.message, "Route"
-    assert_includes offenses.first.message, "Data.define(:host)"
+    assert_includes offenses.first.message, "Data.define"
   end
 
   test "registers offense for a Struct builder taking a block" do
@@ -88,5 +88,45 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlockTest < CopTestCa
 
     assert_offense source
     assert_correction source, source
+  end
+
+  test "autocorrects Class.new to inherit from its argument" do
+    assert_correction \
+      <<~RUBY,
+        class Foo
+          LoggerProbe = Class.new(BaseLogger) do
+            def call
+            end
+          end
+        end
+      RUBY
+      <<~RUBY
+        class Foo
+          class LoggerProbe < BaseLogger
+            def call
+            end
+          end
+        end
+      RUBY
+  end
+
+  test "autocorrects an argumentless Class.new to a plain class" do
+    assert_correction \
+      <<~RUBY,
+        class Foo
+          Probe = Class.new do
+            def call
+            end
+          end
+        end
+      RUBY
+      <<~RUBY
+        class Foo
+          class Probe
+            def call
+            end
+          end
+        end
+      RUBY
   end
 end
