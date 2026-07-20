@@ -21,7 +21,7 @@ inherit_gem:
   rubocop-callbacksystems: rubocop.yml
 ```
 
-That is enough — the plugin auto-loads, enables every Callbacksystems cop, and
+That is enough. The plugin auto-loads, enables every Callbacksystems cop, and
 configures sensible defaults for the RuboCop core cops, Minitest, Performance,
 and Rails plugins.
 
@@ -41,7 +41,7 @@ in your `.rubocop.yml`.
 
 All cops live under the `Callbacksystems/` namespace and ship in
 [`config/default.yml`](config/default.yml). The defaults are tuned for typical
-Rails applications — most cops scope themselves to `app/`, `lib/`, or `test/`
+Rails applications, and most cops scope themselves to `app/`, `lib/`, or `test/`
 as appropriate.
 
 ### Disabling a cop
@@ -65,7 +65,7 @@ Use the real cop names and option keys from
 
 ## Cops
 
-This README keeps no per-cop list on purpose — it drifts out of date too fast.
+This README keeps no per-cop list on purpose, since it drifts out of date too fast.
 To see what ships, browse the source: each cop's file under
 [`lib/rubocop/cop/callbacksystems/`](lib/rubocop/cop/callbacksystems/) carries an
 `@example` block contrasting bad and good code, and
