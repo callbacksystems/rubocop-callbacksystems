@@ -7,6 +7,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     assert_offense <<~RUBY
       class Order
         class LineItem
+          def total
+          end
         end
       end
     RUBY
@@ -16,6 +18,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     assert_offense <<~RUBY
       class Order
         class LineItem
+          def total
+          end
         end
 
         private
@@ -25,10 +29,14 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     RUBY
   end
 
-  test "registers offense for a public constant defining a Data class" do
+  test "registers offense for a public constant building a Data class with behavior" do
     offenses = assert_offense <<~RUBY
       class Order
-        LineItem = Data.define(:sku, :quantity)
+        LineItem = Data.define(:sku, :quantity) do
+          def total
+            sku
+          end
+        end
 
         private
           def process
@@ -40,19 +48,11 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     assert_includes offenses.first.message, "its own file"
   end
 
-  test "registers offense for a public constant defining a Struct" do
+  test "registers offense for a Struct with behavior" do
     assert_offense <<~RUBY
       class Order
-        LineItem = Struct.new(:sku, keyword_init: true)
-      end
-    RUBY
-  end
-
-  test "registers offense for a class builder taking a block" do
-    assert_offense <<~RUBY
-      class Order
-        LineItem = Data.define(:sku) do
-          def to_s
+        LineItem = Struct.new(:sku, keyword_init: true) do
+          def total
             sku
           end
         end
@@ -60,27 +60,54 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     RUBY
   end
 
-  test "registers offense for a public constant defining an anonymous class" do
+  test "registers offense for an anonymous class with behavior" do
     assert_offense <<~RUBY
       class Order
-        LineItem = Class.new(Base)
+        LineItem = Class.new(Base) do
+          def total
+          end
+        end
       end
     RUBY
   end
 
-  test "allows a constant defining a class in the private section" do
+  test "allows a constant building a class in the private section" do
     assert_no_offense <<~RUBY
       class Order
         def process
         end
 
         private
-          LineItem = Data.define(:sku, :quantity)
+          LineItem = Data.define(:sku) do
+            def total
+              sku
+            end
+          end
       end
     RUBY
   end
 
-  test "allows constants that do not define a class" do
+  test "allows a declaration with no body" do
+    assert_no_offense <<~RUBY
+      class Order
+        LineItem = Data.define(:sku, :quantity)
+        Position = Struct.new(:row, :column)
+      end
+    RUBY
+  end
+
+  test "allows an empty error class" do
+    assert_no_offense <<~RUBY
+      class Order
+        class Rejected < StandardError; end
+
+        def process
+        end
+      end
+    RUBY
+  end
+
+  test "allows constants that do not build a class" do
     assert_no_offense <<~RUBY
       class Order
         FORMATS = [ :json ].freeze
@@ -90,9 +117,13 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     RUBY
   end
 
-  test "does not flag a top-level constant defining a class" do
+  test "does not flag a top-level constant building a class" do
     assert_no_offense <<~RUBY
-      LineItem = Data.define(:sku, :quantity)
+      LineItem = Data.define(:sku) do
+        def total
+          sku
+        end
+      end
     RUBY
   end
 
@@ -142,6 +173,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     assert_offense <<~RUBY
       module Orders
         class LineItem
+          def total
+          end
         end
       end
     RUBY

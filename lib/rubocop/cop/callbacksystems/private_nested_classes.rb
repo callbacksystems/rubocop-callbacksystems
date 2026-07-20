@@ -6,26 +6,25 @@
 # A constant assigned from `Data.define`, `Struct.new` or `Class.new` defines a
 # class in everything but syntax, so it reads under the same rule.
 #
+# A definition with no body is left alone. An error class or a bare list of
+# members declares what something is rather than how it works, and a file of its
+# own would cost more than it says.
+#
 # @example
 #   # bad - public nested class
 #   class Order
 #     class LineItem
-#     end
-#   end
-#
-#   # bad - nested class before private keyword
-#   class Order
-#     class LineItem
-#     end
-#
-#     private
-#       def process
+#       def total
 #       end
+#     end
 #   end
 #
-#   # bad - a constant that defines a class
+#   # bad - a constant that builds a class with behavior
 #   class Order
-#     LineItem = Data.define(:sku, :quantity)
+#     LineItem = Data.define(:sku, :quantity) do
+#       def total
+#       end
+#     end
 #
 #     private
 #       def process
@@ -38,7 +37,17 @@
 #     end
 #
 #     private
-#       LineItem = Data.define(:sku, :quantity)
+#       class LineItem
+#         def total
+#         end
+#       end
+#   end
+#
+#   # good - declarations with no body, wherever they read best
+#   class Order
+#     class Rejected < StandardError; end
+#
+#     LineItem = Data.define(:sku, :quantity)
 #   end
 #
 class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callbacksystems::Base
@@ -61,7 +70,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callba
       end
 
       def offense?
-        class_definition? && nested? && !in_private_section?(node, enclosing.body)
+        defines_behavior? && nested? && !in_private_section?(node, enclosing.body)
       end
 
       def offense_message
@@ -71,24 +80,24 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callba
       private
         attr_reader :node
 
-        def class_definition?
-          node.class_type? || builds_class?
+        # A declaration with no body says what something is, not how it works,
+        # and reads the same wherever it sits. An error class or a plain list of
+        # members costs nothing where it is declared, so only a definition
+        # carrying behavior answers to the rule.
+        def defines_behavior?
+          node.class_type? ? node.body.present? : builds_class_with_body?
         end
 
-        def builds_class?
-          node.casgn_type? && class_builder?(builder_call)
+        def builds_class_with_body?
+          node.casgn_type? && any_block_type?(node.expression) && class_builder?(node.expression.send_node)
         end
 
         def class_builder?(call)
-          call&.send_type? && CLASS_BUILDERS[builder_name_of(call)] == call.method_name
+          CLASS_BUILDERS[builder_name_of(call)] == call.method_name
         end
 
         def builder_name_of(call)
           call.receiver.short_name if call.receiver&.const_type?
-        end
-
-        def builder_call
-          node.expression&.then { any_block_type?(it) ? it.send_node : it }
         end
 
         def nested?
