@@ -29,6 +29,10 @@ class RuboCop::Callbacksystems::BodySections
     private_children.select(&:class_type?)
   end
 
+  def in_private_section?(node)
+    private_modifier ? private_modifier.source_range.begin_pos < node.source_range.begin_pos : false
+  end
+
   def private_modifier
     statements_in(body).find { visibility_modifier_of(it) == :private }
   end

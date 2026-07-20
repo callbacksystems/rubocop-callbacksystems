@@ -54,10 +54,11 @@
 #
 class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Declare `%<name>s` in the private section instead of marking it with `private_constant`."
+  REDUNDANT_MESSAGE = "Remove `private_constant` from `%<name>s`, which is already declared in the private section."
 
   def on_send(node)
-    PrivateConstantMarker.new(node).movable_arguments.each do |argument|
-      add_offense(argument, message: format(MESSAGE, name: argument.value))
+    PrivateConstantMarker.new(node).each_offense do |argument, message|
+      add_offense(argument, message: message)
     end
   end
 
@@ -71,12 +72,20 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         @node = node
       end
 
-      def movable_arguments
-        marked_arguments.reject { pinned?(it) }
+      def each_offense(&block)
+        if block
+          movable_arguments.each { yield it, message_for(it) }
+        else
+          to_enum(__method__)
+        end
       end
 
       private
         attr_reader :node
+
+        def movable_arguments
+          marked_arguments.reject { pinned?(it) }
+        end
 
         def marked_arguments
           marker? ? node.arguments.select { it.type?(:sym, :str) } : []
@@ -95,7 +104,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         end
 
         def constant_reads
-          constant_nodes.map { ConstantRead.new(it, private_modifier) }
+          constant_nodes.map { ConstantRead.new(it, enclosing_body) }
         end
 
         def constant_nodes
@@ -106,8 +115,29 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           enclosing_class_or_module_of(node)&.body
         end
 
-        def private_modifier
-          private_modifier_in(enclosing_body)
+        def message_for(argument)
+          format(template_for(argument.value.to_s), name: argument.value)
+        end
+
+        # The marker on a constant already sitting in the private section says
+        # nothing the section does not.
+        def template_for(name)
+          declared_privately?(declaration_of(name)) ? REDUNDANT_MESSAGE : MESSAGE
+        end
+
+        def declared_privately?(declaration)
+          declaration && in_private_section?(declaration, enclosing_body)
+        end
+
+        def declaration_of(name)
+          statements_in(enclosing_body).find { declared_name_of(it) == name }
+        end
+
+        def declared_name_of(statement)
+          case statement.type
+          when :casgn then statement.name.to_s
+          when :class, :module then statement.identifier.short_name.to_s
+          end
         end
     end
 
@@ -117,13 +147,13 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
     class ConstantRead
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node, private_modifier)
+      def initialize(node, body)
         @node = node
-        @private_modifier = private_modifier
+        @body = body
       end
 
       def pins_declaration?
-        class_level? && !inside_private_section?
+        class_level? && !in_private_section?(node, body)
       end
 
       def name
@@ -131,7 +161,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
       end
 
       private
-        attr_reader :node, :private_modifier
+        attr_reader :node, :body
 
         def class_level?
           !inside_method? && !definition_identifier?(node)
@@ -139,10 +169,6 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
 
         def inside_method?
           node.each_ancestor(:any_def).any?
-        end
-
-        def inside_private_section?
-          private_modifier && private_modifier.source_range.begin_pos < node.source_range.begin_pos
         end
     end
 end

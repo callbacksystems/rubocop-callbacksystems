@@ -23,6 +23,10 @@ module RuboCop::Callbacksystems::Helpers::Visibility
     sections_in(body).private_modifier
   end
 
+  def in_private_section?(node, body)
+    sections_in(body).in_private_section?(node)
+  end
+
   def visibility_modifier_of(node)
     if bare_send?(node) && node.arguments.empty?
       node.method_name if %i[private protected public].include?(node.method_name)

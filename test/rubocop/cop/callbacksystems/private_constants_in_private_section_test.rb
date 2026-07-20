@@ -70,6 +70,22 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
     RUBY
   end
 
+  test "reports the marker as redundant when the constant already sits in the private section" do
+    offenses = assert_offense <<~RUBY
+      class Backend
+        def formats
+          FORMATS
+        end
+
+        private
+          FORMATS = [ :json ].freeze
+          private_constant :FORMATS
+      end
+    RUBY
+
+    assert_includes offenses.first.message, "already declared in the private section"
+  end
+
   test "allows a constant read by a macro at class level" do
     assert_no_offense <<~RUBY
       class Backend

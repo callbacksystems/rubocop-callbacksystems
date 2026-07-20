@@ -60,6 +60,43 @@ class RuboCop::Callbacksystems::BodySectionsTest < ActiveSupport::TestCase
     assert_equal %w[Inner Other], sections.private_nested_classes.map { it.identifier.source }
   end
 
+  test "in_private_section? returns true for a node below the private modifier" do
+    body = RuboCop::ProcessedSource.new(<<~RUBY, RUBY_VERSION.to_f).ast.body
+      class Foo
+        def bar; end
+
+        private
+          MEMBERS = [ :name ].freeze
+      end
+    RUBY
+
+    assert RuboCop::Callbacksystems::BodySections.new(body).in_private_section?(body.children.last)
+  end
+
+  test "in_private_section? returns false for a node above the private modifier" do
+    body = RuboCop::ProcessedSource.new(<<~RUBY, RUBY_VERSION.to_f).ast.body
+      class Foo
+        MEMBERS = [ :name ].freeze
+
+        private
+          def bar; end
+      end
+    RUBY
+
+    assert_not RuboCop::Callbacksystems::BodySections.new(body).in_private_section?(body.children.first)
+  end
+
+  test "in_private_section? returns false when there is no private section" do
+    body = RuboCop::ProcessedSource.new(<<~RUBY, RUBY_VERSION.to_f).ast.body
+      class Foo
+        MEMBERS = [ :name ].freeze
+        def bar; end
+      end
+    RUBY
+
+    assert_not RuboCop::Callbacksystems::BodySections.new(body).in_private_section?(body.children.first)
+  end
+
   test "private_modifier returns the modifier that opens the private section" do
     sections = sections_of(<<~RUBY)
       class Foo

@@ -149,6 +149,20 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     assert_nil Helpers.private_modifier_in(body)
   end
 
+  test "in_private_section? tells which side of the modifier a node sits on" do
+    body = class_body(<<~RUBY)
+      class Foo
+        MEMBERS = [ :name ].freeze
+
+        private
+          ROUTES = [ :show ].freeze
+      end
+    RUBY
+
+    assert Helpers.in_private_section?(body.children.last, body)
+    assert_not Helpers.in_private_section?(body.children.first, body)
+  end
+
   test "visibility_modifier_of returns the modifier symbol" do
     body = class_body(<<~RUBY)
       class Foo
