@@ -25,6 +25,77 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassesTest < CopTestCase
     RUBY
   end
 
+  test "registers offense for a public constant defining a Data class" do
+    offenses = assert_offense <<~RUBY
+      class Order
+        LineItem = Data.define(:sku, :quantity)
+
+        private
+          def process
+          end
+      end
+    RUBY
+
+    assert_includes offenses.first.message, "LineItem"
+    assert_includes offenses.first.message, "its own file"
+  end
+
+  test "registers offense for a public constant defining a Struct" do
+    assert_offense <<~RUBY
+      class Order
+        LineItem = Struct.new(:sku, keyword_init: true)
+      end
+    RUBY
+  end
+
+  test "registers offense for a class builder taking a block" do
+    assert_offense <<~RUBY
+      class Order
+        LineItem = Data.define(:sku) do
+          def to_s
+            sku
+          end
+        end
+      end
+    RUBY
+  end
+
+  test "registers offense for a public constant defining an anonymous class" do
+    assert_offense <<~RUBY
+      class Order
+        LineItem = Class.new(Base)
+      end
+    RUBY
+  end
+
+  test "allows a constant defining a class in the private section" do
+    assert_no_offense <<~RUBY
+      class Order
+        def process
+        end
+
+        private
+          LineItem = Data.define(:sku, :quantity)
+      end
+    RUBY
+  end
+
+  test "allows constants that do not define a class" do
+    assert_no_offense <<~RUBY
+      class Order
+        FORMATS = [ :json ].freeze
+        LIMIT = 10
+        MATCHER = Data::TYPES.first
+      end
+    RUBY
+  end
+
+  test "does not flag a top-level constant defining a class" do
+    assert_no_offense <<~RUBY
+      LineItem = Data.define(:sku, :quantity)
+    RUBY
+  end
+
   test "allows nested class in private section" do
     assert_no_offense <<~RUBY
       class Order
