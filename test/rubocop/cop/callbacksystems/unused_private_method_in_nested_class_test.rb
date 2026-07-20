@@ -142,4 +142,18 @@ class UnusedPrivateMethodInNestedClassTest < CopTestCase
 
     assert_equal 1, offenses.count
   end
+
+  test "allows a private method in a nested class with a superclass" do
+    assert_no_offense <<~RUBY
+      class LoggerTest
+        private
+          class LoggerProbe < BaseLogger
+            private
+              def on_start(payload)
+                events << payload
+              end
+          end
+      end
+    RUBY
+  end
 end

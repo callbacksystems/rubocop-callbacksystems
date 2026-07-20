@@ -72,6 +72,16 @@ class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop:
         attr_reader :nested_class, :class_name
 
         def unused_methods
+          provable? ? uncalled_methods : []
+        end
+
+        # A superclass calls the hooks its subclass overrides, and that call is
+        # nowhere in this file, so an inherited class proves nothing here.
+        def provable?
+          nested_class.parent_class.nil?
+        end
+
+        def uncalled_methods
           private_methods_in(nested_class).reject do |method_node|
             called_methods.include?(method_node.method_name) || macro_referenced_methods.include?(method_node.method_name)
           end
