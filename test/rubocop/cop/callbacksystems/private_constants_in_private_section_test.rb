@@ -57,6 +57,19 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
     RUBY
   end
 
+  test "registers offense when the class-level readers are private too" do
+    assert_offense <<~RUBY
+      class Analysis
+        MEMBERS = [ :host, :matcher ].freeze
+        private_constant :MEMBERS
+
+        private
+          Route = Data.define(*MEMBERS)
+          Result = Data.define(*MEMBERS, :findings)
+      end
+    RUBY
+  end
+
   test "allows a constant read by a macro at class level" do
     assert_no_offense <<~RUBY
       class Backend

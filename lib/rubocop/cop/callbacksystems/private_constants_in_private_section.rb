@@ -3,8 +3,9 @@
 # with `private_constant` from the top of the class says the same thing twice
 # and leaves the declaration among the public ones.
 #
-# The marker earns its place when class-level code above needs the constant,
-# since the declaration cannot move below the code that reads it.
+# The marker earns its place when class-level code above the private section
+# reads the constant, since the declaration cannot move below the code that
+# reads it. Class-level code inside the section moves down with it.
 #
 # @example
 #   # bad - only method bodies read it
@@ -27,7 +28,23 @@
 #       Route = Data.define(:host, :matcher)
 #   end
 #
-#   # good - class-level code reads it, so it has to stay above
+#   # bad - the reader is private too, so both move
+#   class Backend
+#     MEMBERS = [ :host, :matcher ].freeze
+#     private_constant :MEMBERS
+#
+#     private
+#       Route = Data.define(*MEMBERS)
+#   end
+#
+#   # good
+#   class Backend
+#     private
+#       MEMBERS = [ :host, :matcher ].freeze
+#       Route = Data.define(*MEMBERS)
+#   end
+#
+#   # good - class-level code above reads it, so it has to stay there
 #   class Backend
 #     FORMATS = [ :json ].freeze
 #     private_constant :FORMATS
@@ -55,7 +72,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
       end
 
       def movable_arguments
-        marked_arguments.reject { read_at_class_level?(it) }
+        marked_arguments.reject { pinned?(it) }
       end
 
       private
@@ -69,14 +86,16 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           bare_send?(node) && node.method?(:private_constant)
         end
 
-        def read_at_class_level?(argument)
-          class_level_names.include?(argument.value.to_s)
+        def pinned?(argument)
+          pinning_names.include?(argument.value.to_s)
         end
 
-        # A constant read by class-level code has to be declared before that
-        # code runs, so it cannot move down into the private section.
-        def class_level_names
-          constant_nodes.select { class_level_read?(it) }.map { it.short_name.to_s }
+        def pinning_names
+          @pinning_names ||= constant_reads.select(&:pins_declaration?).map(&:name)
+        end
+
+        def constant_reads
+          constant_nodes.map { ConstantRead.new(it, private_modifier) }
         end
 
         def constant_nodes
@@ -87,12 +106,43 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           enclosing_class_or_module_of(node)&.body
         end
 
-        def class_level_read?(constant)
-          !inside_method?(constant) && !definition_identifier?(constant)
+        def private_modifier
+          private_modifier_in(enclosing_body)
+        end
+    end
+
+    # A constant read that would break if the declaration moved: one made by
+    # class-level code, from above the private section the declaration would
+    # move into.
+    class ConstantRead
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, private_modifier)
+        @node = node
+        @private_modifier = private_modifier
+      end
+
+      def pins_declaration?
+        class_level? && !inside_private_section?
+      end
+
+      def name
+        node.short_name.to_s
+      end
+
+      private
+        attr_reader :node, :private_modifier
+
+        def class_level?
+          !inside_method? && !definition_identifier?(node)
         end
 
-        def inside_method?(constant)
-          constant.each_ancestor(:any_def).any?
+        def inside_method?
+          node.each_ancestor(:any_def).any?
+        end
+
+        def inside_private_section?
+          private_modifier && private_modifier.source_range.begin_pos < node.source_range.begin_pos
         end
     end
 end
