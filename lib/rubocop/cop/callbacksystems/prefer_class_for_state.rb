@@ -144,37 +144,53 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
     # reaches and detecting whether the flow loops back onto a method already on the
     # path. A value that cycles through mutually recursive helpers is a cursor over a
     # structure, not state, so it is exempt.
-    Reach = Struct.new(:index) do
+    class Reach < Struct.new(:index)
       def initialize(index)
         super
         @callees = Set.new
       end
 
       def count
-        @callees.size
+        callees.size
       end
 
       def cyclic?(flow, path)
-        flow.threading_calls.any? { loops_back?(it, path) }
+        flow.threading_calls.any? { loops_back?(Step.new(call: it, path: path)) }
       end
 
-      def loops_back?(call, path)
-        return true if path.include?(call.method_name)
+      private
+        attr_reader :callees
 
-        !@callees.include?(call.method_name) && descends?(call, path)
+        def loops_back?(step)
+          return true if step.looping?
+
+          !callees.include?(step.method_name) && descends?(step)
+        end
+
+        def descends?(step)
+          callees << step.method_name
+          next_flow = index.parameter_flow(step.method_name, step.position)
+          next_flow ? cyclic?(next_flow, step.next_path) : false
+        end
+    end
+
+    # One call being followed and the method names walked through to reach it.
+    class Step < Data.define(:call, :path)
+      delegate :method_name, :position, to: :call
+
+      def looping?
+        path.include?(method_name)
       end
 
-      def descends?(call, path)
-        @callees << call.method_name
-        next_flow = index.parameter_flow(call.method_name, call.position)
-        next_flow ? cyclic?(next_flow, path + [ call.method_name ]) : false
+      def next_path
+        path + [ method_name ]
       end
     end
 
     # Resolves a receiverless call's method name and argument position to the
     # value flow it lands on in the callee, so a value can be followed across a
     # method boundary.
-    MethodIndex = Struct.new(:container) do
+    class MethodIndex < Struct.new(:container)
       include RuboCop::Callbacksystems::Helpers
 
       def parameter_flow(name, position)
@@ -182,22 +198,23 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
         Parameter.new(method, position, self).flow unless method.nil? || recursive?(method)
       end
 
-      def methods_by_name
-        @methods_by_name ||= methods.index_by(&:method_name)
-      end
+      private
+        def methods_by_name
+          @methods_by_name ||= methods.index_by(&:method_name)
+        end
 
-      def methods
-        container ? direct_method_nodes_in(container.body) : []
-      end
+        def methods
+          container ? direct_method_nodes_in(container.body) : []
+        end
 
-      def recursive?(method)
-        receiverless_method_names_in(method.body).include?(method.method_name)
-      end
+        def recursive?(method)
+          receiverless_method_names_in(method.body).include?(method.method_name)
+        end
     end
 
     # A method parameter resolved by position, exposing the value flow it carries:
     # the parameter name scoped to its method body.
-    Parameter = Data.define(:method_node, :position, :index) do
+    class Parameter < Data.define(:method_node, :position, :index)
       include RuboCop::Callbacksystems::Helpers
 
       def flow
@@ -212,37 +229,38 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
 
     # One value (a name within a single method body) and the receiverless
     # calls it is passed to. The unit followed by the transitive search.
-    ValueFlow = Data.define(:name, :method_node, :index) do
+    class ValueFlow < Data.define(:name, :method_node, :index)
       include RuboCop::Callbacksystems::Helpers
 
       def threading_calls
         method_node.each_descendant(:send).select { bare_send?(it) }.filter_map { call_in(it) }
       end
 
-      def call_in(send_node)
-        position = send_node.arguments.find_index { passes_value?(it) }
-        Call.new(send_node.method_name, position) if position
-      end
+      private
+        def call_in(send_node)
+          position = send_node.arguments.find_index { passes_value?(it) }
+          Call.new(send_node.method_name, position) if position
+        end
 
-      def passes_value?(argument)
-        argument.lvar_type? && argument.children.first.to_s == name && !shadowed?(argument)
-      end
+        def passes_value?(argument)
+          argument.lvar_type? && argument.children.first.to_s == name && !shadowed?(argument)
+        end
 
-      # A block between the reference and the method that binds an argument of the
-      # same name introduces a different value: the reference is no longer the
-      # parameter being followed. Numbered and `it` blocks bind `_1`/`it`, which
-      # never collide with a named parameter, so they cannot shadow.
-      def shadowed?(argument)
-        blocks_above(argument).any? { rebinds_name?(it) }
-      end
+        # A block between the reference and the method that binds an argument of the
+        # same name introduces a different value: the reference is no longer the
+        # parameter being followed. Numbered and `it` blocks bind `_1`/`it`, which
+        # never collide with a named parameter, so they cannot shadow.
+        def shadowed?(argument)
+          blocks_above(argument).any? { rebinds_name?(it) }
+        end
 
-      def blocks_above(argument)
-        argument.each_ancestor(:block).take_while { it != method_node }
-      end
+        def blocks_above(argument)
+          argument.each_ancestor(:block).take_while { it != method_node }
+        end
 
-      def rebinds_name?(block)
-        block.argument_list.any? { it.respond_to?(:name) && it.name.to_s == name }
-      end
+        def rebinds_name?(block)
+          block.argument_list.any? { it.respond_to?(:name) && it.name.to_s == name }
+        end
     end
 
     Call = Data.define(:method_name, :position)

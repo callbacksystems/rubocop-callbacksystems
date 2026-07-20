@@ -183,6 +183,9 @@ Callbacksystems/PreferClassForState:
 Callbacksystems/PreferClassNewForEmptyNestedClass:
   Enabled: true
 
+Callbacksystems/PreferClassOverBuilderBlock:
+  Enabled: true
+
 Callbacksystems/PreferDeclarativeCollections:
   Enabled: true
 

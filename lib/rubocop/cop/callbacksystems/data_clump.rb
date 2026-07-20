@@ -106,7 +106,7 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
 
     # One method's eligible parameter names: its significant names, deduplicated,
     # minus the exempt ones.
-    Signature = Data.define(:node, :exempt_names) do
+    class Signature < Data.define(:node, :exempt_names)
       include RuboCop::Callbacksystems::Helpers
 
       def reaches?(wanted)
@@ -156,19 +156,19 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
     end
 
-    Clump = Data.define(:signatures, :names) do
+    class Clump < Data.define(:signatures, :names)
       # Two tiers, mirroring the JS rule no-data-clump: a multi-name clump needs
       # min_methods reaches; a lone name needs the higher single-param threshold.
       def qualifies?(limits)
         count >= (names.many? ? limits[:min_methods] : limits[:min_methods_for_single_param])
       end
 
-      def location
-        signatures.first.node.loc.name
-      end
-
       def count
         signatures.size
+      end
+
+      def location
+        signatures.first.node.loc.name
       end
 
       def params
