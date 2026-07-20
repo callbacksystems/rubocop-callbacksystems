@@ -52,6 +52,12 @@ Callbacksystems/EarlyReturn:
 
 Callbacksystems/EmptyLineBeforeMethod:
   Enabled: true
+  DescribingMacros:
+    - desc
+    - long_desc
+    - method_option
+    - method_options
+    - option
 
 Callbacksystems/EmptyPrivateSection:
   Enabled: true

@@ -181,4 +181,70 @@ class EmptyLineBeforeMethodTest < CopTestCase
 
     assert_correction(source, corrected)
   end
+
+  test "allows a describing macro glued to its method" do
+    assert_no_offense <<~RUBY
+      class Backup < Thor
+        desc "perform", "Run a backup now"
+        option :force, type: :boolean
+        def perform
+        end
+
+        desc "list", "List backups"
+        def list
+        end
+      end
+    RUBY
+  end
+
+  test "registers offense when the macro group has no empty line above it" do
+    offenses = assert_offense <<~RUBY
+      class Backup < Thor
+        desc "perform", "Run a backup now"
+        def perform
+        end
+        desc "list", "List backups"
+        def list
+        end
+      end
+    RUBY
+
+    assert_equal 1, offenses.size
+    assert_includes offenses.first.message, "list"
+  end
+
+  test "allows a describing macro opening the body" do
+    assert_no_offense <<~RUBY
+      class Backup < Thor
+        desc "perform", "Run a backup now"
+        def perform
+        end
+      end
+    RUBY
+  end
+
+  test "autocorrects above the macro group instead of below it" do
+    assert_correction \
+      <<~RUBY,
+        class Backup < Thor
+          desc "perform", "Run a backup now"
+          def perform
+          end
+          desc "list", "List backups"
+          def list
+          end
+        end
+      RUBY
+      <<~RUBY
+        class Backup < Thor
+          desc "perform", "Run a backup now"
+          def perform
+          end
+
+          desc "list", "List backups"
+          def list
+          end
+        end
+      RUBY
+  end
 end

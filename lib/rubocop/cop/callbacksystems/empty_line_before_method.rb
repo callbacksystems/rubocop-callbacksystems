@@ -46,9 +46,10 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callb
   MESSAGE = "Add an empty line before `%<method>s`."
 
   def on_def(node)
-    if SiblingCheck.new(node).offense?
+    check = SiblingCheck.new(node, describing_macros)
+    if check.offense?
       add_offense(node, message: format(MESSAGE, method: node.method_name)) do |corrector|
-        corrector.insert_before(line_start_range_for(node), "\n")
+        corrector.insert_before(line_start_range_for(check.leading_node), "\n")
       end
     end
   end
@@ -56,6 +57,10 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callb
   alias on_defs on_def
 
   private
+    def describing_macros
+      cop_config["DescribingMacros"].to_a.map(&:to_sym)
+    end
+
     def line_start_range_for(node)
       line_start = node.source_range.begin_pos - node.source_range.column
       node.source_range.with(begin_pos: line_start, end_pos: line_start)
@@ -64,23 +69,47 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callb
     class SiblingCheck
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, describing_macros)
         @node = node
+        @describing_macros = describing_macros
       end
 
       def offense?
         previous_node && !first_in_body? && !after_visibility_modifier? && missing_empty_line?
       end
 
+      # A macro describing the method below it belongs to that method, so the
+      # empty line goes above the macro instead of between the two.
+      def leading_node
+        @leading_node ||= walk_up(node)
+      end
+
       private
-        attr_reader :node
+        attr_reader :node, :describing_macros
 
         def previous_node
-          @previous_node ||= node.left_sibling if node.parent&.begin_type?
+          @previous_node ||= sibling_above(leading_node)
+        end
+
+        def sibling_above(statement)
+          statement.left_sibling if statement.parent&.begin_type?
+        end
+
+        def walk_up(statement)
+          above = sibling_above(statement)
+          describing?(above) && glued?(above, statement) ? walk_up(above) : statement
+        end
+
+        def describing?(statement)
+          bare_send?(statement) && describing_macros.include?(statement.method_name)
+        end
+
+        def glued?(above, statement)
+          (statement.first_line - above.last_line) <= 1
         end
 
         def first_in_body?
-          ParentCheck.new(node, node.parent).first_in_body?
+          ParentCheck.new(leading_node, leading_node.parent).first_in_body?
         end
 
         def after_visibility_modifier?
@@ -88,7 +117,7 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callb
         end
 
         def missing_empty_line?
-          (node.first_line - previous_node.last_line) <= 1
+          glued?(previous_node, leading_node)
         end
     end
 
