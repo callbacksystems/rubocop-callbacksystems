@@ -127,6 +127,32 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     assert_nil Helpers.visibility_modifier_of(body)
   end
 
+  test "private_modifier_in returns the private modifier of the body" do
+    body = class_body(<<~RUBY)
+      class Foo
+        def bar; end
+
+        private
+          def baz; end
+      end
+    RUBY
+
+    assert_equal :private, Helpers.private_modifier_in(body).method_name
+  end
+
+  test "private_modifier_in returns nil when the body has no private section" do
+    body = class_body(<<~RUBY)
+      class Foo
+        def bar; end
+
+        protected
+          def baz; end
+      end
+    RUBY
+
+    assert_nil Helpers.private_modifier_in(body)
+  end
+
   test "private_method? returns true for methods after private" do
     method = method_named(<<~RUBY, :baz)
       class Bar

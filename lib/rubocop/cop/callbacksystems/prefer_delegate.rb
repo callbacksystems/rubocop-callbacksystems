@@ -1,11 +1,15 @@
-# Detects private methods that only delegate to a same-named method on a simple
-# receiver (`def size; node.size; end`). The `delegate` macro says it declaratively.
-# Rails/Delegate covers public delegations but skips private ones (the macro defines
-# public methods unless told otherwise), so the private case is caught here.
+# Detects methods that only delegate to a same-named method on a plain
+# receiver (`def size; node.size; end`). The `delegate` macro says it
+# declaratively.
 #
-# The autocorrection folds the method into an existing same-receiver
-# `delegate ... private: true` when one is present, keeping them on one line;
-# otherwise it writes a fresh macro beside the section's other declarations.
+# Rails/Delegate covers the public single-receiver case, so what is left here
+# is the private one (the macro defines public methods unless told otherwise)
+# and the nested one, where a chain of calls becomes a dotted target that
+# Rails/Delegate does not recognize.
+#
+# The autocorrection folds the method into an existing same-target `delegate`
+# when one is present, keeping them on one line; otherwise it writes a fresh
+# macro beside the section's other declarations.
 #
 # @example
 #   # bad - hand-written private delegation
@@ -19,6 +23,14 @@
 #   # good - folded into the existing delegate
 #   private
 #     delegate :name, :size, to: :node, private: true
+#
+#   # bad - hand-written nested delegation
+#   def database_names
+#     config.postgres.database_names
+#   end
+#
+#   # good - the chain becomes a dotted target
+#   delegate :database_names, to: "config.postgres"
 #
 class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
@@ -39,15 +51,15 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
       end
 
       def offense?
-        private_method?(node) && node.arguments.empty? && delegates_to_same_name?
+        node.arguments.empty? && delegates_to_same_name? && reportable?
       end
 
       def offense_message
-        format(MESSAGE, receiver: receiver_name)
+        format(MESSAGE, receiver: receiver_names.join("."))
       end
 
       def correct(corrector)
-        Conversion.new(node, receiver_name).apply(corrector)
+        Conversion.new(node, receiver_names).apply(corrector)
       end
 
       private
@@ -55,69 +67,78 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         delegate :body, to: :node, private: true
 
         def delegates_to_same_name?
-          body&.send_type? && body.method?(node.method_name) && body.arguments.empty? && simple_receiver?
+          body&.send_type? && body.method?(node.method_name) && body.arguments.empty? && receiver_names.any?
         end
 
-        def simple_receiver?
-          bare_send?(body.receiver) && body.receiver.arguments.empty?
+        def receiver_names
+          @receiver_names ||= chain_names_in(body&.receiver) || []
         end
 
-        def receiver_name
-          body.receiver.method_name
+        # A delegatable receiver is a chain of argumentless calls on self
+        # (`config.postgres`), which the macro can express as a dotted target.
+        # Anything else in the chain gives up the whole reading.
+        def chain_names_in(receiver)
+          if receiver.nil?
+            []
+          elsif chained_call?(receiver)
+            chain_names_in(receiver.receiver)&.then { it + [ receiver.method_name ] }
+          end
+        end
+
+        def chained_call?(receiver)
+          receiver.send_type? && receiver.arguments.empty?
+        end
+
+        # Rails/Delegate already reports the public single-receiver case.
+        def reportable?
+          private_method?(node) || receiver_names.many?
         end
     end
 
-    # Rewrites the method as the delegate macro: folded into a same-receiver
-    # `delegate ... private: true` if one exists, otherwise a new macro placed after
-    # the section's declarations (attr_reader/delegate) or its `private` modifier.
+    # Rewrites the method as the delegate macro: folded into a same-target
+    # `delegate` if one exists, otherwise a new macro placed after the section's
+    # declarations (attr_reader/delegate) or its `private` modifier. With
+    # neither to anchor it, the offense is reported without a correction.
     class Conversion
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node, receiver)
+      def initialize(node, receiver_names)
         @node = node
-        @receiver = receiver
+        @receiver_names = receiver_names
       end
 
       def apply(corrector)
-        sibling = same_receiver_delegate
-        if sibling
-          corrector.insert_before(sibling.last_argument, ":#{node.method_name}, ")
-        else
-          corrector.insert_after(anchor, "\n#{macro_indent}delegate :#{node.method_name}, to: :#{receiver}, private: true")
+        if sibling_delegate || anchor
+          write(corrector)
+          corrector.remove(statement_removal_range_for(node))
         end
-        corrector.remove(removal_range)
       end
 
       private
-        attr_reader :node, :receiver
+        attr_reader :node, :receiver_names
 
-        def same_receiver_delegate
-          container_statements.find { private_delegate_to_receiver?(it) }
+        def sibling_delegate
+          @sibling_delegate ||= container_macros.find { sibling?(it) }
+        end
+
+        def container_macros
+          container_statements.map { RuboCop::Callbacksystems::DelegateMacro.new(it) }
         end
 
         def container_statements
-          statements_in(enclosing_class_or_module_of(node)&.body)
+          statements_in(enclosing_body_for(node))
         end
 
-        def private_delegate_to_receiver?(statement)
-          statement.send_type? && statement.method?(:delegate) &&
-            options(statement)&.then { target(it) == receiver && private?(it) }
+        def sibling?(macro)
+          macro.macro? && macro.target == receiver_path && macro.private? == private_delegation?
         end
 
-        def options(statement)
-          statement.last_argument if statement.last_argument&.hash_type?
+        def receiver_path
+          receiver_names.join(".")
         end
 
-        def target(options)
-          value(options, :to)&.then { it.value if it.sym_type? }
-        end
-
-        def value(options, key)
-          options.pairs.find { it.key.sym_type? && it.key.value == key }&.value
-        end
-
-        def private?(options)
-          value(options, :private)&.true_type? || false
+        def private_delegation?
+          private_method?(node)
         end
 
         def anchor
@@ -125,39 +146,35 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         end
 
         def declarations
-          preceding_statements.select { declaration?(it) }
+          preceding_statements.select { declaration_macro?(it) }
         end
 
         def preceding_statements
           container_statements.take_while { it != node }
         end
 
-        def declaration?(statement)
-          bare_send?(statement) && %i[attr_reader attr_accessor delegate].include?(statement.method_name)
-        end
-
         def private_modifier
           preceding_statements.find { visibility_modifier_of(it) == :private }
         end
 
-        def macro_indent
-          " " * node.source_range.column
-        end
-
-        # The method's own lines plus the blank line above it, so removing the method
-        # does not leave a stray blank where it used to sit.
-        def removal_range
-          range = line_removal_range_for(node)
-          blank_line_above(range) || range
-        end
-
-        def blank_line_above(range)
-          source = range.source_buffer.source
-          newline = range.begin_pos - 1
-          if newline >= 0 && source[newline] == "\n"
-            line_start = (source.rindex("\n", newline - 1) || -1) + 1
-            range.with(begin_pos: line_start) if source[line_start...newline].match?(/\A[ \t]*\z/)
+        def write(corrector)
+          if sibling_delegate
+            corrector.insert_before(sibling_delegate.first_option, ":#{node.method_name}, ")
+          else
+            corrector.insert_after(anchor, "\n#{indentation_of(node)}#{macro_source}")
           end
+        end
+
+        def macro_source
+          "delegate :#{node.method_name}, to: #{macro_target}#{private_option}"
+        end
+
+        def macro_target
+          receiver_names.many? ? "\"#{receiver_path}\"" : ":#{receiver_path}"
+        end
+
+        def private_option
+          ", private: true" if private_delegation?
         end
     end
 end

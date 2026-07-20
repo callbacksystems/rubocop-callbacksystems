@@ -53,6 +53,9 @@ Callbacksystems/EarlyReturn:
 Callbacksystems/EmptyLineBeforeMethod:
   Enabled: true
 
+Callbacksystems/EmptyPrivateSection:
+  Enabled: true
+
 Callbacksystems/InlineMemoizedComputation:
   Enabled: true
 
@@ -66,6 +69,9 @@ Callbacksystems/MaxSafeNavigationDepth:
   MaxDepth: 3
 
 Callbacksystems/MethodInvocationOrder:
+  Enabled: true
+
+Callbacksystems/MixinsFirst:
   Enabled: true
 
 Callbacksystems/NestedClassesAtEndOfPrivateSection:
@@ -194,6 +200,9 @@ Callbacksystems/PreferMethodOverVariable:
   Exclude:
     - "test/**/*"
 
+Callbacksystems/PreferModuleForStaticClass:
+  Enabled: true
+
 Callbacksystems/PreferOrdinalArrayAccess:
   Enabled: true
   SafeAutoCorrect: false
@@ -214,6 +223,12 @@ Callbacksystems/PreferTurboPageRefreshBroadcasts:
   Enabled: true
   Include:
     - "app/**/*"
+
+Callbacksystems/PrivateConstantsInPrivateSection:
+  Enabled: true
+
+Callbacksystems/PrivateDelegatePlacement:
+  Enabled: true
 
 Callbacksystems/PrivateMethodArgumentClump:
   Enabled: true
@@ -241,6 +256,9 @@ Callbacksystems/PublicMethodsMustHaveTests:
 Callbacksystems/RedundantConcernExtend:
   Enabled: true
 
+Callbacksystems/RedundantConstantNamespace:
+  Enabled: true
+
 Callbacksystems/RepeatedFixtureInTests:
   Enabled: true
   Include:
@@ -261,6 +279,9 @@ Callbacksystems/SingleLineSetupBlock:
   Enabled: true
   Include:
     - "test/**/*"
+
+Callbacksystems/SingleSingletonClass:
+  Enabled: true
 
 Callbacksystems/SingleTopLevelClassOrModule:
   Enabled: true

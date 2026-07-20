@@ -46,33 +46,23 @@ class RuboCop::Cop::Callbacksystems::DelegateRequiresPrivateOption < RuboCop::Co
       end
 
       def offense?
-        delegate_call? && inside_private_section? && !private_option_set?
+        macro.macro? && !macro.private? && inside_private_section?
       end
 
       def add_private_option(corrector)
-        corrector.insert_after(options_hash.pairs.last, ", private: true")
+        corrector.insert_after(macro.last_option, ", private: true")
       end
 
       private
         attr_reader :node
 
-        def delegate_call?
-          bare_send?(node) && node.method?(:delegate) && options_hash
-        end
-
-        def options_hash
-          node.last_argument if node.last_argument&.hash_type?
+        def macro
+          @macro ||= RuboCop::Callbacksystems::DelegateMacro.new(node)
         end
 
         def inside_private_section?
           body = enclosing_body_for(node)
           body && visibility_at(node, body) == :private
-        end
-
-        def private_option_set?
-          options_hash.pairs.any? do |pair|
-            pair.key.sym_type? && pair.key.value == :private && pair.value.true_type?
-          end
         end
     end
 end

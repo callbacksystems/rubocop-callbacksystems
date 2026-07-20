@@ -60,13 +60,10 @@ class RuboCop::Cop::Callbacksystems::InlineMemoizedComputation < RuboCop::Cop::C
 
       private
         attr_reader :node
+        delegate :expression, to: "node.body", private: true
 
         def delegating_call?
           bare_send?(expression) && expression.arguments.empty?
-        end
-
-        def expression
-          node.body.expression
         end
 
         def enclosing_defines?

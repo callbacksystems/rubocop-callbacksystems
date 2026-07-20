@@ -28,12 +28,11 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksystems::Base
+  extend RuboCop::Cop::AutoCorrector
   include RuboCop::Callbacksystems::TestCopHelpers
 
   GROUPING_MESSAGE = "Tests for `%<method>s` should be grouped together."
   ORDER_MESSAGE = "Test for `%<method>s` appears after `%<previous>s`, but `%<method>s` is defined first in source."
-
-  extend RuboCop::Cop::AutoCorrector
 
   def external_dependency_checksum
     RuboCop::Callbacksystems::ProjectFilesChecksum.for([ "app/**/*.rb", "lib/**/*.rb" ], root: project_root)

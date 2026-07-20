@@ -18,6 +18,24 @@ class RuboCop::Callbacksystems::Helpers::NodeTypesTest < HelpersTestCase
     assert_not Helpers.any_block_type?(nil)
   end
 
+  test "declaration_macro? returns true for a receiver-less declaration macro" do
+    node = processed_source("delegate :size, to: :node").ast
+
+    assert Helpers.declaration_macro?(node)
+  end
+
+  test "declaration_macro? returns false for other receiver-less calls" do
+    node = processed_source("validates :name").ast
+
+    assert_not Helpers.declaration_macro?(node)
+  end
+
+  test "declaration_macro? returns false when the macro has a receiver" do
+    node = processed_source("other.attr_reader :node").ast
+
+    assert_not Helpers.declaration_macro?(node)
+  end
+
   test "bare_send? returns true for receiver-less send" do
     node = processed_source("foo(1)").ast
 
@@ -38,6 +56,40 @@ class RuboCop::Callbacksystems::Helpers::NodeTypesTest < HelpersTestCase
 
   test "bare_send? returns false for nil" do
     assert_not Helpers.bare_send?(nil)
+  end
+
+  test "singleton_section? returns true for class << self" do
+    node = processed_source("class << self\nend").ast
+
+    assert Helpers.singleton_section?(node)
+  end
+
+  test "singleton_section? returns false for a singleton class of another object" do
+    node = processed_source("class << other\nend").ast
+
+    assert_not Helpers.singleton_section?(node)
+  end
+
+  test "singleton_section? returns false for nil" do
+    assert_not Helpers.singleton_section?(nil)
+  end
+
+  test "definition_identifier? returns true for the constant a class definition names" do
+    node = processed_source("class Foo::Bar\nend").ast.identifier
+
+    assert Helpers.definition_identifier?(node)
+  end
+
+  test "definition_identifier? returns false for a superclass reference" do
+    node = processed_source("class Foo < Bar\nend").ast.parent_class
+
+    assert_not Helpers.definition_identifier?(node)
+  end
+
+  test "definition_identifier? returns false for a constant read in a body" do
+    node = processed_source("class Foo\n  Bar\nend").ast.body
+
+    assert_not Helpers.definition_identifier?(node)
   end
 
   test "reads_variable? returns true when the node reads the given local variable" do

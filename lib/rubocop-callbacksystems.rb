@@ -4,6 +4,7 @@ require "active_support"
 require "active_support/core_ext/array/access"
 require "active_support/core_ext/enumerable"
 require "active_support/core_ext/module/delegation"
+require "active_support/core_ext/object/blank"
 require "active_support/core_ext/string/inflections"
 
 module RubocopCallbacksystems

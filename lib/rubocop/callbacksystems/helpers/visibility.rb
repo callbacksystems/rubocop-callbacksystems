@@ -27,6 +27,10 @@ module RuboCop::Callbacksystems::Helpers::Visibility
     end
   end
 
+  def private_modifier_in(body)
+    statements_in(body).find { visibility_modifier_of(it) == :private }
+  end
+
   def private_method?(method_node)
     visibility_of(method_node) == :private
   end

@@ -64,9 +64,9 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callbacksystems::Base
-  MESSAGE = "Method `%<expected>s` should be defined before `%<actual>s` to keep callers before callees."
-
   extend RuboCop::Cop::AutoCorrector
+
+  MESSAGE = "Method `%<expected>s` should be defined before `%<actual>s` to keep callers before callees."
 
   def on_class(node)
     analyze(node, direct_methods_in(node, :def), macro_references: true)

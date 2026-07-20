@@ -17,10 +17,10 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Callbacksystems::Base
+  extend RuboCop::Cop::AutoCorrector
+
   MESSAGE = "Extract repeated `module: %<module>s` to a `scope module: %<module>s do` block."
   ROUTE_METHODS = %i[resources resource get post put patch delete match root].freeze
-
-  extend RuboCop::Cop::AutoCorrector
 
   def on_new_investigation
     repeated_route_groups.each_value { register(it) } if routes_file?
