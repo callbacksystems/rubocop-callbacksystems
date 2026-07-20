@@ -115,7 +115,7 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
         end
 
         def indentation_step
-          " " * (statements.first.source_range.column - enclosing_body.parent.source_range.column)
+          " " * (statements.first.source_range.column - enclosing_definition_of(node).source_range.column)
         end
     end
 end

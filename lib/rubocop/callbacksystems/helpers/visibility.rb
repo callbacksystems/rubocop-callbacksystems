@@ -1,24 +1,26 @@
 module RuboCop::Callbacksystems::Helpers::Visibility
-  def public_method?(method_node)
-    visibility_of(method_node) == :public
+  def public_method?(node)
+    visibility_for(node).public?
   end
 
-  def visibility_of(method_node)
-    body = enclosing_body_for(method_node)
-    body ? visibility_at(method_node, body) : :public
+  def visibility_of(node)
+    visibility_for(node).level
   end
 
-  def enclosing_body_for(method_node)
-    method_node.each_ancestor(:class, :module, :sclass).first&.body&.then { it if it.type?(:begin, :kwbegin) }
+  def visibility_at(node, body)
+    visibility_for(node).level_in(body)
   end
 
-  def visibility_at(method_node, body)
-    current = :public
-    body.each_child_node do |child|
-      break current if child.equal?(method_node)
+  def enclosing_body_for(node)
+    visibility_for(node).enclosing_body
+  end
 
-      current = visibility_modifier_of(child) || current
-    end
+  def enclosing_definition_of(node)
+    visibility_for(node).enclosing_definition
+  end
+
+  def private_modifier_in(body)
+    statements_in(body).find { visibility_modifier_of(it) == :private }
   end
 
   def visibility_modifier_of(node)
@@ -27,16 +29,12 @@ module RuboCop::Callbacksystems::Helpers::Visibility
     end
   end
 
-  def private_modifier_in(body)
-    statements_in(body).find { visibility_modifier_of(it) == :private }
+  def private_method?(node)
+    visibility_for(node).private?
   end
 
-  def private_method?(method_node)
-    visibility_of(method_node) == :private
-  end
-
-  def private_non_predicate?(method_node)
-    visibility_of(method_node) != :public && !method_node.predicate_method?
+  def private_non_predicate?(node)
+    visibility_for(node).private_non_predicate?
   end
 
   def private_nested_class?(class_node)
@@ -71,4 +69,9 @@ module RuboCop::Callbacksystems::Helpers::Visibility
   def private_methods_in(class_node)
     each_child_with_visibility(class_node).filter_map { |child, in_private| child if in_private && child.def_type? }
   end
+
+  private
+    def visibility_for(node)
+      RuboCop::Callbacksystems::NodeVisibility.new(node)
+    end
 end

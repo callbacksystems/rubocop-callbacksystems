@@ -62,23 +62,6 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     assert_equal :protected, Helpers.visibility_of(method)
   end
 
-  test "enclosing_body_for returns class body" do
-    method = method_named(<<~RUBY, :foo)
-      class Bar
-        def foo; end
-        def baz; end
-      end
-    RUBY
-
-    assert_equal :begin, Helpers.enclosing_body_for(method).type
-  end
-
-  test "enclosing_body_for returns nil for method outside class" do
-    method = processed_source("def foo; end").ast
-
-    assert_nil Helpers.enclosing_body_for(method)
-  end
-
   test "visibility_at returns public when no modifier precedes method" do
     source = <<~RUBY
       class Foo
@@ -107,24 +90,37 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     assert_equal :private, Helpers.visibility_at(method, body)
   end
 
-  test "visibility_modifier_of returns the modifier symbol" do
-    body = class_body(<<~RUBY)
-      class Foo
-        private
+  test "enclosing_body_for returns class body" do
+    method = method_named(<<~RUBY, :foo)
+      class Bar
+        def foo; end
+        def baz; end
       end
     RUBY
 
-    assert_equal :private, Helpers.visibility_modifier_of(body)
+    assert_equal :begin, Helpers.enclosing_body_for(method).type
   end
 
-  test "visibility_modifier_of returns nil for non-modifier sends" do
-    body = class_body(<<~RUBY)
-      class Foo
-        attr_reader :name
+  test "enclosing_body_for returns nil for method outside class" do
+    method = processed_source("def foo; end").ast
+
+    assert_nil Helpers.enclosing_body_for(method)
+  end
+
+  test "enclosing_definition_of returns the class holding the node" do
+    method = method_named(<<~RUBY, :foo)
+      class Bar
+        def foo; end
       end
     RUBY
 
-    assert_nil Helpers.visibility_modifier_of(body)
+    assert_equal "Bar", Helpers.enclosing_definition_of(method).identifier.source
+  end
+
+  test "enclosing_definition_of returns nil at the top level" do
+    method = method_named("def foo; end", :foo)
+
+    assert_nil Helpers.enclosing_definition_of(method)
   end
 
   test "private_modifier_in returns the private modifier of the body" do
@@ -151,6 +147,26 @@ class RuboCop::Callbacksystems::Helpers::VisibilityTest < HelpersTestCase
     RUBY
 
     assert_nil Helpers.private_modifier_in(body)
+  end
+
+  test "visibility_modifier_of returns the modifier symbol" do
+    body = class_body(<<~RUBY)
+      class Foo
+        private
+      end
+    RUBY
+
+    assert_equal :private, Helpers.visibility_modifier_of(body)
+  end
+
+  test "visibility_modifier_of returns nil for non-modifier sends" do
+    body = class_body(<<~RUBY)
+      class Foo
+        attr_reader :name
+      end
+    RUBY
+
+    assert_nil Helpers.visibility_modifier_of(body)
   end
 
   test "private_method? returns true for methods after private" do

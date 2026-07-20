@@ -58,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::EmptyPrivateSection < RuboCop::Cop::Callbac
         # Not `enclosing_body_for`: a body holding nothing but the modifier is a
         # single statement, and that helper only reports multi-statement bodies.
         def enclosing_body
-          node.each_ancestor(:class, :module, :sclass).first&.body
+          enclosing_definition_of(node)&.body
         end
     end
 end
