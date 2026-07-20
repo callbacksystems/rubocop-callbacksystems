@@ -244,6 +244,9 @@ Callbacksystems/PrivateMethodArgumentClump:
   Exclude:
     - "test/**/*"
 
+Callbacksystems/PrivateMethodsInPrivateSection:
+  Enabled: true
+
 Callbacksystems/PrivateNestedClassMethodVisibility:
   Enabled: true
 

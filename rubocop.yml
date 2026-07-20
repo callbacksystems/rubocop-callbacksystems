@@ -469,7 +469,6 @@ Minitest/UselessAssertion:
 # Style
 
 Style/AccessModifierDeclarations:
-  AllowModifiersOnSymbols: false
   AllowModifiersOnAttrs: false
   AllowModifiersOnAliasMethod: false
 
