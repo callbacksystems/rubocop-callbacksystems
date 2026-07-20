@@ -40,6 +40,101 @@ class PrivateNestedClassMethodVisibilityTest < CopTestCase
     RUBY
   end
 
+  test "no offense for method called on a memoized instance variable" do
+    assert_no_offense <<~RUBY
+      class Foo
+        def process
+          @entry ||= Entry.new(node)
+          @entry.commit
+        end
+
+        private
+          class Entry
+            def initialize(node)
+              @node = node
+            end
+
+            def commit
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense for method called on a method returning an instance" do
+    assert_no_offense <<~RUBY
+      class Foo
+        def process
+          entry.commit
+        end
+
+        private
+          def entry
+            Entry.new(node)
+          end
+
+          class Entry
+            def initialize(node)
+              @node = node
+            end
+
+            def commit
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense for method called on a memoized method returning an instance" do
+    assert_no_offense <<~RUBY
+      class Foo
+        def process
+          entry.commit
+        end
+
+        private
+          def entry
+            @entry ||= Entry.new(node)
+          end
+
+          class Entry
+            def initialize(node)
+              @node = node
+            end
+
+            def commit
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "registers offense for a method the instance holder never calls" do
+    offenses = assert_offense <<~RUBY
+      class Foo
+        def process
+          entry.commit
+        end
+
+        private
+          def entry
+            @entry ||= Entry.new(node)
+          end
+
+          class Entry
+            def commit
+            end
+
+            def rollback
+            end
+          end
+      end
+    RUBY
+
+    assert_equal 1, offenses.size
+    assert_includes offenses.first.message, "rollback"
+  end
+
   test "no offense for private methods in nested class" do
     assert_no_offense <<~RUBY
       class Foo

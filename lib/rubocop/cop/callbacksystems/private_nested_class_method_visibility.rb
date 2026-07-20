@@ -69,7 +69,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
         end
 
         def external_calls
-          @external_calls ||= Set.new([ :initialize ] + direct_calls + variable_calls + block_pass_calls + macro_referenced_methods)
+          @external_calls ||= Set.new([ :initialize ] + direct_calls + calls_on_instances + block_pass_calls + macro_referenced_methods)
         end
 
         def direct_calls
@@ -93,22 +93,43 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
             node.receiver.short_name == class_name
         end
 
-        def variable_calls
-          parent_node.body.each_node(:lvasgn, :ivasgn).flat_map { calls_on_assigned_variable(it) }
+        def calls_on_instances
+          external_sends.filter_map { it.method_name if reads_instance?(it.receiver) }
         end
 
-        def calls_on_assigned_variable(assignment)
-          if instance_method_call?(assignment.expression)
-            external_sends.filter_map do |send_node|
-              send_node.method_name if call_on_variable?(send_node, assignment.name)
-            end
-          else
-            []
+        def reads_instance?(receiver)
+          instance_names.include?(name_read_by(receiver))
+        end
+
+        # A name bound to an instance: a variable assigned from the class, or a
+        # method whose body evaluates to one. Calls on that name reach the class
+        # from outside just as `Inner.new.run` does.
+        def instance_names
+          @instance_names ||= (assigned_names + returning_method_names).to_set
+        end
+
+        def assigned_names
+          parent_node.body.each_node(:lvasgn, :ivasgn, :or_asgn).filter_map { it.name if instance_method_call?(it.expression) }
+        end
+
+        def returning_method_names
+          direct_method_nodes_in(parent_node.body).filter_map { it.method_name if returns_instance?(it) }
+        end
+
+        def returns_instance?(method_node)
+          instance_method_call?(returned_expression_in(method_node.body))
+        end
+
+        def returned_expression_in(body)
+          body&.or_asgn_type? ? body.expression : body
+        end
+
+        def name_read_by(receiver)
+          if receiver&.type?(:lvar, :ivar)
+            receiver.name
+          elsif bare_send?(receiver) && receiver.arguments.empty?
+            receiver.method_name
           end
-        end
-
-        def call_on_variable?(send_node, variable_name)
-          reads_variable?(send_node.receiver, variable_name)
         end
 
         def block_pass_calls
