@@ -20,7 +20,7 @@ module RuboCop::Callbacksystems::Helpers::Visibility
   end
 
   def private_modifier_in(body)
-    statements_in(body).find { visibility_modifier_of(it) == :private }
+    sections_in(body).private_modifier
   end
 
   def visibility_modifier_of(node)
@@ -47,31 +47,27 @@ module RuboCop::Callbacksystems::Helpers::Visibility
   end
 
   def private_nested_classes_in(class_node)
-    each_child_with_visibility(class_node).filter_map { |child, in_private| child if in_private && child.class_type? }
+    sections_in(class_node.body).private_nested_classes
   end
 
   def each_child_with_visibility(class_node, &block)
-    if block && class_node.body
-      in_private = false
-      class_node.body.each_child_node do |child|
-        in_private = true if visibility_modifier_of(child) == :private
-        yield child, in_private
-      end
-    else
-      to_enum(__method__, class_node)
-    end
+    sections_in(class_node.body).each_child_with_visibility(&block)
   end
 
   def public_methods_in(class_node)
-    each_child_with_visibility(class_node).filter_map { |child, in_private| child if !in_private && child.def_type? }
+    sections_in(class_node.body).public_method_nodes
   end
 
   def private_methods_in(class_node)
-    each_child_with_visibility(class_node).filter_map { |child, in_private| child if in_private && child.def_type? }
+    sections_in(class_node.body).private_method_nodes
   end
 
   private
     def visibility_for(node)
       RuboCop::Callbacksystems::NodeVisibility.new(node)
+    end
+
+    def sections_in(body)
+      RuboCop::Callbacksystems::BodySections.new(body)
     end
 end
