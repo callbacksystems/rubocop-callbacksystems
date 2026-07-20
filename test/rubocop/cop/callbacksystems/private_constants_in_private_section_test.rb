@@ -100,6 +100,38 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
     RUBY
   end
 
+  test "registers offense when the class-level readers are test blocks" do
+    assert_offense <<~RUBY
+      class LoggerTest < ActiveSupport::TestCase
+        LoggerProbe = Class.new(BaseLogger)
+        private_constant :LoggerProbe
+
+        setup do
+          @logger = LoggerProbe.new
+        end
+
+        teardown { @logger.close }
+
+        test "activates" do
+          assert_same @logger, LoggerProbe.new.activate
+        end
+      end
+    RUBY
+  end
+
+  test "allows a constant read from a block that runs with the class body" do
+    assert_no_offense <<~RUBY
+      class Report
+        FORMATS = [ :json ].freeze
+        private_constant :FORMATS
+
+        [ :csv ].each do |format|
+          validates format, inclusion: { in: FORMATS }
+        end
+      end
+    RUBY
+  end
+
   test "allows a constant read by a macro at class level" do
     assert_no_offense <<~RUBY
       class Backend

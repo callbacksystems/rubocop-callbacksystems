@@ -55,6 +55,7 @@
 class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Declare `%<name>s` in the private section instead of marking it with `private_constant`."
   REDUNDANT_MESSAGE = "Remove `private_constant` from `%<name>s`, which is already declared in the private section."
+  DEFERRED_MACROS = %i[test setup teardown].freeze
 
   def on_send(node)
     PrivateConstantMarker.new(node).each_offense do |argument, message|
@@ -170,11 +171,17 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         end
 
         def class_level?
-          !inside_method? && !definition_identifier?(node)
+          !runs_later? && !definition_identifier?(node)
         end
 
-        def inside_method?
-          node.each_ancestor(:any_def).any?
+        # A method body and a block held for later both run once the class body
+        # is done, so what they read can be declared anywhere in it.
+        def runs_later?
+          node.each_ancestor(:any_def).any? || inside_deferred_block?
+        end
+
+        def inside_deferred_block?
+          node.each_ancestor(:any_block).any? { DEFERRED_MACROS.include?(it.method_name) }
         end
     end
 end
