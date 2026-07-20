@@ -65,79 +65,35 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
         attr_reader :parent_node, :nested_class, :class_name
 
         def unused_public_methods
-          public_methods_in(nested_class).reject { external_calls.include?(it.method_name) }
+          public_methods_in(nested_class).reject { mentioned_outside?(it.method_name) }
         end
 
-        def external_calls
-          @external_calls ||= Set.new([ :initialize ] + direct_calls + calls_on_instances + block_pass_calls + macro_referenced_methods)
+        # An instance reaches other objects as an argument, an element of a
+        # collection or a return value, and no reading of one file follows it
+        # there. So any mention of the name outside the class counts as a use of
+        # it, and only a name nobody says at all is reported.
+        def mentioned_outside?(method_name)
+          external_names.include?(method_name)
         end
 
-        def direct_calls
-          external_sends.filter_map do |send_node|
-            send_node.method_name if instance_method_call?(send_node.receiver)
-          end
+        def external_names
+          @external_names ||= Set.new([ :initialize ] + called_names + block_pass_names + macro_referenced_methods)
         end
 
-        def external_sends
-          @external_sends ||= parent_node.body.each_node(:send).reject { inside_nested_class?(it) }
+        def called_names
+          nodes_outside(:send).map(&:method_name)
+        end
+
+        def nodes_outside(type)
+          parent_node.body.each_node(type).reject { inside_nested_class?(it) }
         end
 
         def inside_nested_class?(node)
           node.each_ancestor(:class).any?(nested_class)
         end
 
-        def instance_method_call?(node)
-          node&.send_type? &&
-            node.method?(:new) &&
-            node.receiver&.const_type? &&
-            node.receiver.short_name == class_name
-        end
-
-        def calls_on_instances
-          external_sends.filter_map { it.method_name if reads_instance?(it.receiver) }
-        end
-
-        def reads_instance?(receiver)
-          instance_names.include?(name_read_by(receiver))
-        end
-
-        # A name bound to an instance: a variable assigned from the class, or a
-        # method whose body evaluates to one. Calls on that name reach the class
-        # from outside just as `Inner.new.run` does.
-        def instance_names
-          @instance_names ||= (assigned_names + returning_method_names).to_set
-        end
-
-        def assigned_names
-          parent_node.body.each_node(:lvasgn, :ivasgn, :or_asgn).filter_map { it.name if instance_method_call?(it.expression) }
-        end
-
-        def returning_method_names
-          direct_method_nodes_in(parent_node.body).filter_map { it.method_name if returns_instance?(it) }
-        end
-
-        def returns_instance?(method_node)
-          instance_method_call?(returned_expression_in(method_node.body))
-        end
-
-        def returned_expression_in(body)
-          body&.or_asgn_type? ? body.expression : body
-        end
-
-        def name_read_by(receiver)
-          if receiver&.type?(:lvar, :ivar)
-            receiver.name
-          elsif bare_send?(receiver) && receiver.arguments.empty?
-            receiver.method_name
-          end
-        end
-
-        def block_pass_calls
-          parent_node.body.each_node(:block_pass).filter_map do |node|
-            next if inside_nested_class?(node)
-
-            node.children.first.value if node.children.first&.sym_type?
-          end
+        def block_pass_names
+          nodes_outside(:block_pass).filter_map { it.children.first.value if it.children.first&.sym_type? }
         end
 
         def macro_referenced_methods
