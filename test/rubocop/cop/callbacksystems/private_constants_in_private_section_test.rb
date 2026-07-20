@@ -86,6 +86,20 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
     assert_includes offenses.first.message, "already declared in the private section"
   end
 
+  test "registers offense when the class-level read names another constant ending the same" do
+    assert_offense <<~RUBY
+      class Inventory
+        MARKER = /\\A\#{Regexp.escape(FileEntry::MARKER)}\\z/
+        private_constant :MARKER
+
+        private
+          def marked?(line)
+            line.match?(MARKER)
+          end
+      end
+    RUBY
+  end
+
   test "allows a constant read by a macro at class level" do
     assert_no_offense <<~RUBY
       class Backend

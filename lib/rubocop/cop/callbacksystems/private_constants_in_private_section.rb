@@ -153,7 +153,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
       end
 
       def pins_declaration?
-        class_level? && !in_private_section?(node, body)
+        own_constant? && class_level? && !in_private_section?(node, body)
       end
 
       def name
@@ -162,6 +162,12 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
 
       private
         attr_reader :node, :body
+
+        # `Other::Namespace::NAME` reads a constant of its own that happens to
+        # end in the same name.
+        def own_constant?
+          node.namespace.nil?
+        end
 
         def class_level?
           !inside_method? && !definition_identifier?(node)
