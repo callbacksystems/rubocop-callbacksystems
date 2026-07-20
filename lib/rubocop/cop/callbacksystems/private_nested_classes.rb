@@ -52,7 +52,6 @@
 #
 class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callbacksystems::Base
   MESSAGE = "Nested class `%<name>s` should be in the private section, or live in its own file if it is part of the API."
-  CLASS_BUILDERS = { Data: :define, Struct: :new, Class: :new }.freeze
 
   def on_class(node)
     nested = NestedClass.new(node)
@@ -70,35 +69,15 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callba
       end
 
       def offense?
-        defines_behavior? && nested? && !in_private_section?(node, enclosing.body)
+        class_with_body?(node) && nested? && !in_private_section?(node, enclosing.body)
       end
 
       def offense_message
-        format(MESSAGE, name: name)
+        format(MESSAGE, name: class_name_of(node))
       end
 
       private
         attr_reader :node
-
-        # A declaration with no body says what something is, not how it works,
-        # and reads the same wherever it sits. An error class or a plain list of
-        # members costs nothing where it is declared, so only a definition
-        # carrying behavior answers to the rule.
-        def defines_behavior?
-          node.class_type? ? node.body.present? : builds_class_with_body?
-        end
-
-        def builds_class_with_body?
-          node.casgn_type? && any_block_type?(node.expression) && class_builder?(node.expression.send_node)
-        end
-
-        def class_builder?(call)
-          CLASS_BUILDERS[builder_name_of(call)] == call.method_name
-        end
-
-        def builder_name_of(call)
-          call.receiver.short_name if call.receiver&.const_type?
-        end
 
         def nested?
           enclosing.present?
@@ -106,10 +85,6 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClasses < RuboCop::Cop::Callba
 
         def enclosing
           @enclosing ||= enclosing_class_or_module_of(node)
-        end
-
-        def name
-          node.class_type? ? node.identifier.source : node.name.to_s
         end
     end
 end

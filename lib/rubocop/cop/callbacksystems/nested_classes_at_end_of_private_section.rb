@@ -1,6 +1,10 @@
 # Ensures private nested classes are defined at the end of the private section.
 # Methods should not appear after nested class definitions.
 #
+# A constant built from `Data.define`, `Struct.new` or `Class.new` with a block
+# defines a class too, so it reads under the same rule. One with no block only
+# declares its members and stays wherever it is.
+#
 # @example
 #   # bad - method after nested class
 #   class Foo
@@ -47,7 +51,7 @@ class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCo
 
       def each_offense(&block)
         if block
-          misplaced_methods.each { yield it, format(MESSAGE, method: it.method_name, class: first_class.identifier.short_name) }
+          misplaced_methods.each { yield it, format(MESSAGE, method: it.method_name, class: class_name_of(first_class)) }
         else
           to_enum(__method__)
         end
@@ -65,13 +69,17 @@ class RuboCop::Cop::Callbacksystems::NestedClassesAtEndOfPrivateSection < RuboCo
         end
 
         def first_class
-          @first_class ||= private_members.find(&:class_type?)
+          @first_class ||= private_members.find { class_with_body?(it) }
         end
 
         def private_members
           @private_members ||= each_child_with_visibility(node).filter_map do |child, in_private|
-            child if in_private && child.type?(:def, :class)
+            child if in_private && member?(child)
           end
+        end
+
+        def member?(child)
+          child.def_type? || class_with_body?(child)
         end
     end
 end

@@ -8,6 +8,8 @@ class NestedClassesAtEndOfPrivateSectionTest < CopTestCase
       class Foo
         private
           class Bar
+            def call
+            end
           end
 
           def helper_method
@@ -27,6 +29,62 @@ class NestedClassesAtEndOfPrivateSectionTest < CopTestCase
           end
 
           class Bar
+            def call
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "registers offense for method after a class builder with a block" do
+    offenses = assert_offense <<~RUBY
+      class Verification
+        def run_once
+          execute_once
+        end
+
+        private
+          Result = Data.define(:host, :output) do
+            def to_s
+              output
+            end
+          end
+
+          def execute_once
+            Result.new(host: host, output: "")
+          end
+      end
+    RUBY
+
+    assert_includes offenses.first.message, "Result"
+    assert_includes offenses.first.message, "execute_once"
+  end
+
+  test "no offense when the class builder closes the private section" do
+    assert_no_offense <<~RUBY
+      class Verification
+        private
+          def execute_once
+            Result.new(host: host)
+          end
+
+          Result = Data.define(:host) do
+            def to_s
+              host
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense for a class builder with no block" do
+    assert_no_offense <<~RUBY
+      class Verification
+        private
+          Result = Data.define(:host, :output)
+
+          def execute_once
+            Result.new(host: host, output: "")
           end
       end
     RUBY
@@ -62,6 +120,8 @@ class NestedClassesAtEndOfPrivateSectionTest < CopTestCase
       class Foo
         private
           class Bar
+            def call
+            end
           end
 
           def helper_one
@@ -80,6 +140,8 @@ class NestedClassesAtEndOfPrivateSectionTest < CopTestCase
       module Foo
         private
           class Bar
+            def call
+            end
           end
 
           def helper

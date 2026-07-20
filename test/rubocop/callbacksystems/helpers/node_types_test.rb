@@ -1,23 +1,6 @@
 require "helpers_test_case"
 
 class RuboCop::Callbacksystems::Helpers::NodeTypesTest < HelpersTestCase
-  test "any_block_type? returns true for block nodes" do
-    ast = processed_source("items.each { |x| x }").ast
-    block_node = ast.each_node(:block).first
-
-    assert Helpers.any_block_type?(block_node)
-  end
-
-  test "any_block_type? returns false for non-block nodes" do
-    ast = processed_source("foo").ast
-
-    assert_not Helpers.any_block_type?(ast)
-  end
-
-  test "any_block_type? returns false for nil" do
-    assert_not Helpers.any_block_type?(nil)
-  end
-
   test "declaration_macro? returns true for a receiver-less declaration macro" do
     node = processed_source("delegate :size, to: :node").ast
 
@@ -119,6 +102,65 @@ class RuboCop::Callbacksystems::Helpers::NodeTypesTest < HelpersTestCase
 
   test "reads_variable? returns false for nil" do
     assert_not Helpers.reads_variable?(nil, :value)
+  end
+
+  test "class_with_body? returns true for a class holding methods" do
+    node = processed_source("class Foo\n  def bar; end\nend").ast
+
+    assert Helpers.class_with_body?(node)
+  end
+
+  test "class_with_body? returns false for a class with no body" do
+    node = processed_source("class Foo < Bar; end").ast
+
+    assert_not Helpers.class_with_body?(node)
+  end
+
+  test "class_with_body? returns true for a class builder taking a block" do
+    node = processed_source("Entry = Data.define(:sku) do\n  def total; end\nend").ast
+
+    assert Helpers.class_with_body?(node)
+  end
+
+  test "class_with_body? returns false for a class builder with no block" do
+    node = processed_source("Entry = Data.define(:sku, :quantity)").ast
+
+    assert_not Helpers.class_with_body?(node)
+  end
+
+  test "class_with_body? returns false for a constant that builds nothing" do
+    node = processed_source("FORMATS = [ :json ].freeze").ast
+
+    assert_not Helpers.class_with_body?(node)
+  end
+
+  test "any_block_type? returns true for block nodes" do
+    ast = processed_source("items.each { |x| x }").ast
+    block_node = ast.each_node(:block).first
+
+    assert Helpers.any_block_type?(block_node)
+  end
+
+  test "any_block_type? returns false for non-block nodes" do
+    ast = processed_source("foo").ast
+
+    assert_not Helpers.any_block_type?(ast)
+  end
+
+  test "any_block_type? returns false for nil" do
+    assert_not Helpers.any_block_type?(nil)
+  end
+
+  test "class_name_of returns the name a class definition declares" do
+    node = processed_source("class Foo::Bar\n  def baz; end\nend").ast
+
+    assert_equal "Foo::Bar", Helpers.class_name_of(node)
+  end
+
+  test "class_name_of returns the constant a class builder assigns" do
+    node = processed_source("Entry = Data.define(:sku)").ast
+
+    assert_equal "Entry", Helpers.class_name_of(node)
   end
 
   test "constant_name_of returns simple constant name" do
