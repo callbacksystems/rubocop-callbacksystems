@@ -65,6 +65,40 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
         attr_reader :parent_node, :nested_class, :class_name
 
         def unused_public_methods
+          instances_stay_here? ? uncalled_public_methods : []
+        end
+
+        # An instance handed to another object is called from files this one does
+        # not show, so once one leaves nothing here proves a method unused.
+        def instances_stay_here?
+          constructions.none? { handed_off?(it) }
+        end
+
+        def constructions
+          nodes_outside(:send).select { builds_instance?(it) }
+        end
+
+        def nodes_outside(type)
+          parent_node.body.each_node(type).reject { inside_nested_class?(it) }
+        end
+
+        def inside_nested_class?(node)
+          node.each_ancestor(:class).any?(nested_class)
+        end
+
+        def builds_instance?(send_node)
+          send_node.method?(:new) && send_node.receiver&.const_type? && send_node.receiver.short_name == class_name
+        end
+
+        def handed_off?(construction)
+          construction.parent&.type?(:array, :hash, :pair) || passed_as_argument?(construction)
+        end
+
+        def passed_as_argument?(construction)
+          construction.parent&.send_type? && !construction.parent.receiver.equal?(construction)
+        end
+
+        def uncalled_public_methods
           public_methods_in(nested_class).reject { mentioned_outside?(it.method_name) }
         end
 
@@ -82,14 +116,6 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
 
         def called_names
           nodes_outside(:send).map(&:method_name)
-        end
-
-        def nodes_outside(type)
-          parent_node.body.each_node(type).reject { inside_nested_class?(it) }
-        end
-
-        def inside_nested_class?(node)
-          node.each_ancestor(:class).any?(nested_class)
         end
 
         def block_pass_names

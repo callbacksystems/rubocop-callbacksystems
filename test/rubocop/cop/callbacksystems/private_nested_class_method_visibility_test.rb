@@ -417,4 +417,60 @@ class PrivateNestedClassMethodVisibilityTest < CopTestCase
       end
     RUBY
   end
+
+  test "no offense when an instance is passed to another object" do
+    assert_no_offense <<~RUBY
+      class Backend
+        def respond_to(command, with:)
+          add_route(routes, Route.new(matcher: command, response: with))
+        end
+
+        private
+          class Route < Data.define(:matcher, :response)
+            def matches?(command)
+              matcher.call(command)
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense when an instance is collected" do
+    assert_no_offense <<~RUBY
+      class Backend
+        def routes
+          [ Route.new(matcher: nil) ]
+        end
+
+        private
+          class Route < Data.define(:matcher)
+            def matches?(command)
+              matcher.call(command)
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "registers offense when instances are built and used on the spot" do
+    offenses = assert_offense <<~RUBY
+      class Sequencer
+        def run
+          Node.new(name).connect
+        end
+
+        private
+          class Node < Data.define(:name)
+            def connect
+            end
+
+            def capture_sequence
+            end
+          end
+      end
+    RUBY
+
+    assert_equal 1, offenses.size
+    assert_includes offenses.first.message, "capture_sequence"
+  end
 end
