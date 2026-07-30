@@ -3,6 +3,9 @@ inherit_mode:
     - Exclude
     - Include
 
+Callbacksystems/AssertWithExpectedArgument:
+  Enabled: true
+
 Callbacksystems/ApplicationControllerMethodDefinition:
   Enabled: true
   Include:

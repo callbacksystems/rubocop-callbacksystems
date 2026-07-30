@@ -414,8 +414,10 @@ Minitest/AssertSilent:
 Minitest/AssertTruthy:
   Enabled: true
 
+# Replaced by Callbacksystems/AssertWithExpectedArgument, which also recognizes
+# variables and method calls named like messages (e.g. audit.failure_message).
 Minitest/AssertWithExpectedArgument:
-  Enabled: true
+  Enabled: false
 
 Minitest/LiteralAsActualArgument:
   Enabled: true
