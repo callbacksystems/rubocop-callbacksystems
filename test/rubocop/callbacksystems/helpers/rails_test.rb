@@ -52,4 +52,20 @@ class RuboCop::Callbacksystems::Helpers::RailsTest < HelpersTestCase
 
     assert_not Helpers.rails_test_base_class?(superclass)
   end
+
+  test "routes_file? matches the main routes file" do
+    assert Helpers.routes_file?("config/routes.rb")
+  end
+
+  test "routes_file? matches files under config/routes" do
+    assert Helpers.routes_file?("config/routes/admin.rb")
+  end
+
+  test "routes_file? does not match unrelated files" do
+    assert_not Helpers.routes_file?("app/models/user.rb")
+  end
+
+  test "routes_file? returns falsy for nil" do
+    assert_not Helpers.routes_file?(nil)
+  end
 end

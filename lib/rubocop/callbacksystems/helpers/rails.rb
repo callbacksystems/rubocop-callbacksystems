@@ -21,4 +21,8 @@ module RuboCop::Callbacksystems::Helpers::Rails
   def rails_test_base_class?(superclass_node)
     RAILS_TEST_BASE_CLASSES.include?(constant_name_of(superclass_node))
   end
+
+  def routes_file?(path)
+    path.present? && (path.include?("config/routes") || path.end_with?("routes.rb"))
+  end
 end

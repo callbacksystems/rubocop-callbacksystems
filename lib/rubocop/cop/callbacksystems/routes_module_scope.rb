@@ -23,15 +23,10 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Callbacks
   ROUTE_METHODS = %i[resources resource get post put patch delete match root].freeze
 
   def on_new_investigation
-    repeated_route_groups.each_value { register(it) } if routes_file?
+    repeated_route_groups.each_value { register(it) } if routes_file?(processed_source.file_path)
   end
 
   private
-    def routes_file?
-      path = processed_source.file_path
-      path && (path.include?("config/routes") || path.end_with?("routes.rb"))
-    end
-
     def repeated_route_groups
       grouped_routes.select { |_, routes| routes.many? }
     end

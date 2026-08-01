@@ -114,6 +114,12 @@ Callbacksystems/NoCommentsInTestClassBody:
   Include:
     - "test/**/*"
 
+Callbacksystems/NoCustomRouteActions:
+  Enabled: true
+  Include:
+    - "config/routes.rb"
+    - "config/routes/**/*"
+
 Callbacksystems/NoDirectEagerLoading:
   Enabled: true
   Include:
@@ -170,6 +176,11 @@ Callbacksystems/NoTapCollectionBuilding:
 
 Callbacksystems/NoTypographicClutter:
   Enabled: true
+
+Callbacksystems/NoWritesInGetActions:
+  Enabled: true
+  Include:
+    - "app/controllers/**/*"
 
 Callbacksystems/OrderedMixinArguments:
   Enabled: true
@@ -324,6 +335,11 @@ Callbacksystems/SingularScopeNames:
   Enabled: true
   Include:
     - "app/models/**/*"
+
+Callbacksystems/SystemTestBrowserDriver:
+  Enabled: true
+  Include:
+    - "test/**/*"
 
 Callbacksystems/TestMethodDefinition:
   Enabled: true
