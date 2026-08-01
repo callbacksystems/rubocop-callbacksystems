@@ -28,6 +28,19 @@ class CollapseMultilineExpressionTest < CopTestCase
       RUBY
   end
 
+  test "registers offense and corrects multiline hash keeping a double splat" do
+    assert_correction \
+      <<~RUBY,
+        x = {
+          foo: 1,
+          **options.slice(:bar, :baz)
+        }
+      RUBY
+      <<~RUBY
+        x = { foo: 1, **options.slice(:bar, :baz) }
+      RUBY
+  end
+
   test "allows single-line hash" do
     assert_no_offense <<~RUBY
       x = { foo: 1, bar: 2 }

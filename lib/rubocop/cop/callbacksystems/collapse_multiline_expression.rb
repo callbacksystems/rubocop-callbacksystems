@@ -42,7 +42,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
   MESSAGE = "This expression can fit on a single line."
 
-  HASH_SHAPE = { open: "{", close: "}", items: :pairs }.freeze
+  HASH_SHAPE = { open: "{", close: "}", items: :children }.freeze
   ARRAY_SHAPE = { open: "[", close: "]", items: :values }.freeze
 
   def on_hash(node)
