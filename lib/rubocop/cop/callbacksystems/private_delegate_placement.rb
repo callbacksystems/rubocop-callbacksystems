@@ -1,6 +1,7 @@
 # `delegate ... private: true` declares private methods, so it belongs in the
 # private section next to the other private declarations. Left above, it hides
-# private methods among the public API.
+# private methods among the public API; left below the section's methods, it
+# hides a declaration among behavior.
 #
 # @example
 #   # bad
@@ -13,6 +14,16 @@
 #
 #     private
 #       attr_reader :order
+#   end
+#
+#   # bad - below the methods of its section
+#   class Report
+#     private
+#       def formatted_total
+#         total.to_s
+#       end
+#
+#       delegate :total, to: :order, private: true
 #   end
 #
 #   # good
@@ -30,10 +41,11 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Move this `delegate` into the private section; it declares private methods."
+  STRAYED_MESSAGE = "Move this `delegate` up beside the other private declarations."
 
   def on_send(node)
     delegation = MisplacedDelegate.new(node)
-    add_offense(node, message: MESSAGE) { delegation.move(it) } if delegation.offense?
+    add_offense(node, message: delegation.offense_message) { delegation.move(it) } if delegation.offense?
   end
 
   alias on_csend on_send
@@ -47,7 +59,11 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
       end
 
       def offense?
-        private_delegate? && outside_private_section?
+        private_delegate? && statements.include?(node) && !placed_with_declarations? && !blocked_by_constant?
+      end
+
+      def offense_message
+        outside_private_section? ? MESSAGE : STRAYED_MESSAGE
       end
 
       def move(corrector)
@@ -66,10 +82,6 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           @macro ||= RuboCop::Callbacksystems::DelegateMacro.new(node)
         end
 
-        def outside_private_section?
-          statements.include?(node) && visibility_at(node, enclosing_body) != :private
-        end
-
         def statements
           @statements ||= statements_in(enclosing_body)
         end
@@ -78,14 +90,12 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           @enclosing_body ||= enclosing_body_for(node)
         end
 
-        # Beside the private declarations when the section is already open,
-        # otherwise at the end of the body, where the new section goes.
-        def anchor
-          declarations_after_private_modifier.last || private_modifier || statements.excluding(node).last
+        def placed_with_declarations?
+          declarations_after_private_modifier.include?(node)
         end
 
         def declarations_after_private_modifier
-          statements_after_private_modifier.take_while { declaration_macro?(it) }
+          statements_after_private_modifier.take_while { declaration?(it) }
         end
 
         def statements_after_private_modifier
@@ -94,6 +104,40 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
 
         def private_modifier
           @private_modifier ||= private_modifier_in(enclosing_body)
+        end
+
+        def declaration?(statement)
+          statement.casgn_type? || declaration_macro?(statement)
+        end
+
+        # Moving up over the assignment of a constant the delegate reads would
+        # break the class at load time, so that placement is not a choice.
+        def blocked_by_constant?
+          referenced_constant_names.intersect?(constant_names_crossed_moving_up)
+        end
+
+        def referenced_constant_names
+          node.arguments.flat_map { it.each_node(:const).map(&:short_name) }
+        end
+
+        def constant_names_crossed_moving_up
+          statements_between_anchor_and_node.select(&:casgn_type?).map(&:name)
+        end
+
+        def statements_between_anchor_and_node
+          anchor_index = statements.index(anchor)
+          node_index = statements.index(node)
+          anchor_index && anchor_index < node_index ? statements[(anchor_index + 1)...node_index] : []
+        end
+
+        # Beside the private declarations when the section is already open,
+        # otherwise at the end of the body, where the new section goes.
+        def anchor
+          declarations_after_private_modifier.last || private_modifier || statements.excluding(node).last
+        end
+
+        def outside_private_section?
+          visibility_at(node, enclosing_body) != :private
         end
 
         def relocated_delegate

@@ -131,6 +131,62 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacementTest < CopTestCase
       RUBY
   end
 
+  test "autocorrects a delegate strayed below the methods of its section" do
+    assert_correction \
+      <<~RUBY,
+        class Report
+          private
+            attr_reader :order
+
+            def formatted_total
+              total.to_s
+            end
+
+            delegate :total, to: :order, private: true
+        end
+      RUBY
+      <<~RUBY
+        class Report
+          private
+            attr_reader :order
+            delegate :total, to: :order, private: true
+
+            def formatted_total
+              total.to_s
+            end
+        end
+      RUBY
+  end
+
+  test "no offense for a delegate after the section constants" do
+    assert_no_offense <<~RUBY
+      class Report
+        private
+          FORMATS = %i[ plain html ].freeze
+
+          delegate :total, to: :order, private: true
+
+          def formatted_total
+            total.to_s
+          end
+      end
+    RUBY
+  end
+
+  test "no offense when moving up would cross a constant the delegate reads" do
+    assert_no_offense <<~RUBY
+      class Report
+        private
+          def formatted_total
+            total.to_s
+          end
+
+          REGISTRY = Registry.new
+          delegate :total, to: REGISTRY, private: true
+      end
+    RUBY
+  end
+
   test "autocorrects a nested class by its own indentation" do
     assert_correction \
       <<~RUBY,
