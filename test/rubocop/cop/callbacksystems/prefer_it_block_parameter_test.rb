@@ -129,6 +129,18 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameterTest < CopTestCase
     RUBY
   end
 
+  test "does not register offense for define_method" do
+    assert_no_offense <<~RUBY
+      define_method(:double) { |number| number * 2 }
+    RUBY
+  end
+
+  test "does not register offense for define_singleton_method with unused parameter" do
+    assert_no_offense <<~RUBY
+      object.define_singleton_method(:call) { |_client| response }
+    RUBY
+  end
+
   test "does not register offense for Proc.new" do
     assert_no_offense <<~RUBY
       greet = Proc.new { |name| puts name }

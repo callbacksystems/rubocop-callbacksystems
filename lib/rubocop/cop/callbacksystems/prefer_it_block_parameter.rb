@@ -28,13 +28,16 @@
 #   double = ->(number) { number * 2 }
 #   greet = proc { |name| puts name }
 #
+#   # good - define_method, where the block sets the defined method's signature
+#   define_method(:double) { |number| number * 2 }
+#
 class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
   MESSAGE = "Use `it` instead of explicit block parameter `|%<param>s|`."
 
   def on_block(node)
-    if single_param_inline_block?(node)
+    if Candidate.new(node).convertible?
       add_offense(node, message: format(MESSAGE, param: node.first_argument.source)) do |corrector|
         Correction.new(corrector, node).apply
       end
@@ -45,13 +48,36 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
   alias on_itblock on_block
 
   private
-    def single_param_inline_block?(node)
-      node.body && node.braces? && node.single_line? && node.arguments.size == 1 &&
-        node.first_argument.arg_type? && !node.lambda_or_proc? && !nested_in_convertible_block?(node)
-    end
+    class Candidate
+      METHOD_DEFINITIONS = %i[define_method define_singleton_method].freeze
 
-    def nested_in_convertible_block?(node)
-      node.each_ancestor(:any_block).any? { it.arguments.size == 1 && it.braces? && it.single_line? }
+      def initialize(node)
+        @node = node
+      end
+
+      def convertible?
+        single_line_braced? && single_replaceable_parameter? &&
+          !node.lambda_or_proc? && !method_definition? && !nested_in_convertible_block?
+      end
+
+      private
+        attr_reader :node
+
+        def single_line_braced?
+          node.body && node.braces? && node.single_line?
+        end
+
+        def single_replaceable_parameter?
+          node.arguments.size == 1 && node.first_argument.arg_type?
+        end
+
+        def method_definition?
+          METHOD_DEFINITIONS.include?(node.method_name)
+        end
+
+        def nested_in_convertible_block?
+          node.each_ancestor(:any_block).any? { it.arguments.size == 1 && it.braces? && it.single_line? }
+        end
     end
 
     class Correction
