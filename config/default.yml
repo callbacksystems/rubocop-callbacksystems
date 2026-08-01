@@ -42,6 +42,9 @@ Callbacksystems/DataClump:
 Callbacksystems/DeclarativeMethodNaming:
   Enabled: true
 
+Callbacksystems/DelegateModuleFunctions:
+  Enabled: true
+
 Callbacksystems/DelegateRequiresPrivateOption:
   Enabled: true
 
