@@ -47,6 +47,15 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
     class VisibilityCheck
       include RuboCop::Callbacksystems::Helpers
 
+      # Ruby and its runtime call protocol methods structurally (a double splat
+      # calls to_hash, interpolation calls to_s, case calls ===, sorting calls
+      # <=>), so their names never appear near an instance.
+      PROTOCOL_METHODS = %i[
+        to_hash to_h to_str to_s to_ary to_a to_proc to_int to_i to_path
+        == eql? hash <=> === each call inspect as_json to_json
+        deconstruct deconstruct_keys
+      ].freeze
+
       def initialize(parent_node, nested_class)
         @parent_node = parent_node
         @nested_class = nested_class
@@ -111,7 +120,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
         end
 
         def external_names
-          @external_names ||= Set.new([ :initialize ] + called_names + block_pass_names + macro_referenced_methods)
+          @external_names ||= Set.new([ :initialize, *PROTOCOL_METHODS ] + called_names + block_pass_names + macro_referenced_methods)
         end
 
         def called_names

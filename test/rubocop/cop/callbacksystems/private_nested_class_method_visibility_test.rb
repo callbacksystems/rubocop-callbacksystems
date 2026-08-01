@@ -452,6 +452,44 @@ class PrivateNestedClassMethodVisibilityTest < CopTestCase
     RUBY
   end
 
+  test "no offense for a protocol method Ruby calls structurally" do
+    assert_no_offense <<~RUBY
+      class Customer
+        def checkout
+          PreferenceAttributes.new(options).items
+        end
+
+        private
+          class PreferenceAttributes < Data.define(:options)
+            def items
+              options[:items]
+            end
+
+            def to_hash
+              { items: items }
+            end
+          end
+      end
+    RUBY
+  end
+
+  test "no offense when an instance is double-splatted into a call" do
+    assert_no_offense <<~RUBY
+      class Customer
+        def charge(amount)
+          client.create(**PaymentAttributes.new(amount))
+        end
+
+        private
+          class PaymentAttributes < Data.define(:amount)
+            def to_hash
+              { amount: amount }
+            end
+          end
+      end
+    RUBY
+  end
+
   test "registers offense when instances are built and used on the spot" do
     offenses = assert_offense <<~RUBY
       class Sequencer
