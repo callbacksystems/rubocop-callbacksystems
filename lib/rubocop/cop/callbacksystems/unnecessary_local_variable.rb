@@ -70,7 +70,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
       def inline(corrector)
         if inlineable?
           corrector.remove(node.source_range.with(end_pos: next_statement.source_range.begin_pos))
-          corrector.replace(reference, value.source)
+          corrector.replace(reference, inlined_source)
         end
       end
 
@@ -132,6 +132,22 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
 
         def reference
           references.first
+        end
+
+        # An assignment gives a bare call its own statement, so `find_account "id"`
+        # keeps its arguments there. The read is a receiver or an argument, where the
+        # same source would take the following `.method` or comma as its own argument,
+        # so the arguments travel with parentheses around them.
+        def inlined_source
+          if value.arguments? && !value.parenthesized?
+            "#{call_source_through_selector}(#{value.arguments.map(&:source).join(", ")})"
+          else
+            value.source
+          end
+        end
+
+        def call_source_through_selector
+          value.source_range.with(end_pos: value.loc.selector.end_pos).source
         end
     end
 end

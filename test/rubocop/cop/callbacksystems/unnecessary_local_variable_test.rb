@@ -287,6 +287,58 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
     CORRECTED
   end
 
+  test "parenthesizes a bare call inlined into a receiver" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        account = find_account "personal"
+        account.email
+      end
+    RUBY
+      def process
+        find_account("personal").email
+      end
+    CORRECTED
+  end
+
+  test "parenthesizes a bare call inlined into a later argument" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        account = find_account "personal"
+        assert_equal expected, account
+      end
+    RUBY
+      def process
+        assert_equal expected, find_account("personal")
+      end
+    CORRECTED
+  end
+
+  test "parenthesizes a bare call with a receiver and several arguments" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        slot = calendar.slot_at 9, duration: 30
+        slot.available?
+      end
+    RUBY
+      def process
+        calendar.slot_at(9, duration: 30).available?
+      end
+    CORRECTED
+  end
+
+  test "leaves an already parenthesized call alone" do
+    assert_correction <<~RUBY, <<~CORRECTED
+      def process
+        account = find_account("personal")
+        account.email
+      end
+    RUBY
+      def process
+        find_account("personal").email
+      end
+    CORRECTED
+  end
+
   test "leaves a variable read two statements later for a human" do
     assert_correction <<~RUBY, <<~SAME
       def process
