@@ -27,6 +27,16 @@
 #   include Searchable
 #   include Confirmable  # wins over Searchable, so it comes second
 #
+#   # bad - a note among the modules travels with the one it was written about
+#   include Searchable,
+#     # only for confirmed accounts
+#     Confirmable
+#
+#   # good
+#   # only for confirmed accounts
+#   include Confirmable,
+#     Searchable
+#
 class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
@@ -57,11 +67,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
         format(MESSAGE, sorted: sorted_names.join(", "))
       end
 
-      # Sorting rewrites the whole list in one go, and a comment written among
-      # the modules was written about one of them: there is no telling which, so
-      # a list carrying one is reported and left to be sorted by hand.
       def reorder(corrector)
-        corrector.replace(arguments_range, sorted_names.join(", ")) unless holds_comment?(arguments_range, comments)
+        corrector.replace(rewritten_range, sorted_source) if correctable?
       end
 
       private
@@ -80,8 +87,126 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           @sorted_names ||= names.sort
         end
 
+        # Rewriting an annotated list means writing the statement out again, so
+        # a call sharing its line with other code is reported and left to be
+        # sorted by hand.
+        def correctable?
+          notes.empty? || starts_its_line?
+        end
+
+        # A trailing note on a list written across lines was written about the
+        # module on that line. One trailing a list that fits on a single line was
+        # written about the statement, so it stays where the author put it.
+        def notes
+          @notes ||= comments.select { notes_range.contains?(it.source_range) }
+        end
+
+        def notes_range
+          spans_lines? ? arguments_range.with(end_pos: closing_line.end_pos) : arguments_range
+        end
+
+        def spans_lines?
+          !arguments_range.single_line?
+        end
+
         def arguments_range
           arguments.first.source_range.join(arguments.last.source_range)
+        end
+
+        def closing_line
+          buffer.line_range(buffer.line_for_position(arguments_range.end_pos))
+        end
+
+        def buffer
+          node.source_range.source_buffer
+        end
+
+        def starts_its_line?
+          node.source_range.source_line[0...node.loc.column].strip.empty?
+        end
+
+        def rewritten_range
+          notes.empty? ? arguments_range : statement_range
+        end
+
+        # From the indentation up to the end of the line the list closes on, so
+        # the notes among the modules are the rewrite's to place.
+        def statement_range
+          arguments_range.with(begin_pos: node.source_range.begin_pos - node.loc.column, end_pos: closing_line.end_pos)
+        end
+
+        def sorted_source
+          notes.empty? ? sorted_names.join(", ") : annotated_source
+        end
+
+        # One module to a line, each under the notes written about it. The notes
+        # of whichever module now leads move above the statement: the line it
+        # shares with `include` has no room for them.
+        def annotated_source
+          "#{leading_notes}#{indentation}#{node.method_name} #{listed_mixins}"
+        end
+
+        def leading_notes
+          sorted_mixins.first.notes_at(indentation)
+        end
+
+        def sorted_mixins
+          @sorted_mixins ||= mixins.sort_by(&:name)
+        end
+
+        def mixins
+          @mixins ||= arguments.map { Mixin.new(it.source, notes_for(it)) }
+        end
+
+        def notes_for(argument)
+          notes.select { owner_of(it).equal?(argument) }.map(&:text)
+        end
+
+        # A note on its own line was written above the module it belongs to; one
+        # trailing a line was written about the module ending on that line.
+        def owner_of(note)
+          if own_line_comment?(note)
+            arguments.find { it.source_range.begin_pos > note.source_range.end_pos }
+          else
+            arguments.rfind { it.source_range.end_pos < note.source_range.begin_pos }
+          end
+        end
+
+        def indentation
+          indentation_of(node)
+        end
+
+        def listed_mixins
+          [ sorted_mixins.first.name, *sorted_mixins.drop(1).map { it.written_at(continuation) } ].join(",\n")
+        end
+
+        def continuation
+          "#{indentation}  "
+        end
+
+        # One module in the list with the notes written about it, so sorting
+        # moves them together and a note keeps the module it belongs to.
+        class Mixin
+          attr_reader :name
+
+          def initialize(name, notes)
+            @name = name
+            @notes = notes
+          end
+
+          def written_at(indentation)
+            "#{notes_at(indentation)}#{indentation}#{name}"
+          end
+
+          # Every note is written above its module. One trailing a module would
+          # land before the comma once the list is rebuilt, where a comment
+          # cannot sit.
+          def notes_at(indentation)
+            notes.map { "#{indentation}#{it}\n" }.join
+          end
+
+          private
+            attr_reader :notes
         end
     end
 end

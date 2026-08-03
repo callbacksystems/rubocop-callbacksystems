@@ -88,11 +88,71 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArgumentsTest < CopTestCase
       CORRECTED
   end
 
-  test "reports a list holding a comment but leaves it, since the note belongs to one module" do
+  test "moves a note above the module it was written about" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Report
+          include Confirmable,
+            # the broad one
+            Searchable,
+            Accessible
+        end
+      RUBY
+        class Report
+          include Accessible,
+            Confirmable,
+            # the broad one
+            Searchable
+        end
+      CORRECTED
+  end
+
+  test "lifts the note of the module that now leads above the statement" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Report
+          include Searchable,
+            # only for confirmed accounts
+            Confirmable
+        end
+      RUBY
+        class Report
+          # only for confirmed accounts
+          include Confirmable,
+            Searchable
+        end
+      CORRECTED
+  end
+
+  test "reads a note trailing a line as written about the module on it" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Report
+          include Searchable, # the broad one
+            Confirmable
+        end
+      RUBY
+        class Report
+          include Confirmable,
+            # the broad one
+            Searchable
+        end
+      CORRECTED
+  end
+
+  test "keeps a note trailing a single-line list, which was written about the statement" do
+    assert_correction \
+      "include Searchable, Confirmable # both are read-only",
+      "include Confirmable, Searchable # both are read-only"
+  end
+
+  test "reports a note-carrying call sharing its line but leaves it, having no statement to rewrite" do
     code = <<~RUBY
-      include Searchable,
-        # this one wins
-        Confirmable
+      class Report
+        x = 1; include Searchable,
+          # a note
+          Confirmable
+      end
     RUBY
 
     assert_offense code
