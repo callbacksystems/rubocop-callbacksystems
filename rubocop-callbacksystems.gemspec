@@ -4,10 +4,11 @@ Gem::Specification.new do |spec|
   spec.authors = [ "Callbacksystems" ]
   spec.email = [ "hello@callbacksystems.com" ]
 
-  spec.summary = "Callbacksystems Ruby style for RuboCop"
+  spec.summary = "Shared RuboCop configuration for Callback Systems projects"
   spec.description = <<~DESC.strip
-    A RuboCop plugin that enforces the Callbacksystems Ruby style guide
-    through a suite of custom cops for Rails applications and Ruby gems.
+    A RuboCop plugin whose cops cover what RuboCop core and the official plugins
+    do not: naming and structural conventions, declarative style, test
+    discipline, and the patterns that keep code readable as a system grows.
   DESC
   spec.homepage = "https://github.com/callbacksystems/rubocop-callbacksystems"
   spec.license = "MIT"
@@ -15,11 +16,12 @@ Gem::Specification.new do |spec|
 
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
-  spec.metadata["documentation_uri"] = "#{spec.homepage}#readme"
+  spec.metadata["documentation_uri"] = "#{spec.homepage}/blob/main/docs/README.md"
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.metadata["default_lint_roller_plugin"] = "RuboCop::Callbacksystems::Plugin"
 
-  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "LICENSE"]
+  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "CHANGELOG.md", "LICENSE"]
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "activesupport"

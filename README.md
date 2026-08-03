@@ -1,11 +1,12 @@
 # rubocop-callbacksystems
 
-A RuboCop plugin that enforces the [Callbacksystems Ruby style guide](https://callbacksystems.com)
-through a suite of custom cops for Rails applications and Ruby gems.
+Shared RuboCop configuration for Callback Systems projects.
 
-The cops focus on what RuboCop core and the official plugins do not cover:
-naming and structural conventions, declarative style, test discipline, and
-patterns that keep code readable as a system grows.
+The cops it adds cover what RuboCop core and the official plugins do not: naming
+and structural conventions, declarative style, test discipline, and the patterns
+that keep code readable as a system grows.
+
+For what any individual cop does, see [the cop reference](docs/README.md).
 
 ## Installation
 
@@ -14,89 +15,72 @@ patterns that keep code readable as a system grows.
 gem "rubocop-callbacksystems", require: false
 ```
 
-Then include the bundled configuration in your `.rubocop.yml`:
+Requires Ruby 4.0 and RuboCop 1.72 or newer.
+
+## Usage
+
+Inherit the bundled configuration in your `.rubocop.yml`:
 
 ```yaml
 inherit_gem:
   rubocop-callbacksystems: rubocop.yml
 ```
 
-That is enough. The bundled config declares this gem under `plugins:`, so
-RuboCop loads it, enables every Callbacksystems cop, and configures the core
-cops along with the Minitest, Performance and Rails plugins.
+That is the whole setup. The bundled config declares this gem under `plugins:`,
+so RuboCop loads it, enables every Callbacksystems cop, and configures the core
+cops along with the Minitest, Performance and Rails plugins. Then run RuboCop as
+usual:
 
-To take the cops without the style guide, declare the plugin yourself and
-configure the cops as you like:
+```bash
+bundle exec rubocop
+```
+
+This is one opinionated style, taken whole. To take the cops without it, declare
+the plugin yourself and configure them as you like:
 
 ```yaml
 plugins:
   - rubocop-callbacksystems
 ```
 
-## Usage
+## Customizing
 
-Run RuboCop as usual:
-
-```bash
-bundle exec rubocop
-```
-
-The bundled `rubocop.yml` enables the full ruleset out of the box. To override
-specific cops in your project, declare them after the `inherit_gem` directive
-in your `.rubocop.yml`.
-
-## Configuration
-
-All cops live under the `Callbacksystems/` namespace and ship in
-[`config/default.yml`](config/default.yml). The defaults are tuned for typical
-Rails applications, and most cops scope themselves to `app/`, `lib/`, or `test/`
-as appropriate.
-
-### Disabling a cop
+Override any cop after the `inherit_gem` directive.
 
 ```yaml
 Callbacksystems/CopName:
   Enabled: false
+
+Callbacksystems/OtherCop:
+  MaxOperators: 4
 ```
 
-### Adjusting thresholds
-
-Cops that take parameters expose them as standard RuboCop options:
-
-```yaml
-Callbacksystems/CopName:
-  OptionName: 4
-```
-
-Use the real cop names and option keys from
-[`config/default.yml`](config/default.yml).
-
-## Cops
-
-This README keeps no per-cop list on purpose, since it drifts out of date too fast.
-To see what ships, browse the source: each cop's file under
-[`lib/rubocop/cop/callbacksystems/`](lib/rubocop/cop/callbacksystems/) carries an
-`@example` block contrasting bad and good code, and
-[`config/default.yml`](config/default.yml) lists every cop with its options and
-default scope.
+Every cop is on by default and lives under the `Callbacksystems/` namespace.
+[`config/default.yml`](config/default.yml) is the full list: each cop with its
+description, its options and the paths it applies to. Most scope themselves to
+`app/`, `lib/` or `test/`.
 
 ## Development
 
 ```bash
-bin/setup         # install dependencies
-bin/test          # run the test suite
-bin/rubocop       # self-lint the gem
+bin/setup                # install dependencies
+bin/test                 # run the test suite
+bin/rubocop              # the plugin on itself
+UPDATE_DOCS=1 bin/test   # regenerate the cop reference and descriptions
 ```
 
-Every cop has a paired test under `test/rubocop/cop/callbacksystems/`. The
-helper modules in `lib/rubocop/callbacksystems/helpers/` are tested under
-`test/rubocop/callbacksystems/helpers/`.
+Every cop has a paired test under `test/rubocop/cop/callbacksystems/`, and the
+helper modules under `test/rubocop/callbacksystems/helpers/`.
+
+The cop reference and the `Description:` of each cop in `config/default.yml` are
+both generated from the sentence that opens the cop's file, so it is written in
+one place and there is nothing to keep in sync. A test fails when either drifts.
 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and conventions.
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](LICENSE).
+MIT

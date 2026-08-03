@@ -1,7 +1,7 @@
-# AI agents (and pasting from formatted text) sneak typographic characters into
-# source: smart quotes, en/em dashes, ellipses, arrows, bullets, zero-width
-# spaces. Keep code ASCII-clean: these are invisible noise to the toolchain,
-# break grep, and signal sloppy review. Decorative line-drawing characters are
+# Keeps typographic characters out of source: smart quotes, en/em dashes,
+# ellipses, arrows, bullets, zero-width spaces. They arrive by pasting from
+# formatted text or from an AI agent, and they are invisible noise to the
+# toolchain, break grep, and signal sloppy review. Decorative line-drawing characters are
 # left to a divider-comment cop.
 #
 # @example

@@ -4,60 +4,74 @@ inherit_mode:
     - Include
 
 Callbacksystems/AssertWithExpectedArgument:
+  Description: "`assert expected, actual` passes whenever `expected` is truthy, so a two-argument `assert` usually means `assert_equal`."
   Enabled: true
 
 Callbacksystems/ApplicationControllerMethodDefinition:
+  Description: Prohibits defining methods directly in ApplicationController.
   Enabled: true
   Include:
     - "app/controllers/application_controller.rb"
 
 Callbacksystems/BuilderMethodParentheses:
+  Description: Requires parentheses on builder method calls (`.new`, ActiveRecord persistence, finders, strong parameters) when they have arguments.
   Enabled: true
   Exclude:
     - "app/helpers/**/*"
 
 Callbacksystems/CollapseMultilineExpression:
+  Description: Detects multiline expressions that can fit on a single line and collapses them.
   Enabled: true
   MaxLineLength: 120
 
 Callbacksystems/ComplexConditional:
+  Description: Detects complex conditionals with too many boolean operators.
   Enabled: true
   MaxOperators: 1
 
 Callbacksystems/ControllerTestResponseAssertion:
+  Description: In controller tests, every test that makes an HTTP request must assert the response.
   Enabled: true
   Include:
     - "test/controllers/**/*"
 
 Callbacksystems/ControllerTestResponseFirstAssertion:
+  Description: In controller tests, the first assertion after an HTTP request must be a response assertion (assert_response or assert_redirected_to).
   Enabled: true
   Include:
     - "test/controllers/**/*"
 
 Callbacksystems/DataClump:
+  Description: Detects a set of parameter names that travel together across a class's or module's private methods.
   Enabled: true
   MinMethods: 3
   MinMethodsForRepeatedSignature: 2
   MinMethodsForSingleParam: 6
 
 Callbacksystems/DeclarativeMethodNaming:
+  Description: A method that returns a value should be named for the value it hands back, not for the imperative action it performs.
   Enabled: true
 
 Callbacksystems/DelegateModuleFunctions:
+  Description: Detects methods that only wrap the same-named method on a constant.
   Enabled: true
 
 Callbacksystems/DelegateRequiresPrivateOption:
+  Description: "`delegate` does not inherit the visibility of the surrounding section."
   Enabled: true
 
 Callbacksystems/EagerLoadingScopeNaming:
+  Description: Ensures eager loading scopes follow naming conventions.
   Enabled: true
   Include:
     - "app/models/**/*"
 
 Callbacksystems/EarlyReturn:
+  Description: Prohibits early exits except for a single guard clause on the first line.
   Enabled: true
 
 Callbacksystems/EmptyLineBeforeMethod:
+  Description: Enforces an empty line before method definitions.
   Enabled: true
   DescribingMacros:
     - desc
@@ -67,133 +81,169 @@ Callbacksystems/EmptyLineBeforeMethod:
     - option
 
 Callbacksystems/EmptyPrivateSection:
+  Description: A `private` keyword with nothing after it declares a section that holds nothing.
   Enabled: true
 
 Callbacksystems/ExpandedEmptyClassOrModule:
+  Description: An empty class or module keeps its `end` on a line of its own, the way `Style/EmptyMethod` already asks of an empty method.
   Enabled: true
 
 Callbacksystems/InlineMemoizedComputation:
+  Description: Detects memoization methods that delegate to another method in the same class.
   Enabled: true
 
 Callbacksystems/JobEnqueueMethods:
+  Description: Ensures methods that enqueue jobs follow the `_later` naming convention.
   Enabled: true
   Include:
     - "app/models/**/*"
 
 Callbacksystems/MaxSafeNavigationDepth:
+  Description: Deeply chained safe navigation (`a&.b&.c&.d&.e`) signals deep coupling or poor data modelling.
   Enabled: true
   MaxDepth: 3
 
 Callbacksystems/MethodInvocationOrder:
+  Description: 'Ensures methods are ordered by invocation: callers before callees, and a caller''s callees in the order it first invokes them (depth-first).'
   Enabled: true
 
 Callbacksystems/MixinsFirst:
+  Description: Mixins come before anything else in a class or module body, constants included.
   Enabled: true
 
 Callbacksystems/NestedClassesAtEndOfPrivateSection:
+  Description: Ensures private nested classes are defined at the end of the private section.
   Enabled: true
 
 Callbacksystems/NoAbbreviations:
+  Description: Prohibits common abbreviations in method, variable, and constant names.
   Enabled: true
 
 Callbacksystems/NoAnemicDelegation:
+  Description: Detects private methods that only delegate to a newly created object.
   Enabled: true
 
 Callbacksystems/NoAnemicRecord:
+  Description: A hash of three or more keys, built in one place and read from several others, is a data clump wearing braces.
   Enabled: true
   MinFields: 3
   MinReaders: 2
 
 Callbacksystems/NoAssertSelect:
+  Description: Prohibits using assert_select in tests.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/NoBangMethodWithoutCounterpart:
+  Description: Prohibits bang methods (ending with `!`) unless a non-bang counterpart exists.
   Enabled: true
 
 Callbacksystems/NoCallMethod:
+  Description: Prohibits defining methods named `call`.
   Enabled: true
 
 Callbacksystems/NoCommentsInTestClassBody:
+  Description: Detects comments in the direct body of test classes.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/NoCustomRouteActions:
+  Description: Keeps routes on the standard resource actions, so a custom action becomes its own resource instead of a member or collection addition.
   Enabled: true
   Include:
     - "config/routes.rb"
     - "config/routes/**/*"
 
 Callbacksystems/NoDirectEagerLoading:
+  Description: Prohibits using preload, eager_load, or includes directly in controllers.
   Enabled: true
   Include:
     - "app/controllers/**/*"
 
 Callbacksystems/NoEachWithEarlyReturn:
+  Description: Detects each blocks with conditional early returns that should use find.
   Enabled: true
 
 Callbacksystems/NoExplicitPublicModifier:
+  Description: Do not use explicit `public` modifier.
   Enabled: true
 
 Callbacksystems/NoHashWithDefaultBlock:
+  Description: Detects `Hash.new` with a default block that initializes missing keys to an empty collection.
   Enabled: true
 
 Callbacksystems/NoLocalVariableReturn:
+  Description: Prohibits returning a local variable as the last statement of a method.
   Enabled: true
 
 Callbacksystems/NoManualAccumulation:
+  Description: Detects manual accumulation patterns that should use declarative methods.
   Enabled: true
 
 Callbacksystems/NoMixedMemoization:
+  Description: Detects memoization mixed with other statements in the same method.
   Enabled: true
 
 Callbacksystems/NoNestedModulesInClasses:
+  Description: Forbids nested modules inside classes.
   Enabled: true
 
 Callbacksystems/NoNilAtEndOfMethod:
+  Description: Prohibits returning nil at the end of a method.
   Enabled: true
   SafeAutoCorrect: false
 
 Callbacksystems/NoRedundantWrapperMethod:
+  Description: Detects private methods that only call another method without adding value.
   Enabled: true
 
 Callbacksystems/NoSectionDividerComments:
+  Description: ASCII-art section dividers in comments add no information.
   Enabled: true
 
 Callbacksystems/NoSendInTests:
+  Description: Prohibits using `send` or `__send__` inside test blocks.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/NoServiceObjects:
+  Description: Prohibits files in service object-style directories under `app/`.
   Enabled: true
   Include:
     - "app/**/*"
 
 Callbacksystems/NoSingleLetterNames:
+  Description: Detects single-letter names for variables, block arguments, and method parameters.
   Enabled: true
 
 Callbacksystems/NoSingletonClassInModules:
+  Description: Forbids using `class << self` inside modules.
   Enabled: true
 
 Callbacksystems/NoTapCollectionBuilding:
+  Description: Detects using tap to build collections imperatively.
   Enabled: true
 
 Callbacksystems/NoTypographicClutter:
+  Description: 'Keeps typographic characters out of source: smart quotes, en/em dashes, ellipses, arrows, bullets, zero-width spaces.'
   Enabled: true
 
 Callbacksystems/NoWritesInGetActions:
+  Description: Keeps GET actions free of writes and enqueued side effects.
   Enabled: true
   Include:
     - "app/controllers/**/*"
 
 Callbacksystems/OrderedMixinArguments:
+  Description: Ensures the modules of one mixin call are sorted alphabetically.
   Enabled: true
   SafeAutoCorrect: false
 
 Callbacksystems/PluralControllerNames:
+  Description: Ensures controller names are plural.
   Enabled: true
   IgnoredNames:
     - Application
@@ -202,84 +252,109 @@ Callbacksystems/PluralControllerNames:
     - "app/controllers/**/*"
 
 Callbacksystems/PreferAttrReaderOverInstanceVariable:
+  Description: Detects direct use of instance variables that were assigned in initialize.
   Enabled: true
 
 Callbacksystems/PreferBackslashContinuation:
+  Description: Prefers backslash line continuation over parentheses for multiline method calls.
   Enabled: true
 
 Callbacksystems/PreferClassForState:
+  Description: Detects a single value threaded through many method calls.
   Enabled: true
   MinMethods: 4
 
 Callbacksystems/PreferClassNewForEmptyNestedClass:
+  Description: A nested class with no body declares that something exists, most often an error.
   Enabled: true
 
 Callbacksystems/PreferClassOverBuilderBlock:
+  Description: A `Data.define`, `Struct.new` or `Class.new` given a block defines a class with behavior, so it reads better as the class it is.
   Enabled: true
 
 Callbacksystems/PreferDeclarativeCollections:
+  Description: Detects imperative collection building that could be written declaratively.
   Enabled: true
 
 Callbacksystems/PreferDelegate:
+  Description: Detects methods that only delegate to a same-named method on a plain receiver (`def size; node.size; end`).
   Enabled: true
 
 Callbacksystems/PreferDelegateOverIvarAssignment:
+  Description: Detects `@x = receiver.x` style assignments inside `initialize` that mirror a method call.
   Enabled: true
 
 Callbacksystems/PreferExcluding:
+  Description: Detects `array - [element]` patterns that should use `excluding`.
   Enabled: true
 
 Callbacksystems/PreferItBlockParameter:
+  Description: Detects single-line brace blocks with a single parameter that should use `it` instead.
   Enabled: true
 
 Callbacksystems/PreferMany:
+  Description: Detects `collection.size > 1` patterns that should use `many?`.
   Enabled: true
 
 Callbacksystems/PreferMethodOverVariable:
+  Description: Detects local variable assignments that could be methods instead.
   Enabled: true
   Exclude:
     - "test/**/*"
 
 Callbacksystems/PreferModuleForStaticClass:
+  Description: A class whose whole body is class-level code should be a module with `extend self`.
   Enabled: true
 
 Callbacksystems/PreferOrdinalArrayAccess:
+  Description: Detects array access with numeric indices that could use ordinal methods.
   Enabled: true
   SafeAutoCorrect: false
 
 Callbacksystems/PreferPositiveWrap:
+  Description: A negative `return unless` guard followed by a happy path reads more naturally as `if cond; ...; end`.
   Enabled: true
 
 Callbacksystems/PreferSquish:
+  Description: Detects `str.strip.gsub(/\s+/, " ")` patterns that should use `squish`.
   Enabled: true
 
 Callbacksystems/PreferStringifyKeys:
+  Description: Detects `hash.transform_keys(&:to_s)` patterns that should use `stringify_keys`.
   Enabled: true
 
 Callbacksystems/PreferSymbolizeKeys:
+  Description: Detects `hash.transform_keys(&:to_sym)` patterns that should use `symbolize_keys`.
   Enabled: true
 
 Callbacksystems/PreferTurboPageRefreshBroadcasts:
+  Description: Enforces Turbo page refreshes over targeted stream broadcasts.
   Enabled: true
   Include:
     - "app/**/*"
 
 Callbacksystems/PrivateConstantsInPrivateSection:
+  Description: A constant that only serves the implementation belongs in the private section, where every other implementation detail already lives.
   Enabled: true
 
 Callbacksystems/PrivateDelegatePlacement:
+  Description: "`delegate ..."
   Enabled: true
 
 Callbacksystems/PrivateMethodsInPrivateSection:
+  Description: A method you define goes in the private section, not above it with a `private :name` afterwards.
   Enabled: true
 
 Callbacksystems/PrivateNestedClassMethodVisibility:
+  Description: Detects public methods in private nested classes that are never called from outside.
   Enabled: true
 
 Callbacksystems/PrivateNestedClasses:
+  Description: Requires nested classes to be declared in the private section.
   Enabled: true
 
 Callbacksystems/PublicMethodsMustHaveTests:
+  Description: Ensures all public methods in classes and modules have corresponding tests.
   Enabled: true
   Include:
     - "app/**/*"
@@ -289,85 +364,104 @@ Callbacksystems/PublicMethodsMustHaveTests:
     - "app/helpers/**/*"
 
 Callbacksystems/RedundantConcernExtend:
+  Description: Detects unnecessary extend ActiveSupport::Concern.
   Enabled: true
 
 Callbacksystems/RedundantConstantNamespace:
+  Description: A constant reference does not need to repeat the namespace it is already written inside.
   Enabled: true
 
 Callbacksystems/RepeatedFixtureInTests:
+  Description: Detects when the same fixture is called in multiple tests.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/RestrictedControllerActions:
+  Description: Restricts controller actions to the 7 standard Rails actions.
   Enabled: true
   Include:
     - "app/controllers/**/*"
 
 Callbacksystems/RoutesModuleScope:
+  Description: Ensures repeated `module:` options in routes are extracted to a scope block.
   Enabled: true
   Include:
     - "config/routes.rb"
     - "config/routes/**/*"
 
 Callbacksystems/SingleLineSetupBlock:
+  Description: Enforces the use of `{ }` instead of `do end` for single-line setup and teardown blocks.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/SingleSingletonClass:
+  Description: A class declares its class-level methods in a single `class << self` section.
   Enabled: true
 
 Callbacksystems/SingleTopLevelClassOrModule:
+  Description: Forbids multiple classes or modules at the top level of a file.
   Enabled: true
 
 Callbacksystems/SingleUseFixtureVariable:
+  Description: Detects when a fixture is assigned to a variable but only used once.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/SingleUseSetupVariable:
+  Description: Detects instance variables assigned in setup blocks that are used in at most one test.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/SingularScopeNames:
+  Description: Ensures scope names are singular (unless they use `with_*` prefix).
   Enabled: true
   Include:
     - "app/models/**/*"
 
 Callbacksystems/SystemTestBrowserDriver:
+  Description: Keeps system tests on a real browser driver.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/TestMethodDefinition:
+  Description: Enforces `test "description" do` over `def test_*`, and block syntax for setup and teardown over method definitions.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/TestMethodOrder:
+  Description: Ensures tests are ordered following the method definition order in the source file.
   Enabled: true
   Include:
     - "test/**/*"
 
 Callbacksystems/TooManyInstanceVariables:
+  Description: Flags private methods with too many instance variable assignments.
   Enabled: true
   MaxAssignments: 2
 
 Callbacksystems/TooManyLocalVariables:
+  Description: Flags methods with too many local variable assignments.
   Enabled: true
   MaxAssignments: 3
 
 Callbacksystems/TooManyValidationGuards:
+  Description: 'Counts only validation guards: leading `return`s that reject input by returning nothing, `nil`, or `false`.'
   Enabled: true
   MaxGuards: 2
 
 Callbacksystems/UnnecessaryLocalVariable:
+  Description: Detects local variables that alias a method call that already reads as a name.
   Enabled: true
   Exclude:
     - "app/controllers/**/*"
     - "test/**/*"
 
 Callbacksystems/UnusedPrivateMethodInNestedClass:
+  Description: Detects unused private methods in private nested classes.
   Enabled: true

@@ -1,8 +1,8 @@
-# Detects a single value threaded through many method calls: a parameter or a
+# Detects a single value threaded through many method calls. A parameter or a
 # local passed as an argument to several different receiverless methods, directly
-# or down a pipeline. Such a value is instance state in disguise: it reads
-# better as the state of a class, with the methods that receive it becoming
-# instance methods that no longer need the argument.
+# or down a pipeline, is instance state in disguise: it reads better as the state
+# of a class, with the methods that receive it becoming instance methods that no
+# longer need the argument.
 #
 # The value is followed by *data flow*: every receiverless method it is passed to
 # as an argument, then (through that callee's matching parameter) wherever it

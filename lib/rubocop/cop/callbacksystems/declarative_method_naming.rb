@@ -1,6 +1,6 @@
-# A method that returns a value should be named for the value it hands back
-# (`total`, `user_by_id`), not for the imperative action it performs
-# (`compute_total`, `get_user`). The imperative name reads as a command when the
+# A method that returns a value should be named for the value it hands back, not
+# for the imperative action it performs. `compute_total` is really `total` and
+# `get_user` is `user_by_id`: the imperative name reads as a command when the
 # thing is really a query. We flag a method whose name leads with a producer verb
 # and carries a noun we can rename it to (`compute_total` -> `total`). A bare verb
 # (`fetch`) is left alone: with no noun there is nothing to rename to. A verb

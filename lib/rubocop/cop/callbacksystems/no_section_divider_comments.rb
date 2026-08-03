@@ -1,4 +1,4 @@
-# ASCII-art section dividers in comments add no information: a row of dashes,
+# ASCII-art section dividers in comments add no information. A row of dashes,
 # equals, or box-drawing glyphs is noise to the toolchain and signals padding
 # over substance. A pure divider should be removed; a divider wrapping a title
 # (`=== Setup ===`) should keep only its inner text as a normal comment.

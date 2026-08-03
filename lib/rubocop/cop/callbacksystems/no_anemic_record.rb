@@ -1,8 +1,7 @@
 # A hash of three or more keys, built in one place and read from several others,
-# is a concept with no behaviour: every caller reaches past it to its keys
-# (`context[:account]`) because it has no methods of its own. That is a data clump
-# wearing braces, and the same refactor applies: give it a class, and the methods
-# reading its keys become its methods.
+# is a data clump wearing braces. Every caller reaches past it to its keys
+# (`context[:account]`) because it has no methods of its own, so the same refactor
+# applies: give it a class, and the methods reading its keys become its methods.
 #
 # The distinction that matters is whether the hash travels. One built and consumed
 # on the spot, an options argument or a payload handed straight to a call, is a

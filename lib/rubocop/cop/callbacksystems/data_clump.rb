@@ -1,8 +1,8 @@
 # Detects a set of parameter names that travel together across a class's or
-# module's private methods, suggesting they should be extracted into a parameter
-# object. Only private methods are examined: a public method's signature answers
-# to an interface, not internal threading: the same reason the JS rule skips
-# exported functions and public members.
+# module's private methods. Those values are one concept, and the methods passing
+# them around should be its methods instead. Only private methods are examined: a
+# public method's signature answers to an interface, not internal threading: the
+# same reason the JS rule skips exported functions and public members.
 #
 # The set is found as a connected component in the co-occurrence graph of shared
 # parameter names: names used by two or more methods, linked whenever they appear
