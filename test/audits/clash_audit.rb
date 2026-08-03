@@ -1,10 +1,6 @@
-# Corrections do not run one cop at a time. `rubocop -a` loops over the whole enabled set, and two cops rewriting the
-# same region can leave something neither would produce alone: this is how `delegate :about, :about` got written, which
-# parses and holds every comment but defines the method twice.
-#
-# So each shape the suite declares is corrected by every correcting cop at once, the way a real run would, and the
-# result is checked: it has to still parse, and a `Lint` offense that was not there before the correction is one the fix
-# introduced.
+# `rubocop -a` loops over the whole enabled set, and two cops rewriting the same region can leave something neither
+# would produce alone. So each shape the suite declares is corrected by every correcting cop at once, the way a real run
+# does, and the result has to still parse and to pass the `Lint` cops it passed before.
 class ClashAudit
   MAX_PASSES = 5
   STYLE_CONFIG_PATH = File.expand_path("../../rubocop.yml", __dir__)

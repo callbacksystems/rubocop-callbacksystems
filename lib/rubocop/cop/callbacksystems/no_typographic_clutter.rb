@@ -21,8 +21,7 @@ class RuboCop::Cop::Callbacksystems::NoTypographicClutter < RuboCop::Cop::Callba
   ].freeze
   # Clutter ranges: zero-width space/joiner, smart quotes, the arrows block.
   CLUTTER_RANGES = [ 0x200B..0x200D, 0x2018..0x201F, 0x2190..0x21FF ].freeze
-  # Only these have one unambiguous ASCII spelling, so only these autocorrect. Written as escapes so this file stays
-  # ASCII-clean under its own cop.
+  # Only these have one unambiguous ASCII spelling, so only these autocorrect.
   ASCII_EQUIVALENT = {
     "\u2018" => "'", "\u2019" => "'",
     "\u201C" => "\"", "\u201D" => "\"",

@@ -197,8 +197,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         end
       end
 
-      # All three: a group left out makes the canonical list shorter than what it is compared against, and the offense
-      # has nothing to move.
       def canonical_order
         @canonical_order ||= VISIBILITIES.flat_map { ordered_by_visibility(it) }
       end

@@ -178,7 +178,6 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
       end
     end
 
-    # What lets a value be followed across a method boundary.
     class MethodIndex < Struct.new(:container)
       include RuboCop::Callbacksystems::Helpers
 

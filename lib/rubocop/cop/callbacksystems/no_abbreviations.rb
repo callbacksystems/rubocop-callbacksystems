@@ -22,8 +22,6 @@
 #   USER_ATTRIBUTES = %i[name email]
 #
 class RuboCop::Cop::Callbacksystems::NoAbbreviations < RuboCop::Cop::Callbacksystems::Base
-  # Excluded: params (Rails), args (Ruby), id/ids (standard),
-  #           config/env/info/lib/max/min/proc/temp/sync (common and clear)
   ABBREVIATIONS = {
     "abbrev" => "abbreviation",
     "amt" => "amount",
