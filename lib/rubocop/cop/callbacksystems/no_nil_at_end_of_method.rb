@@ -33,6 +33,12 @@
 #     nil
 #   end
 #
+# The correction is not safe, and is marked so: dropping the `nil` hands back
+# whatever the statement above it evaluates to, where the method used to answer
+# `nil`. That is the point of the rule, since a method reaching its end already
+# answers `nil` unless something else is being returned by accident, but it is a
+# change in what callers see, so it waits for the unsafe autocorrect pass.
+#
 class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 

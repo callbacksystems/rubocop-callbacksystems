@@ -58,4 +58,22 @@ class RuboCop::Cop::Callbacksystems::PreferManyTest < CopTestCase
       1 > users.size
     RUBY
   end
+
+  test "allows a string literal receiver, which has no many?" do
+    assert_no_offense <<~RUBY
+      "abc".length > 1
+    RUBY
+  end
+
+  test "allows an interpolated string receiver" do
+    assert_no_offense <<~'RUBY'
+      "a#{b}c".size > 1
+    RUBY
+  end
+
+  test "allows a receiver coerced to a string" do
+    assert_no_offense <<~RUBY
+      name.to_s.size > 1
+    RUBY
+  end
 end

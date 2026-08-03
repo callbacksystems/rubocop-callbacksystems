@@ -149,6 +149,7 @@ Callbacksystems/NoNestedModulesInClasses:
 
 Callbacksystems/NoNilAtEndOfMethod:
   Enabled: true
+  SafeAutoCorrect: false
 
 Callbacksystems/NoRedundantWrapperMethod:
   Enabled: true
