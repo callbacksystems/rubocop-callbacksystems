@@ -76,4 +76,26 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArgumentsTest < CopTestCase
   test "sorting is offered but marked unsafe, since the ancestor chain follows the list" do
     assert_not RuboCop::Cop::Callbacksystems::OrderedMixinArguments.new(CopTestCase.default_config).safe_autocorrect?
   end
+
+  test "sorts a list written across several lines onto one" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        include Searchable,
+          Confirmable,
+          Accessible
+      RUBY
+        include Accessible, Confirmable, Searchable
+      CORRECTED
+  end
+
+  test "reports a list holding a comment but leaves it, since the note belongs to one module" do
+    code = <<~RUBY
+      include Searchable,
+        # this one wins
+        Confirmable
+    RUBY
+
+    assert_offense code
+    assert_correction code, code
+  end
 end

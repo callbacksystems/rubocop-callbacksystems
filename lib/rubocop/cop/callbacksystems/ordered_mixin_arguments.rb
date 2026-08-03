@@ -1,9 +1,10 @@
-# Ensures mixin arguments on one line are sorted alphabetically.
+# Ensures the modules of one mixin call are sorted alphabetically.
 #
 # Putting several modules in one `include` is a claim that their order does not
 # matter, and once that holds they may as well read alphabetically. When the
 # order does matter, the modules belong on separate lines where the precedence
-# is written down rather than implied.
+# is written down rather than implied. Separate calls are left alone: it is the
+# comma that makes the claim, so only what shares one is sorted.
 #
 # Ruby resolves `include A, B` to the ancestors `[A, B]` and `include B, A` to
 # `[B, A]`, so sorting is only a rewrite of the appearance when no two modules
@@ -33,7 +34,7 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
   MESSAGE = "Sort mixin arguments alphabetically: `%<sorted>s`. If their order matters, put them on separate lines."
 
   def on_send(node)
-    mixin = MixinCall.new(node)
+    mixin = MixinCall.new(node, processed_source.comments)
     add_offense(node, message: mixin.offense_message) { mixin.reorder(it) } if mixin.unsorted?
   end
 
@@ -43,8 +44,9 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
     class MixinCall
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, comments)
         @node = node
+        @comments = comments
       end
 
       def unsorted?
@@ -55,12 +57,15 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
         format(MESSAGE, sorted: sorted_names.join(", "))
       end
 
+      # Sorting rewrites the whole list in one go, and a comment written among
+      # the modules was written about one of them: there is no telling which, so
+      # a list carrying one is reported and left to be sorted by hand.
       def reorder(corrector)
-        corrector.replace(arguments.first.source_range.join(arguments.last.source_range), sorted_names.join(", "))
+        corrector.replace(arguments_range, sorted_names.join(", ")) unless holds_comment?(arguments_range, comments)
       end
 
       private
-        attr_reader :node
+        attr_reader :node, :comments
         delegate :arguments, to: :node, private: true
 
         def mixin_call?
@@ -73,6 +78,10 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
 
         def sorted_names
           @sorted_names ||= names.sort
+        end
+
+        def arguments_range
+          arguments.first.source_range.join(arguments.last.source_range)
         end
     end
 end
