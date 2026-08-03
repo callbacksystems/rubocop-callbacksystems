@@ -1,5 +1,5 @@
 require "test_helper"
-require "cop_reference"
+require "audits/cop_reference"
 
 class DocumentationTest < ActiveSupport::TestCase
   test "the cop reference matches the cops that ship" do

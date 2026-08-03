@@ -13,6 +13,18 @@ class RuboCop::Callbacksystems::Helpers::CommentsTest < HelpersTestCase
     assert_equal "# one", Helpers.first_comment_in(*whole_of("# one\nfoo\n# two\n")).text
   end
 
+  test "comments_in returns every comment the range covers" do
+    range, comments = whole_of("foo\n# first\n# second\nbar\n")
+
+    assert_equal [ "# first", "# second" ], Helpers.comments_in(range, comments).map(&:text)
+  end
+
+  test "comments_in returns nothing when the range covers none" do
+    range, comments = whole_of("foo\nbar\n")
+
+    assert_empty Helpers.comments_in(range, comments)
+  end
+
   test "range_ending_at_first_comment stops the range short of the comment" do
     range, comments = whole_of("foo\n# a note\nbar\n")
 

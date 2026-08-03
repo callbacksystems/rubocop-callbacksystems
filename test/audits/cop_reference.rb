@@ -3,7 +3,7 @@
 # sentence is its description here and in `config/default.yml`, so the two can
 # never disagree and neither is written twice.
 class CopReference
-  ROOT = File.expand_path("..", __dir__)
+  ROOT = File.expand_path("../..", __dir__)
   COP_DIR = "lib/rubocop/cop/callbacksystems"
   CONFIG_PATH = "config/default.yml"
   DOCUMENT_PATH = "docs/README.md"

@@ -1,6 +1,6 @@
 require "test_helper"
-require "fixer_audit"
-require "clash_audit"
+require "audits/fixer_audit"
+require "audits/clash_audit"
 
 class FixerSafetyTest < ActiveSupport::TestCase
   test "no autocorrecting cop drops a comment or breaks the syntax" do

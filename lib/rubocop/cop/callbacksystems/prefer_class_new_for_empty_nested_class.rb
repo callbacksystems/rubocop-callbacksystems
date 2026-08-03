@@ -50,16 +50,15 @@ class RuboCop::Cop::Callbacksystems::PreferClassNewForEmptyNestedClass < RuboCop
       end
 
       def rewrite(corrector)
+        RuboCop::Callbacksystems::LiftedComments.new(node, comments_in(node.source_range, comments)).lift(corrector)
         corrector.replace(node, "#{name} = Class.new#{inherited_class}")
       end
 
       private
         attr_reader :node, :comments
 
-        # A body holding nothing but a comment is no body to the parser, but it is
-        # one to the reader, and `Class.new` has nowhere to put the note.
         def empty_body?
-          node.body.nil? && !holds_comment?(node.source_range, comments)
+          node.body.nil?
         end
 
         def nested?

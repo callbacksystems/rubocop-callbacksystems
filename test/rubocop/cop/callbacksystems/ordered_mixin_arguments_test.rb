@@ -99,8 +99,7 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArgumentsTest < CopTestCase
         end
       RUBY
         class Report
-          include Accessible,
-            Confirmable,
+          include Accessible, Confirmable,
             # the broad one
             Searchable
         end
@@ -118,8 +117,7 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArgumentsTest < CopTestCase
       RUBY
         class Report
           # only for confirmed accounts
-          include Confirmable,
-            Searchable
+          include Confirmable, Searchable
         end
       CORRECTED
   end

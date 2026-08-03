@@ -10,6 +10,10 @@ module RuboCop::Callbacksystems::Helpers::Comments
     comments.find { range.contains?(it.source_range) }
   end
 
+  def comments_in(range, comments)
+    comments.select { range.contains?(it.source_range) }
+  end
+
   # A range about to be deleted, cut back so it spares the comments inside it.
   # Which end moves depends on which side of the deletion the comment belongs to:
   # use this one when the code that survives is below, so the comment reads as

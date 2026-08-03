@@ -103,13 +103,19 @@ class RuboCop::Cop::Callbacksystems::PreferClassNewForEmptyNestedClassTest < Cop
       RUBY
   end
 
-  test "allows a nested class whose only body is a comment" do
-    assert_no_offense <<~RUBY
-      class Configuration
-        class Error < StandardError
-          # explains why this exists
+  test "lifts a comment out of the body it was the only thing in" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Configuration
+          class Error < StandardError
+            # explains why this exists
+          end
         end
-      end
-    RUBY
+      RUBY
+        class Configuration
+          # explains why this exists
+          Error = Class.new(StandardError)
+        end
+      CORRECTED
   end
 end

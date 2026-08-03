@@ -70,8 +70,8 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
     RUBY
   end
 
-  test "allows the marker on a constant already sitting in the private section" do
-    assert_no_offense <<~RUBY
+  test "reports the marker as redundant when the constant already sits in the private section" do
+    offenses = assert_offense <<~RUBY
       class Backend
         def formats
           FORMATS
@@ -82,16 +82,8 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSectionTest < CopT
           private_constant :FORMATS
       end
     RUBY
-  end
 
-  test "allows the marker because the section does not make a constant private" do
-    assert_no_offense <<~RUBY
-      class Backend
-        private
-          LIMIT = 10
-          private_constant :LIMIT
-      end
-    RUBY
+    assert_includes offenses.first.message, "already declared in the private section"
   end
 
   test "registers offense when the class-level read names another constant ending the same" do

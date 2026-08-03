@@ -9,7 +9,7 @@
 # introduced.
 class ClashAudit
   MAX_PASSES = 5
-  STYLE_CONFIG_PATH = File.expand_path("../rubocop.yml", __dir__)
+  STYLE_CONFIG_PATH = File.expand_path("../../rubocop.yml", __dir__)
   PROBE_FILE = "app/models/report.rb"
   TEST_PROBE_FILE = "test/models/report_test.rb"
 

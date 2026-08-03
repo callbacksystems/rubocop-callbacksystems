@@ -61,6 +61,7 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
 
       def autocorrect(corrector)
         if correctable?
+          lift_displaced_comments(corrector)
           corrector.replace(node.loc.begin, " \\")
           corrector.remove(trailing_parenthesis_range)
         end
@@ -136,24 +137,27 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
         end
 
         def correctable?
-          comments_undisturbed? && !last_argument_has_heredoc?
+          !last_argument_has_heredoc?
         end
 
-        def comments_undisturbed?
-          processed_source.comments.none? { disturbed?(it) }
+        def last_argument_has_heredoc?
+          node.last_argument.each_node(:any_str).any?(&:heredoc?)
         end
 
-        def disturbed?(comment)
-          disturbing_ranges.any? { it.contains?(comment.source_range) } || orphaned?(comment)
+        # A backslash joins its line to the next one, so a comment before the
+        # first argument would swallow it, and the closing parenthesis goes away
+        # taking whatever sits in front of it. Both move above the statement.
+        def lift_displaced_comments(corrector)
+          RuboCop::Callbacksystems::LiftedComments.new(node, displaced_comments).lift(corrector)
+          leading_comments.each { corrector.remove(line_removal_range_for(it)) }
         end
 
-        # A backslash joins its line to the next one, so a comment sitting between
-        # the parenthesis and the first argument would swallow that argument and
-        # orphan everything after it. The closing parenthesis goes away too, taking
-        # whatever was written in front of it. Only the parenthesised form can hold
-        # either one.
-        def disturbing_ranges
-          [ continuation_range, trailing_parenthesis_range ]
+        def displaced_comments
+          leading_comments + comments_in(trailing_parenthesis_range, processed_source.comments)
+        end
+
+        def leading_comments
+          comments_in(continuation_range, processed_source.comments)
         end
 
         def continuation_range
@@ -162,14 +166,6 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
 
         def trailing_parenthesis_range
           node.last_argument.source_range.end.join(node.loc.end)
-        end
-
-        def orphaned?(comment)
-          comment.source_range.line == node.loc.end.line && comment.source_range.begin_pos >= node.loc.end.end_pos
-        end
-
-        def last_argument_has_heredoc?
-          node.last_argument.each_node(:any_str).any?(&:heredoc?)
         end
     end
 end

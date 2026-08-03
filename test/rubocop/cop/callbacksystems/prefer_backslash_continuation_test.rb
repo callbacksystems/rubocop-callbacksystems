@@ -241,16 +241,20 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
     CORRECTED
   end
 
-  test "does not correct when a comment precedes the first argument" do
-    code = <<~RUBY
-      some_method(
+  test "lifts a comment before the first argument above the statement" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        some_method(
+          # keep this note
+          arg1: value1,
+          arg2: value2
+        )
+      RUBY
         # keep this note
-        arg1: value1,
-        arg2: value2
-      )
-    RUBY
-
-    assert_correction code, code
+        some_method \\
+          arg1: value1,
+          arg2: value2
+      CORRECTED
   end
 
   test "corrects around a comment between arguments, where the continuation still parses" do
@@ -269,38 +273,49 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
       CORRECTED
   end
 
-  test "does not correct when a comment precedes the closing parenthesis" do
-    code = <<~RUBY
-      some_method(
-        arg1: value1,
-        arg2: value2
+  test "lifts a comment in front of the closing parenthesis above the statement" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        some_method(
+          arg1: value1,
+          arg2: value2
+          # keep this note
+        )
+      RUBY
         # keep this note
-      )
-    RUBY
-
-    assert_correction code, code
+        some_method \\
+          arg1: value1,
+          arg2: value2
+      CORRECTED
   end
 
-  test "does not correct a trailing comment on the last argument" do
-    code = <<~RUBY
-      some_method(
-        arg1: value1,
-        arg2: value2 # keep this note
-      )
-    RUBY
-
-    assert_correction code, code
+  test "lifts a comment trailing the last argument above the statement" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        some_method(
+          arg1: value1,
+          arg2: value2 # keep this note
+        )
+      RUBY
+        # keep this note
+        some_method \\
+          arg1: value1,
+          arg2: value2
+      CORRECTED
   end
 
-  test "does not correct when a comment trails the closing parenthesis" do
-    code = <<~RUBY
-      some_method(
-        arg1: value1,
-        arg2: value2
-      ) # keep this note
-    RUBY
-
-    assert_correction code, code
+  test "leaves a comment trailing the closing parenthesis on the last argument" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        some_method(
+          arg1: value1,
+          arg2: value2
+        ) # keep this note
+      RUBY
+        some_method \\
+          arg1: value1,
+          arg2: value2 # keep this note
+      CORRECTED
   end
 
   test "does not correct when the last argument is a heredoc" do

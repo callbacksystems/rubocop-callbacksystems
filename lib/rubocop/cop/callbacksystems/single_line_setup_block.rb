@@ -72,8 +72,6 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
           holds_comment?(node.source_range, comments)
         end
 
-        # Only a heredoc's marker is inside the block; its body sits below the
-        # `end`, so it is written out again under the braced line.
         def bodies
           RuboCop::Callbacksystems::HeredocBodies.new(node)
         end

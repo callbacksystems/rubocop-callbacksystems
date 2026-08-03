@@ -149,8 +149,6 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           holds_comment?(node.source_range, comments)
         end
 
-        # A heredoc's body outlives the collapse: only its marker sits inside
-        # the expression, so the body is written out again below the line.
         def bodies
           RuboCop::Callbacksystems::HeredocBodies.new(node)
         end
@@ -298,8 +296,6 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           holds_comment?(node.source_range, comments)
         end
 
-        # A heredoc's body outlives the collapse: only its marker sits inside
-        # the call, so the body is written out again below the line.
         def bodies
           RuboCop::Callbacksystems::HeredocBodies.new(node)
         end

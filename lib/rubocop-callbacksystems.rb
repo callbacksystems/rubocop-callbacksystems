@@ -19,5 +19,3 @@ loader.push_dir("#{__dir__}/rubocop", namespace: RuboCop)
 loader.ignore("#{__dir__}/rubocop/callbacksystems/version.rb")
 loader.setup
 loader.eager_load
-
-RuboCop::ConfigObsoletion.files << "#{__dir__}/../config/obsoletion.yml"

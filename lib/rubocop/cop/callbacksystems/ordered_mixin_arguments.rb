@@ -23,19 +23,17 @@
 #   # good - single module (nothing to sort)
 #   include Searchable
 #
-#   # good - separate lines, where the precedence is explicit
+#   # good - separate lines (each line is independent)
 #   include Searchable
-#   include Confirmable  # wins over Searchable, so it comes second
+#   include Confirmable  # depends on Searchable
 #
-#   # bad - a note among the modules travels with the one it was written about
-#   include Searchable,
-#     # only for confirmed accounts
+#   # bad - a note travels with the module it was written about
+#   include Searchable, # only for confirmed accounts
 #     Confirmable
 #
 #   # good
 #   # only for confirmed accounts
-#   include Confirmable,
-#     Searchable
+#   include Confirmable, Searchable
 #
 class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
@@ -87,9 +85,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           @sorted_names ||= names.sort
         end
 
-        # Rewriting an annotated list means writing the statement out again, so
-        # a call sharing its line with other code is reported and left to be
-        # sorted by hand.
+        # Rewriting an annotated list writes the statement out again, which a
+        # call sharing its line with other code has no room for.
         def correctable?
           notes.empty? || starts_its_line?
         end
@@ -129,8 +126,6 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           notes.empty? ? arguments_range : statement_range
         end
 
-        # From the indentation up to the end of the line the list closes on, so
-        # the notes among the modules are the rewrite's to place.
         def statement_range
           arguments_range.with(begin_pos: node.source_range.begin_pos - node.loc.column, end_pos: closing_line.end_pos)
         end
@@ -139,9 +134,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           notes.empty? ? sorted_names.join(", ") : annotated_source
         end
 
-        # One module to a line, each under the notes written about it. The notes
-        # of whichever module now leads move above the statement: the line it
-        # shares with `include` has no room for them.
+        # The notes of whichever module now leads move above the statement: the
+        # line it shares with `include` has no room for them.
         def annotated_source
           "#{leading_notes}#{indentation}#{node.method_name} #{listed_mixins}"
         end
@@ -177,15 +171,15 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
         end
 
         def listed_mixins
-          [ sorted_mixins.first.name, *sorted_mixins.drop(1).map { it.written_at(continuation) } ].join(",\n")
+          sorted_mixins.drop(1).reduce(sorted_mixins.first.name) { |list, mixin| "#{list},#{mixin.after(continuation)}" }
         end
 
         def continuation
           "#{indentation}  "
         end
 
-        # One module in the list with the notes written about it, so sorting
-        # moves them together and a note keeps the module it belongs to.
+        # One module with the notes written about it, so sorting moves them
+        # together.
         class Mixin
           attr_reader :name
 
@@ -194,13 +188,14 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
             @notes = notes
           end
 
-          def written_at(indentation)
-            "#{notes_at(indentation)}#{indentation}#{name}"
+          # A module carrying a note takes a line of its own; one without stays
+          # on the line already running.
+          def after(indentation)
+            notes.any? ? "\n#{notes_at(indentation)}#{indentation}#{name}" : " #{name}"
           end
 
-          # Every note is written above its module. One trailing a module would
-          # land before the comma once the list is rebuilt, where a comment
-          # cannot sit.
+          # Above the module, never trailing it: a trailing note would land
+          # before the comma once the list is rebuilt.
           def notes_at(indentation)
             notes.map { "#{indentation}#{it}\n" }.join
           end

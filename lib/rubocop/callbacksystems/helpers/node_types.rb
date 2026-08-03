@@ -67,8 +67,6 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
       call.receiver.short_name if call.receiver&.const_type?
     end
 
-    # A heredoc's body sits on the lines below its marker, outside the range of
-    # the node holding it, which is what every heredoc-aware helper is about.
     def heredoc_literal?(node)
       node.type?(:str, :dstr, :xstr) && node.heredoc?
     end

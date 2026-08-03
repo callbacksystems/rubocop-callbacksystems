@@ -13,18 +13,16 @@ class CopTestCase < ActiveSupport::TestCase
   DEFAULT_FILE = "test/example_test.rb"
   DEFAULT_CONFIG_PATH = File.expand_path("../config/default.yml", __dir__)
 
-  # The cops read their thresholds from config/default.yml, which RuboCop merges
-  # in through the plugin when it resolves a project's configuration. The bare
-  # Commissioner used here does no resolving, so the defaults are loaded once and
-  # handed to every cop under test.
-  def self.default_config
-    @default_config ||= RuboCop::ConfigLoader.merge_with_default(
-      RuboCop::ConfigLoader.load_file(DEFAULT_CONFIG_PATH), DEFAULT_CONFIG_PATH
-    )
-  end
-
   class << self
     attr_accessor :cop_class
+
+    # The bare Commissioner these tests use resolves no configuration, so the
+    # thresholds the cops read come from here.
+    def default_config
+      @default_config ||= RuboCop::ConfigLoader.merge_with_default(
+        RuboCop::ConfigLoader.load_file(DEFAULT_CONFIG_PATH), DEFAULT_CONFIG_PATH
+      )
+    end
   end
 
   private

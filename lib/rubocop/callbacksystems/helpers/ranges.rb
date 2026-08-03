@@ -19,9 +19,7 @@ module RuboCop::Callbacksystems::Helpers::Ranges
     " " * node.source_range.column
   end
 
-  # Where a node's source really ends. A heredoc body sits below the line its
-  # marker is on, past the end of the node holding it, so a range built from
-  # that end would reach back over the body and delete it.
+  # Where a node's source really ends, past any heredoc body below it.
   def source_end_of(node)
     [ node.source_range.end_pos, *heredoc_ends_in(node) ].max
   end

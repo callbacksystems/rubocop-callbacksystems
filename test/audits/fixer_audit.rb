@@ -6,7 +6,7 @@ class FixerAudit
   MARKER = "# fixer-safety-marker"
   DEFAULT_FILE = "test/example_test.rb"
   HEREDOC_TAGS = %w[RUBY CORRECTED SOURCE EXPECTED].freeze
-  COP_TEST_DIR = File.expand_path("rubocop/cop/callbacksystems", __dir__)
+  COP_TEST_DIR = File.expand_path("../rubocop/cop/callbacksystems", __dir__)
 
   # Removing comments is what these are for, so losing one is the fix working.
   COMMENT_REMOVERS = %w[

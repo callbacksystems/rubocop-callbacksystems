@@ -17,11 +17,10 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
   spec.metadata["documentation_uri"] = "#{spec.homepage}/blob/main/docs/README.md"
-  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.metadata["default_lint_roller_plugin"] = "RuboCop::Callbacksystems::Plugin"
 
-  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "CHANGELOG.md", "LICENSE"]
+  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "LICENSE"]
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "activesupport"
