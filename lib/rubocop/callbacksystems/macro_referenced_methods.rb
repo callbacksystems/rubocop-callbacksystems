@@ -39,7 +39,9 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     class Node
       include RuboCop::Callbacksystems::Helpers
 
-      CALLBACK_OPTIONS = %i[if unless].freeze
+      # Options whose symbol names a method the macro calls: the conditions that
+      # guard a callback, and the handler `rescue_from` hands control to.
+      METHOD_OPTIONS = %i[if unless with].freeze
 
       # Macros that define a method named after their symbol argument instead of
       # referencing an existing one. Their symbol is the method's name, not a call
@@ -52,7 +54,14 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
         cattr_reader cattr_writer cattr_accessor
         thread_mattr_accessor thread_cattr_accessor
         class_attribute store_accessor attribute delegate
+        scope enum composed_of define_method
+        has_many has_one belongs_to has_and_belongs_to_many
+        has_rich_text has_one_attached has_many_attached
       ].freeze
+
+      # The one macro whose reference is not its leading symbol: `alias_method`
+      # defines the first name and calls the second.
+      ALIASING_MACRO = :alias_method
 
       def initialize(node)
         @node = node
@@ -72,7 +81,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
         # A callback condition (`if:`/`unless:`) is evaluated before the action it
         # guards, so it comes first, keeping guard-then-action in the order.
         def from_send
-          hash_option_references + first_symbol_argument + lambda_argument_calls
+          hash_option_references + symbol_argument_reference + lambda_argument_calls
         end
 
         def hash_option_references
@@ -87,7 +96,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
           if key.sym_type?
             case key.value
             when :to then delegate_target_of(value)
-            when *CALLBACK_OPTIONS then callback_condition_of(value)
+            when *METHOD_OPTIONS then method_option_of(value)
             else []
             end
           else
@@ -103,7 +112,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
           end
         end
 
-        def callback_condition_of(value)
+        def method_option_of(value)
           case value.type
           when :sym then [ value.value ]
           when :block then receiverless_method_names_in(value.body)
@@ -111,11 +120,19 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
           end
         end
 
-        def first_symbol_argument
-          return [] if DEFINING_MACROS.include?(node.method_name)
+        # The symbol argument naming a method the macro will call. Most macros
+        # lead with it, the defining ones name a method they create rather than
+        # one to call, and `alias_method` calls the second of its two.
+        def symbol_argument_reference
+          case node.method_name
+          when ALIASING_MACRO then symbol_values.drop(1).take(1)
+          when *DEFINING_MACROS then []
+          else symbol_values.take(1)
+          end
+        end
 
-          symbol = node.arguments.find(&:sym_type?)
-          symbol ? [ symbol.value ] : []
+        def symbol_values
+          node.arguments.select(&:sym_type?).map(&:value)
         end
 
         def lambda_argument_calls

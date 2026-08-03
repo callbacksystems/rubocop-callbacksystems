@@ -120,15 +120,17 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
     assert_not_includes result, :status
   end
 
-  test "ordered returns referenced names in source order, guard before action" do
+  test "all skips the association readers a macro defines rather than calls" do
     body = ast <<~RUBY
-      after_commit :second, if: :first?
-      before_save :third
+      has_many :orders
+      belongs_to :account
+      has_one :profile
+      has_and_belongs_to_many :tags
     RUBY
 
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).ordered
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
 
-    assert_equal %i[first? second third], result
+    assert_empty result
   end
 
   test "collects lambda callback method calls" do
@@ -240,6 +242,71 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
     result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
 
     assert_not_includes result, :notify
+  end
+
+  test "all skips the method a scope defines while keeping the calls in its body" do
+    body = ast <<~RUBY
+      scope :active, -> { confirmed }
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_equal Set[:confirmed], result
+  end
+
+  test "all skips the names enum, composed_of and define_method declare" do
+    body = ast <<~RUBY
+      enum :status, %i[draft live]
+      composed_of :balance
+      define_method(:thing) { 1 }
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_empty result
+  end
+
+  test "all skips the accessors the attachment and rich text macros define" do
+    body = ast <<~RUBY
+      has_rich_text :body
+      has_one_attached :avatar
+      has_many_attached :files
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_empty result
+  end
+
+  test "all takes the second name of alias_method, the one it calls" do
+    body = ast <<~RUBY
+      alias_method :size, :length
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_equal Set[:length], result
+  end
+
+  test "all takes the handler rescue_from is given" do
+    body = ast <<~RUBY
+      rescue_from ActiveRecord::RecordNotFound, with: :not_found
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+
+    assert_equal Set[:not_found], result
+  end
+
+  test "ordered returns referenced names in source order, guard before action" do
+    body = ast <<~RUBY
+      after_commit :second, if: :first?
+      before_save :third
+    RUBY
+
+    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).ordered
+
+    assert_equal %i[first? second third], result
   end
 
   private
