@@ -767,4 +767,37 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
 
     assert_correction code, code
   end
+
+  test "allows a protected method in its conventional place between public and private" do
+    assert_no_offense <<~RUBY
+      class Order
+        def public_one
+          helper
+        end
+
+        protected
+          def guarded
+            helper
+          end
+
+        private
+          def helper; end
+      end
+    RUBY
+  end
+
+  test "puts a protected method after the public ones and before the private ones" do
+    offenses = assert_offense <<~RUBY
+      class Order
+        private
+          def helper; end
+
+        protected
+          def guarded
+            helper
+          end
+      end
+    RUBY
+    assert_includes offenses.first.message, "guarded"
+  end
 end

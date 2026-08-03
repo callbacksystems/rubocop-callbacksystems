@@ -280,7 +280,24 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
 
         def deletable?
-          unused? || !inline_target.nil?
+          discardable? || !inline_target.nil?
+        end
+
+        # An unread assignment still runs whatever built it, and in a setup block
+        # that call is often the precondition the tests rely on: deleting
+        # `@record = Record.create!` takes the record with it. A literal does
+        # nothing on its own and a fixture call only reads, so those still go; any
+        # other call is reported and left for whoever knows whether it matters.
+        def discardable?
+          unused? && inert_value?
+        end
+
+        def inert_value?
+          INLINABLE_TYPES.include?(value.type) || fixture_read?
+        end
+
+        def fixture_read?
+          RuboCop::Callbacksystems::FixtureCall.new(value).valid?
         end
     end
 

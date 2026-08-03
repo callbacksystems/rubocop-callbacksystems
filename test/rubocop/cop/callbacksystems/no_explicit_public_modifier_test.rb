@@ -114,4 +114,30 @@ class NoExplicitPublicModifierTest < CopTestCase
       end
     CORRECTED
   end
+
+  test "keeps the declaration when public modifies one" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Order
+          public attr_reader :token
+        end
+      RUBY
+        class Order
+          attr_reader :token
+        end
+      CORRECTED
+  end
+
+  test "keeps a delegate the public modifier stands in front of" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        class Order
+          public delegate :name, to: :user
+        end
+      RUBY
+        class Order
+          delegate :name, to: :user
+        end
+      CORRECTED
+  end
 end

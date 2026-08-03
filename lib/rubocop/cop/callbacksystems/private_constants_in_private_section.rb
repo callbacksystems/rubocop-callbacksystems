@@ -1,11 +1,13 @@
-# A constant that only serves the implementation belongs in the private
-# section, where every other implementation detail already lives. Marking it
-# with `private_constant` from the top of the class says the same thing twice
-# and leaves the declaration among the public ones.
+# A constant that only serves the implementation belongs in the private section,
+# where every other implementation detail already lives. This is about placement
+# only: `private` changes the default visibility of *methods* and leaves constants
+# alone, so `private_constant` is what actually makes one unreachable from
+# outside, and the section is no substitute for it. Keep the marker; move the
+# declaration.
 #
-# The marker earns its place when class-level code above the private section
-# reads the constant, since the declaration cannot move below the code that
-# reads it. Class-level code inside the section moves down with it.
+# A constant read by class-level code above the section stays where it is, since
+# the declaration cannot move below the code that reads it. Class-level code
+# inside the section moves down with it.
 #
 # @example
 #   # bad - only method bodies read it
@@ -18,7 +20,7 @@
 #     end
 #   end
 #
-#   # good - declared where the implementation lives
+#   # good - declared where the implementation lives, still marked private
 #   class Backend
 #     def route_for(host)
 #       Route.new(host, nil)
@@ -26,6 +28,7 @@
 #
 #     private
 #       Route = Data.define(:host, :matcher)
+#       private_constant :Route
 #   end
 #
 #   # bad - the reader is private too, so both move
@@ -41,6 +44,7 @@
 #   class Backend
 #     private
 #       MEMBERS = [ :host, :matcher ].freeze
+#       private_constant :MEMBERS
 #       Route = Data.define(*MEMBERS)
 #   end
 #
@@ -53,8 +57,7 @@
 #   end
 #
 class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop::Cop::Callbacksystems::Base
-  MESSAGE = "Declare `%<name>s` in the private section instead of marking it with `private_constant`."
-  REDUNDANT_MESSAGE = "Remove `private_constant` from `%<name>s`, which is already declared in the private section."
+  MESSAGE = "Declare `%<name>s` in the private section, where the implementation it serves lives."
   DEFERRED_MACROS = %i[test setup teardown].freeze
 
   def on_send(node)
@@ -85,7 +88,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         attr_reader :node
 
         def movable_arguments
-          marked_arguments.reject { pinned?(it) }
+          marked_arguments.reject { settled?(it) }
         end
 
         def marked_arguments
@@ -94,6 +97,11 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
 
         def marker?
           bare_send?(node) && node.method?(:private_constant)
+        end
+
+        # Pinned by class-level code above, or already sitting in the section.
+        def settled?(argument)
+          pinned?(argument) || declared_privately?(declaration_of(argument.value.to_s))
         end
 
         def pinned?(argument)
@@ -116,16 +124,6 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           enclosing_class_or_module_of(node)&.body
         end
 
-        def message_for(argument)
-          format(template_for(argument.value.to_s), name: argument.value)
-        end
-
-        # The marker on a constant already sitting in the private section says
-        # nothing the section does not.
-        def template_for(name)
-          declared_privately?(declaration_of(name)) ? REDUNDANT_MESSAGE : MESSAGE
-        end
-
         def declared_privately?(declaration)
           declaration && in_private_section?(declaration, enclosing_body)
         end
@@ -139,6 +137,10 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           when :casgn then statement.name.to_s
           when :class, :module then statement.identifier.short_name.to_s
           end
+        end
+
+        def message_for(argument)
+          format(MESSAGE, name: argument.value)
         end
     end
 

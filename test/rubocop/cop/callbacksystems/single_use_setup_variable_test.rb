@@ -428,4 +428,21 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
     assert_offense code, file: "test/models/order_test.rb"
     assert_correction code, code, file: "test/models/order_test.rb"
   end
+
+  test "reports an unread creation but leaves it, since the record may be the precondition" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @record = Record.create!
+        end
+
+        test "listing works" do
+          assert Record.count.positive?
+        end
+      end
+    RUBY
+
+    assert_offense code
+    assert_correction code, code
+  end
 end

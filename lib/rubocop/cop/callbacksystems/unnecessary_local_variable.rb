@@ -50,6 +50,29 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
   end
 
   private
+    # One step from the reference up towards the statement that would absorb it,
+    # and whether Ruby may skip that position.
+    class Step < Data.define(:child, :parent)
+      # A short-circuit, a condition and a case subject all evaluate their first
+      # child before deciding, and a safe navigation its receiver; whatever comes
+      # after that may never run.
+      GATED = %i[and or if while until case case_match csend].freeze
+      SKIPPABLE = %i[block numblock itblock resbody].freeze
+
+      def deferred?
+        skippable? || gated?
+      end
+
+      private
+        def skippable?
+          SKIPPABLE.include?(parent&.type)
+        end
+
+        def gated?
+          GATED.include?(parent&.type) && !parent.children.first.equal?(child)
+        end
+    end
+
     class Assignment
       include RuboCop::Callbacksystems::Helpers
 
@@ -123,6 +146,10 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
         end
 
         def inlineable?
+          reads_the_reference? && unconditionally_reached?
+        end
+
+        def reads_the_reference?
           next_statement&.each_node(:lvar)&.any? { it.equal?(reference) }
         end
 
@@ -135,6 +162,19 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
 
         def reference
           references.first
+        end
+
+        # Inlining moves the call down to where the reference sits, so it keeps
+        # the original evaluation only when that place is always reached. Behind a
+        # short-circuit, a branch, a block or a safe navigation the call would
+        # stop happening when the assignment used to run it every time.
+        def unconditionally_reached?
+          steps_to_next_statement.none?(&:deferred?)
+        end
+
+        def steps_to_next_statement
+          nodes = [ reference, *reference.each_ancestor.take_while { it != next_statement } ]
+          nodes.map { Step.new(child: it, parent: it.parent) }
         end
 
         # The assignment and the whitespace up to the statement that absorbs it,

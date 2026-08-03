@@ -194,6 +194,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         @macro_references = macro_references
       end
 
+      VISIBILITIES = %i[public protected private].freeze
+
       def each_offense(&block)
         if block
           report_divergence(&block) if analyzable?
@@ -202,8 +204,12 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         end
       end
 
+      # All three groups, in the order Ruby classes conventionally declare them.
+      # Leaving `protected` out made the canonical list shorter than the methods
+      # it was compared against, so a class holding one drew an offense whose
+      # correction had nothing to move.
       def canonical_order
-        @canonical_order ||= ordered_by_visibility(:public) + ordered_by_visibility(:private)
+        @canonical_order ||= VISIBILITIES.flat_map { ordered_by_visibility(it) }
       end
 
       private

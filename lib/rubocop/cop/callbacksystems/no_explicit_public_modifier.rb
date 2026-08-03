@@ -53,7 +53,7 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
       # A bare `public` reopening visibility after `private` would make the methods
       # below it private, so that case is reported but left for a human to reorder.
       def correct(corrector)
-        corrector.remove(line_removal_range_for(node)) if redundant?
+        corrector.remove(removal_range) if redundant?
       end
 
       private
@@ -69,6 +69,21 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
 
         def preceding_siblings
           (node.parent&.children || []).take_while { it != node }
+        end
+
+        # `public` and `public :foo` say nothing but visibility, so the whole line
+        # goes. `public attr_reader :token` also declares something, and only the
+        # keyword is redundant there: taking the line would take the reader too.
+        def removal_range
+          visibility_only? ? line_removal_range_for(node) : keyword_range
+        end
+
+        def visibility_only?
+          node.arguments.all? { it.type?(:sym, :str) }
+        end
+
+        def keyword_range
+          node.loc.selector.join(node.first_argument.source_range.begin)
         end
     end
 end
