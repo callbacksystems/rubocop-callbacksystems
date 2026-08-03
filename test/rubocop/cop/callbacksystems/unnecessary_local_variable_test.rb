@@ -354,4 +354,20 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariableTest < CopTestCase
       end
     SAME
   end
+
+  test "keeps a comment written between the assignment and the statement that absorbs it" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        def process
+          directory = forbidden_directory
+          # keep this note
+          add_offense(node) if directory
+        end
+      RUBY
+        def process
+          # keep this note
+          add_offense(node) if forbidden_directory
+        end
+      CORRECTED
+  end
 end

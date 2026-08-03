@@ -41,18 +41,49 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callback
   def on_def(node)
     return if node.body&.nil_type?
 
-    last = last_statement_in(node.body)
-    add_offense(last, message: MESSAGE) { remove_trailing_nil(it, last) } if last&.nil_type?
+    trailing = TrailingNil.new(last_statement_in(node.body), processed_source.comments)
+    add_offense(trailing.node, message: MESSAGE) { trailing.remove(it) } if trailing.offense?
   end
 
   alias on_defs on_def
 
   private
-    # Drop the `nil` and the separator before it (newline or `;`), so the fix works
-    # for both multi-line bodies and one-liners. A `nil` with no preceding sibling
-    # (a lone statement in a `begin` block) is reported but left alone.
-    def remove_trailing_nil(corrector, nil_node)
-      previous = nil_node.left_sibling
-      corrector.remove(nil_node.source_range.with(begin_pos: previous.source_range.end_pos)) if previous
+    # The `nil` a method ends with, together with the separator that goes with it.
+    class TrailingNil
+      include RuboCop::Callbacksystems::Helpers
+
+      attr_reader :node
+
+      def initialize(node, comments)
+        @node = node
+        @comments = comments
+      end
+
+      def offense?
+        node&.nil_type?
+      end
+
+      # Drop the `nil` and the separator before it (newline or `;`), so the fix
+      # works for both multi-line bodies and one-liners. A `nil` with no preceding
+      # sibling, a lone statement in a `begin` block, is reported but left alone.
+      def remove(corrector)
+        corrector.remove(removal_range) if previous
+      end
+
+      private
+        attr_reader :comments
+
+        def previous
+          node.left_sibling
+        end
+
+        # A comment in that separator keeps its place under the statement above it.
+        def removal_range
+          range_starting_after_last_comment(separator, comments)
+        end
+
+        def separator
+          node.source_range.with(begin_pos: previous.source_range.end_pos)
+        end
     end
 end

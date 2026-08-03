@@ -200,4 +200,20 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturnTest < CopTestCase
       end
     SAME
   end
+
+  test "keeps a comment written between the assignment and the returned read" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        def process
+          result = calculate_something
+          # keep this note
+          result
+        end
+      RUBY
+        def process
+          # keep this note
+          calculate_something
+        end
+      CORRECTED
+  end
 end

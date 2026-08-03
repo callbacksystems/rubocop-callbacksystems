@@ -61,7 +61,7 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
 
   def on_def(node)
     if (last = last_statement_in(node.body))
-      returned = ReturnedLocal.new(last)
+      returned = ReturnedLocal.new(last, processed_source.comments)
       add_offense(last, message: MESSAGE) { returned.inline(it) } if returned.local?
     end
   end
@@ -73,22 +73,31 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
     # the value only when that variable is assigned immediately above and read just
     # once (here); mutation in between or any extra read is left for a human.
     class ReturnedLocal
-      def initialize(node)
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, comments)
         @node = node
+        @comments = comments
       end
 
       def local?
         variable&.lvar_type?
       end
 
+      # The expression takes the place of the read and the assignment goes away,
+      # rather than one replacement spanning both: a comment written between them
+      # belongs to the line that survives, and a replacement over the whole span
+      # would delete it. Replacing the read also leaves an explicit `return` where
+      # its author put it.
       def inline(corrector)
         if inlineable?
-          corrector.replace(node.source_range.with(begin_pos: assignment.source_range.begin_pos), replacement)
+          corrector.remove(assignment_removal_range)
+          corrector.replace(variable, assignment.expression.source)
         end
       end
 
       private
-        attr_reader :node
+        attr_reader :node, :comments
 
         def variable
           node.return_type? ? node.children.first : node
@@ -115,8 +124,12 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
           node.each_ancestor(:any_def).first
         end
 
-        def replacement
-          node.return_type? ? "return #{assignment.expression.source}" : assignment.expression.source
+        def assignment_removal_range
+          range_ending_at_first_comment(assignment_gap, comments)
+        end
+
+        def assignment_gap
+          assignment.source_range.with(end_pos: node.source_range.begin_pos)
         end
     end
 end

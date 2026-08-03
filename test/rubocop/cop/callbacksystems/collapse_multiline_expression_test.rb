@@ -360,4 +360,23 @@ class CollapseMultilineExpressionTest < CopTestCase
       }
     RUBY
   end
+
+  test "allows a multiline literal holding a comment, which one line could not keep" do
+    assert_no_offense <<~RUBY
+      x = {
+        # keep this note
+        foo: 1,
+        bar: 2
+      }
+    RUBY
+  end
+
+  test "allows a multiline call holding a comment" do
+    assert_no_offense <<~RUBY
+      User.new(
+        # keep this note
+        name: "John"
+      )
+    RUBY
+  end
 end

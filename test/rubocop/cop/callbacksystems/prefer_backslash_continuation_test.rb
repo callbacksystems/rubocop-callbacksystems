@@ -241,6 +241,34 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuationTest < CopTestCa
     CORRECTED
   end
 
+  test "does not correct when a comment precedes the first argument" do
+    code = <<~RUBY
+      some_method(
+        # keep this note
+        arg1: value1,
+        arg2: value2
+      )
+    RUBY
+
+    assert_correction code, code
+  end
+
+  test "corrects around a comment between arguments, where the continuation still parses" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        some_method(
+          arg1: value1,
+          # keep this note
+          arg2: value2
+        )
+      RUBY
+        some_method \\
+          arg1: value1,
+          # keep this note
+          arg2: value2
+      CORRECTED
+  end
+
   test "does not correct when a comment precedes the closing parenthesis" do
     code = <<~RUBY
       some_method(

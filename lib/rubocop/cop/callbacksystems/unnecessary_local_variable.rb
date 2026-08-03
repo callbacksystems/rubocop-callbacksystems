@@ -45,14 +45,17 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
   MESSAGE = "Variable `%<name>s` is unnecessary. Call the method directly or extract a well-named declarative method."
 
   def on_lvasgn(node)
-    assignment = Assignment.new(node)
+    assignment = Assignment.new(node, processed_source.comments)
     add_offense(node, message: assignment.offense_message) { assignment.inline(it) } if assignment.offense?
   end
 
   private
     class Assignment
-      def initialize(node)
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, comments)
         @node = node
+        @comments = comments
         @variable_name = node.name
         @value = node.expression
       end
@@ -69,13 +72,13 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
       # runs between the call and its use, so its evaluation order cannot change.
       def inline(corrector)
         if inlineable?
-          corrector.remove(node.source_range.with(end_pos: next_statement.source_range.begin_pos))
+          corrector.remove(removal_range)
           corrector.replace(reference, inlined_source)
         end
       end
 
       private
-        attr_reader :node, :variable_name, :value
+        attr_reader :node, :comments, :variable_name, :value
 
         def aliases_named_call?
           value&.type?(:call) && !computed_expression? && !value.multiline?
@@ -132,6 +135,17 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
 
         def reference
           references.first
+        end
+
+        # The assignment and the whitespace up to the statement that absorbs it,
+        # stopping short of any comment in that gap: it was written about the
+        # statement that survives.
+        def removal_range
+          range_ending_at_first_comment(assignment_gap, comments)
+        end
+
+        def assignment_gap
+          node.source_range.with(end_pos: next_statement.source_range.begin_pos)
         end
 
         # An assignment gives a bare call its own statement, so `find_account "id"`

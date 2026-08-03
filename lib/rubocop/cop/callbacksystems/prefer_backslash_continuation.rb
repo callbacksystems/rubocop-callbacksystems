@@ -140,11 +140,24 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
         end
 
         def comments_undisturbed?
-          processed_source.comments.none? { removed?(it) || orphaned?(it) }
+          processed_source.comments.none? { disturbed?(it) }
         end
 
-        def removed?(comment)
-          trailing_parenthesis_range.contains?(comment.source_range)
+        def disturbed?(comment)
+          disturbing_ranges.any? { it.contains?(comment.source_range) } || orphaned?(comment)
+        end
+
+        # A backslash joins its line to the next one, so a comment sitting between
+        # the parenthesis and the first argument would swallow that argument and
+        # orphan everything after it. The closing parenthesis goes away too, taking
+        # whatever was written in front of it. Only the parenthesised form can hold
+        # either one.
+        def disturbing_ranges
+          [ continuation_range, trailing_parenthesis_range ]
+        end
+
+        def continuation_range
+          node.loc.begin.join(node.first_argument.source_range.begin)
         end
 
         def trailing_parenthesis_range

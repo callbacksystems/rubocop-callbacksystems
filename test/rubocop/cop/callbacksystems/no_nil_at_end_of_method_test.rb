@@ -117,4 +117,20 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethodTest < CopTestCase
   test "removes the trailing nil in a one-line method" do
     assert_correction "def process; do_something; nil; end", "def process; do_something; end"
   end
+
+  test "keeps a comment written above the trailing nil" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        def process
+          do_something
+          # keep this note
+          nil
+        end
+      RUBY
+        def process
+          do_something
+          # keep this note
+        end
+      CORRECTED
+  end
 end

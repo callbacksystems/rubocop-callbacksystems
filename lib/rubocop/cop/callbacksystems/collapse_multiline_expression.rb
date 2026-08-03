@@ -46,49 +46,44 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
   ARRAY_SHAPE = { open: "[", close: "]", items: :values }.freeze
 
   def on_hash(node)
-    collapser = LiteralCollapser.new(node, max_line_length, HASH_SHAPE)
-    if collapser.offense?
-      add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node, collapser.collapsed)
-      end
-    end
+    collapse LiteralCollapser.new(node, max_line_length, HASH_SHAPE, comments)
   end
 
   def on_array(node)
-    collapser = LiteralCollapser.new(node, max_line_length, ARRAY_SHAPE)
-    if collapser.offense?
-      add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node, collapser.collapsed)
-      end
-    end
+    collapse LiteralCollapser.new(node, max_line_length, ARRAY_SHAPE, comments)
   end
 
   def on_send(node)
-    collapser = SendCollapser.new(node, max_line_length)
-
-    if collapser.offense?
-      add_offense(node, message: MESSAGE) do |corrector|
-        corrector.replace(node, collapser.collapsed)
-      end
-    end
+    collapse SendCollapser.new(node, max_line_length, comments)
   end
 
   alias on_csend on_send
 
   private
+    delegate :comments, to: :processed_source, private: true
+
+    def collapse(collapser)
+      add_offense(collapser.node, message: MESSAGE) { it.replace(collapser.node, collapser.collapsed) } if collapser.offense?
+    end
+
     def max_line_length
       cop_config["MaxLineLength"]
     end
 
     class LiteralCollapser
-      def initialize(node, max_line_length, shape)
+      include RuboCop::Callbacksystems::Helpers
+
+      attr_reader :node
+
+      def initialize(node, max_line_length, shape, comments)
         @node = node
         @max_line_length = max_line_length
         @shape = shape
+        @comments = comments
       end
 
       def offense?
-        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line?
+        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line? && !carries_comment?
       end
 
       def collapsed
@@ -96,7 +91,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       private
-        attr_reader :node, :max_line_length, :shape
+        attr_reader :max_line_length, :shape, :comments
 
         def delimiter_match?
           node.loc.begin&.source == shape[:open]
@@ -125,18 +120,31 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         def suffix_length
           node.loc.end.source_line.length - node.loc.end.column - 1
         end
+
+        # One line cannot hold an own-line comment, so an expression carrying one
+        # keeps the shape it has.
+        def carries_comment?
+          holds_comment?(node.source_range, comments)
+        end
     end
 
     class SendCollapser
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node, max_line_length)
+      attr_reader :node
+
+      def initialize(node, max_line_length, comments)
         @node = node
         @max_line_length = max_line_length
+        @comments = comments
       end
 
       def offense?
-        multiline? && !block_call? && !operator_method? && !link_in_chain? && !chain_contains_blocks? && chain_collapsible? && fits_on_one_line?
+        multiline? && collapsible_shape? && chain_collapsible? && fits_on_one_line? && !carries_comment?
+      end
+
+      def collapsible_shape?
+        !block_call? && !operator_method? && !link_in_chain? && !chain_contains_blocks?
       end
 
       def collapsed
@@ -144,7 +152,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       private
-        attr_reader :node, :max_line_length
+        attr_reader :max_line_length, :comments
         delegate :operator_method?, to: :node, private: true
 
         def multiline?
@@ -205,7 +213,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           if node.receiver
             dot = node.loc.dot&.source || "."
             receiver_collapsed = if node.receiver.send_type?
-              self.class.new(node.receiver, max_line_length).collapsed
+              self.class.new(node.receiver, max_line_length, comments).collapsed
             else
               node.receiver.source.strip
             end
@@ -233,6 +241,12 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           return arg.children.map { it.source.strip } if implicit_hash?(arg)
 
           [ arg.source.strip ]
+        end
+
+        # One line cannot hold an own-line comment, so a call carrying one keeps
+        # the shape it has.
+        def carries_comment?
+          holds_comment?(node.source_range, comments)
         end
     end
 end
