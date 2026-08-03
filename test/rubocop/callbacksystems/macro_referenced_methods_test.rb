@@ -244,58 +244,56 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
     assert_not_includes result, :notify
   end
 
-  test "all skips the method a scope defines while keeping the calls in its body" do
-    body = ast <<~RUBY
-      scope :active, -> { confirmed }
-    RUBY
+  MACROS = {
+    "attr_reader :node" => [],
+    "attribute :priority, :integer" => [],
+    "class_attribute :setting" => [],
+    "store_accessor :settings, :theme" => [],
+    "belongs_to :account" => [],
+    "has_many :orders" => [],
+    "has_one :profile" => [],
+    "has_and_belongs_to_many :tags" => [],
+    "has_rich_text :body" => [],
+    "has_one_attached :avatar" => [],
+    "has_many_attached :files" => [],
+    "has_secure_token :auth_token" => [],
+    "has_secure_password :recovery_password" => [],
+    "generates_token_for :password_reset" => [],
+    "composed_of :balance" => [],
+    "enum :status, %i[draft live]" => [],
+    "define_method(:thing) { 1 }" => [],
+    "queue_as :default" => [],
+    "scope :active, -> { confirmed }" => [ :confirmed ],
+    "alias_method :size, :length" => [ :length ],
+    "alias_attribute :name, :title" => [ :title ],
+    "validate :name_is_unique" => [ :name_is_unique ],
+    "validates :name, presence: true" => [ :name ],
+    "normalizes :email, with: ->(value) { value.strip }" => [ :email ],
+    "encrypts :ssn" => [ :ssn ],
+    "serialize :payload, coder: JSON" => [ :payload ],
+    "accepts_nested_attributes_for :orders" => [ :orders ],
+    "broadcasts_to :account" => [ :account ],
+    "delegate :name, to: :account" => [ :account ],
+    "delegate_missing_to :account" => [ :account ],
+    "before_save :normalize, if: :dirty?" => [ :dirty?, :normalize ],
+    "after_commit :notify, on: :create" => [ :notify ],
+    "before_action :authenticate" => [ :authenticate ],
+    "skip_before_action :authenticate" => [ :authenticate ],
+    "around_action :with_locale" => [ :with_locale ],
+    "helper_method :current_user" => [ :current_user ],
+    "layout :chosen_layout" => [ :chosen_layout ],
+    "rescue_from ActiveRecord::RecordNotFound, with: :not_found" => [ :not_found ],
+    "rate_limit to: 10, with: -> { redirect_to root_url }" => [ :redirect_to, :root_url ],
+    "around_perform :with_timing" => [ :with_timing ],
+    "retry_on Timeout::Error, with: :reschedule" => [ :reschedule ],
+    "after_deliver :log_delivery" => [ :log_delivery ]
+  }.freeze
 
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
+  test "all resolves each Rails macro to the methods of the class it calls" do
+    disagreeing = MACROS.reject { |macro, expected| resolved(macro) == expected.sort }
 
-    assert_equal Set[:confirmed], result
-  end
-
-  test "all skips the names enum, composed_of and define_method declare" do
-    body = ast <<~RUBY
-      enum :status, %i[draft live]
-      composed_of :balance
-      define_method(:thing) { 1 }
-    RUBY
-
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
-
-    assert_empty result
-  end
-
-  test "all skips the accessors the attachment and rich text macros define" do
-    body = ast <<~RUBY
-      has_rich_text :body
-      has_one_attached :avatar
-      has_many_attached :files
-    RUBY
-
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
-
-    assert_empty result
-  end
-
-  test "all takes the second name of alias_method, the one it calls" do
-    body = ast <<~RUBY
-      alias_method :size, :length
-    RUBY
-
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
-
-    assert_equal Set[:length], result
-  end
-
-  test "all takes the handler rescue_from is given" do
-    body = ast <<~RUBY
-      rescue_from ActiveRecord::RecordNotFound, with: :not_found
-    RUBY
-
-    result = RuboCop::Callbacksystems::MacroReferencedMethods.new(body).all
-
-    assert_equal Set[:not_found], result
+    assert_empty disagreeing.transform_values { resolved(it) },
+      "each macro maps to what it calls; a declaration maps to nothing"
   end
 
   test "ordered returns referenced names in source order, guard before action" do
@@ -310,6 +308,10 @@ class MacroReferencedMethodsTest < ActiveSupport::TestCase
   end
 
   private
+    def resolved(macro)
+      RuboCop::Callbacksystems::MacroReferencedMethods.new(ast("class Report\n  #{macro}\nend\n").body).all.to_a.sort
+    end
+
     def ast(source)
       RuboCop::ProcessedSource.new(source, RUBY_VERSION.to_f).ast
     end

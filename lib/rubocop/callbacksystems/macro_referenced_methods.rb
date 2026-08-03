@@ -43,25 +43,26 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       # guard a callback, and the handler `rescue_from` hands control to.
       METHOD_OPTIONS = %i[if unless with].freeze
 
-      # Macros that define a method named after their symbol argument instead of
-      # referencing an existing one. Their symbol is the method's name, not a call
-      # to a `def` elsewhere (and `attr_writer :x` names `x=`, not `x`), so it must
-      # not count as a reference. `delegate` is here for its leading names; its
-      # `to:` target still counts through the hash options.
-      DEFINING_MACROS = %i[
+      # Macros whose leading symbol names something they declare rather than a
+      # method the class calls: an accessor or association they define
+      # (`attr_writer :x` names `x=`, not `x`), a queue, a token purpose.
+      # `delegate` is here for its leading names; its `to:` target still counts
+      # through the hash options.
+      DECLARING_MACROS = %i[
         attr_reader attr_writer attr_accessor
         mattr_reader mattr_writer mattr_accessor
         cattr_reader cattr_writer cattr_accessor
         thread_mattr_accessor thread_cattr_accessor
-        class_attribute store_accessor attribute delegate
-        scope enum composed_of define_method
-        has_many has_one belongs_to has_and_belongs_to_many
-        has_rich_text has_one_attached has_many_attached
+        attribute class_attribute store_accessor delegate define_method
+        belongs_to has_and_belongs_to_many has_many has_one
+        has_many_attached has_one_attached has_rich_text
+        has_secure_password has_secure_token generates_token_for
+        composed_of enum scope queue_as
       ].freeze
 
-      # The one macro whose reference is not its leading symbol: `alias_method`
-      # defines the first name and calls the second.
-      ALIASING_MACRO = :alias_method
+      # Macros that name the method they define first and the one they call
+      # second, the other way round from every other macro here.
+      ALIASING_MACROS = %i[alias_attribute alias_method].freeze
 
       def initialize(node)
         @node = node
@@ -121,12 +122,12 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
         end
 
         # The symbol argument naming a method the macro will call. Most macros
-        # lead with it, the defining ones name a method they create rather than
-        # one to call, and `alias_method` calls the second of its two.
+        # lead with it, a declaring one has none, and an aliasing one calls the
+        # second of its two.
         def symbol_argument_reference
           case node.method_name
-          when ALIASING_MACRO then symbol_values.drop(1).take(1)
-          when *DEFINING_MACROS then []
+          when *ALIASING_MACROS then symbol_values.drop(1).take(1)
+          when *DECLARING_MACROS then []
           else symbol_values.take(1)
           end
         end
