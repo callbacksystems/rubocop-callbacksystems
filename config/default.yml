@@ -189,6 +189,10 @@ Callbacksystems/NoWritesInGetActions:
   Include:
     - "app/controllers/**/*"
 
+Callbacksystems/OrderedMixinArguments:
+  Enabled: true
+  SafeAutoCorrect: false
+
 Callbacksystems/PluralControllerNames:
   Enabled: true
   IgnoredNames:

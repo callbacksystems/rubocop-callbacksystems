@@ -9,10 +9,3 @@ removed:
       two put two messages on one refactor. `DataClump` now covers the repeated
       signature from two methods (`MinMethodsForRepeatedSignature`), and catches
       shared cores and names woven through varying combinations besides
-
-  Callbacksystems/OrderedMixinArguments:
-    reason: >
-      sorting the arguments of `include`, `extend` or `prepend` changes the
-      ancestor chain, and with it which module's method wins. `include A, B` and
-      `include B, A` are different programs, so there is no order the cop could
-      impose without risking a behaviour change
