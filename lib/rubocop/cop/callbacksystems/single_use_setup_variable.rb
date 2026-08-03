@@ -42,10 +42,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
 
   def on_new_investigation
     each_offense do |assignment, message, inline_target, removal_range|
-      add_offense(assignment, message: message) do |corrector|
-        corrector.replace(inline_target, assignment.expression.source) if inline_target
-        corrector.remove(removal_range) if removal_range
-      end
+      rewrite = Rewrite.new(assignment, inline_target, removal_range)
+      add_offense(assignment, message: message) { rewrite.apply(it) }
     end
   end
 
@@ -220,15 +218,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
 
         def inlinable_value?
-          movable_value? && (INLINABLE_TYPES.include?(value.type) || primary_call?)
-        end
-
-        # A heredoc's body sits on the lines below its marker, outside the
-        # assignment. Inlining would carry the marker away from its body and
-        # dropping the line would leave the body behind, so the offense is
-        # reported and the code left as it is.
-        def movable_value?
-          !holds_heredoc?(value)
+          INLINABLE_TYPES.include?(value.type) || primary_call?
         end
 
         def value
@@ -301,7 +291,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
 
         def inert_value?
-          movable_value? && (INLINABLE_TYPES.include?(value.type) || fixture_read?)
+          INLINABLE_TYPES.include?(value.type) || fixture_read?
         end
 
         def fixture_read?
@@ -344,6 +334,48 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         def tests_using_variable
           test_blocks.count do |test_block|
             test_block.each_node(:ivar).any? { it.name == variable_name }
+          end
+        end
+    end
+
+    # How one offending assignment rewrites away. A heredoc value travels in two
+    # pieces: the marker goes where the reference was, and its body has to leave
+    # the setup block and land under the line it now belongs to, since removing
+    # the assignment alone would orphan it.
+    class Rewrite
+      def initialize(assignment, inline_target, removal_range)
+        @assignment = assignment
+        @inline_target = inline_target
+        @removal_range = removal_range
+      end
+
+      def apply(corrector)
+        inline(corrector)
+        discard(corrector)
+      end
+
+      private
+        attr_reader :assignment, :inline_target, :removal_range
+
+        def inline(corrector)
+          if inline_target
+            corrector.replace(inline_target, value.source)
+            bodies.relocate_under(corrector, inline_target)
+          end
+        end
+
+        def value
+          assignment.expression
+        end
+
+        def bodies
+          @bodies ||= RuboCop::Callbacksystems::HeredocBodies.new(value)
+        end
+
+        def discard(corrector)
+          if removal_range
+            corrector.remove(removal_range)
+            bodies.remove(corrector, covered_by: removal_range)
           end
         end
     end

@@ -446,8 +446,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
     assert_correction code, code
   end
 
-  test "reports a single-use heredoc but leaves it, since its body would stay behind" do
-    code = <<~RUBY
+  test "inlines a heredoc, carrying its body to the line the marker went to" do
+    original = <<~RUBY
       class OrderTest < ActiveSupport::TestCase
         setup do
           @body = <<~TEXT
@@ -456,17 +456,26 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
         end
 
         test "renders" do
-          assert_equal "hello\n", @body
+          assert_equal "hello", @body.strip
         end
       end
     RUBY
 
-    assert_offense code, file: "test/models/order_test.rb"
-    assert_correction code, code, file: "test/models/order_test.rb"
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "renders" do
+          assert_equal "hello", <<~TEXT.strip
+            hello
+          TEXT
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
   end
 
-  test "reports an unread heredoc but leaves it, since dropping its line orphans the body" do
-    code = <<~RUBY
+  test "removes an unread heredoc together with its body" do
+    original = <<~RUBY
       class OrderTest < ActiveSupport::TestCase
         setup do
           @body = <<~TEXT
@@ -480,7 +489,14 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
       end
     RUBY
 
-    assert_offense code, file: "test/models/order_test.rb"
-    assert_correction code, code, file: "test/models/order_test.rb"
+    corrected = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        test "listing works" do
+          assert Record.count.positive?
+        end
+      end
+    RUBY
+
+    assert_correction original, corrected, file: "test/models/order_test.rb"
   end
 end

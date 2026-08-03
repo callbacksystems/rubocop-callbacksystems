@@ -380,42 +380,68 @@ class CollapseMultilineExpressionTest < CopTestCase
     RUBY
   end
 
-  test "allows a multiline literal holding a heredoc, whose body needs the lines below" do
-    assert_no_offense <<~RUBY
-      PROBES = [
-        <<~SQL
-          select 1
-        SQL
-      ].freeze
-    RUBY
+  test "collapses a literal holding a heredoc, keeping the body below the line" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        PROBES = [
+          <<~SQL
+            select 1
+          SQL
+        ].freeze
+      RUBY
+        PROBES = [ <<~SQL ].freeze
+            select 1
+          SQL
+      CORRECTED
   end
 
-  test "allows a multiline hash whose value is a heredoc" do
-    assert_no_offense <<~RUBY
-      QUERIES = {
-        report: <<~SQL
-          select 1
-        SQL
-      }.freeze
-    RUBY
+  test "collapses a hash whose value is a heredoc" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        QUERIES = {
+          report: <<~SQL
+            select 1
+          SQL
+        }.freeze
+      RUBY
+        QUERIES = { report: <<~SQL }.freeze
+            select 1
+          SQL
+      CORRECTED
   end
 
-  test "allows a multiline call whose argument is a heredoc" do
-    assert_no_offense <<~RUBY
-      wrap(
-        <<~TEXT
-          hello
-        TEXT
-      )
-    RUBY
+  test "collapses a call whose argument is a heredoc" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        wrap(
+          <<~TEXT
+            hello
+          TEXT
+        )
+      RUBY
+        wrap(<<~TEXT)
+            hello
+          TEXT
+      CORRECTED
   end
 
-  test "allows a backslash continuation onto a heredoc" do
-    assert_no_offense <<~RUBY
-      wrap \
-        <<~TEXT
-          hello
-        TEXT
-    RUBY
+  test "collapses two heredoc arguments, keeping their bodies in order" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        compare(
+          <<~LEFT,
+            a
+          LEFT
+          <<~RIGHT
+            b
+          RIGHT
+        )
+      RUBY
+        compare(<<~LEFT, <<~RIGHT)
+            a
+          LEFT
+            b
+          RIGHT
+      CORRECTED
   end
 end

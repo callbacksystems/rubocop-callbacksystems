@@ -84,7 +84,7 @@ class FixerAudit
       # A source the cop leaves alone has no correction to go wrong, so only the
       # ones it rewrites are worth the variants.
       def failures
-        probeable? ? variants.filter_map { failure_for(it) } : []
+        probeable? ? variants.filter_map(&:failure) : []
       end
 
       def badge
@@ -93,35 +93,15 @@ class FixerAudit
 
       private
         def probeable?
-          parses?(source) && corrects?
+          untouched.parses? && untouched.corrects?
         end
 
-        def parses?(candidate)
-          processed_source(candidate).valid_syntax?
-        end
-
-        def processed_source(candidate)
-          RuboCop::ProcessedSource.new(candidate, RUBY_VERSION.to_f, file)
-        end
-
-        def corrects?
-          corrected(source) != source
-        end
-
-        def corrected(candidate)
-          processed = processed_source(candidate)
-          corrector = RuboCop::Cop::Corrector.new(processed)
-          offenses_in(processed).each { corrector.merge!(it.corrector) if it.corrector }
-          corrector.rewrite
-        end
-
-        def offenses_in(processed)
-          RuboCop::Cop::Commissioner.new([ cop_class.new(CopTestCase.default_config) ], [], raise_error: true)
-            .investigate(processed).offenses
+        def untouched
+          Variant.new(self, source)
         end
 
         def variants
-          source.lines.each_index.map { variant_at(it) }
+          source.lines.each_index.map { Variant.new(self, variant_at(it)) }
         end
 
         def variant_at(index)
@@ -132,16 +112,65 @@ class FixerAudit
         def marker_line(line)
           "#{line[/\A */]}#{MARKER}\n"
         end
+    end
 
-        def failure_for(variant)
-          output = corrected(variant)
-          Failure.new(badge, variant, output) unless parses?(output) && keeps_marker?(output)
-        rescue => error
-          Failure.new(badge, variant, error.message.lines.first.to_s.strip)
+    # One source put through a cop's fixer, and what came back.
+    class Variant
+      def initialize(probe, code)
+        @probe = probe
+        @code = code
+      end
+
+      def failure
+        Failure.new(probe.badge, code, corrected) unless survives?
+      rescue => error
+        Failure.new(probe.badge, code, error.message.lines.first.to_s.strip)
+      end
+
+      def parses?
+        processed_source.valid_syntax?
+      end
+
+      def corrects?
+        corrected != code
+      end
+
+      private
+        attr_reader :probe, :code
+
+        def survives?
+          rewritten.parses? && keeps_marker?
         end
 
-        def keeps_marker?(output)
-          COMMENT_REMOVERS.include?(badge) || output.include?(MARKER)
+        def rewritten
+          self.class.new(probe, corrected)
+        end
+
+        def corrected
+          @corrected ||= RuboCop::Cop::Corrector.new(processed_source).then do |corrector|
+            offenses.each { corrector.merge!(it.corrector) if it.corrector }
+            corrector.rewrite
+          end
+        end
+
+        def processed_source
+          @processed_source ||= RuboCop::ProcessedSource.new(code, RUBY_VERSION.to_f, probe.file)
+        end
+
+        def offenses
+          RuboCop::Cop::Commissioner.new([ probe.cop_class.new(CopTestCase.default_config) ], [], raise_error: true)
+            .investigate(processed_source).offenses
+        end
+
+        def keeps_marker?
+          COMMENT_REMOVERS.include?(probe.badge) || !reads_as_comment? || corrected.include?(MARKER)
+        end
+
+        # A marker that landed inside a heredoc body is content of that string,
+        # not a comment, and a fixer deleting the statement holding it is doing
+        # its job. Only a marker the parser reads as a comment has to survive.
+        def reads_as_comment?
+          processed_source.comments.any? { it.text.include?(MARKER) }
         end
     end
 

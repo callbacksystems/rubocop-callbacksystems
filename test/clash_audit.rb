@@ -89,21 +89,19 @@ class ClashAudit
   ].freeze
 
   # The same, for the cops that only look at test files.
-  TEST_PROBES = [
-    <<~RUBY
-      class ReportTest < ActiveSupport::TestCase
-        setup do
-          @body = <<~TEXT
-            hello
-          TEXT
-        end
-
-        test "renders" do
-          assert_equal "hello", @body.strip
-        end
+  TEST_PROBES = [ <<~RUBY ].freeze
+    class ReportTest < ActiveSupport::TestCase
+      setup do
+        @body = <<~TEXT
+          hello
+        TEXT
       end
-    RUBY
-  ].freeze
+
+      test "renders" do
+        assert_equal "hello", @body.strip
+      end
+    end
+  RUBY
 
   def failure_report
     failures.join("\n\n")

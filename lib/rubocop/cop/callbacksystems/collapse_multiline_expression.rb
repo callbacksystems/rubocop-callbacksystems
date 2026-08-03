@@ -37,6 +37,18 @@
 #   # good
 #   User.new(name: "John")
 #
+#   # bad - only the marker of a heredoc belongs to the expression
+#   PROBES = [
+#     <<~SQL
+#       select 1
+#     SQL
+#   ].freeze
+#
+#   # good - the body is written out again below the line that survives
+#   PROBES = [ <<~SQL ].freeze
+#     select 1
+#   SQL
+#
 class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop::Callbacksystems::Base
   extend RuboCop::Cop::AutoCorrector
 
@@ -60,7 +72,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
     delegate :comments, to: :processed_source, private: true
 
     def collapse(collapser)
-      add_offense(collapser.node, message: MESSAGE) { it.replace(collapser.node, collapser.collapsed) } if collapser.offense?
+      add_offense(collapser.node, message: MESSAGE) { collapser.apply(it) } if collapser.offense?
     end
 
     def max_line_length
@@ -88,11 +100,16 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       def offense?
-        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line? && !needs_its_own_lines?
+        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line? && !carries_comment?
       end
 
       def collapsed
         @collapsed ||= shape.wrap(items_source)
+      end
+
+      def apply(corrector)
+        corrector.replace(node, collapsed)
+        bodies.relocate(corrector)
       end
 
       private
@@ -126,11 +143,16 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           node.loc.end.source_line.length - node.loc.end.column - 1
         end
 
-        # One line cannot hold an own-line comment, and a heredoc body only
-        # starts on the line below its marker, so an expression carrying either
+        # One line cannot hold an own-line comment, so an expression carrying one
         # keeps the shape it has.
-        def needs_its_own_lines?
-          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
+        def carries_comment?
+          holds_comment?(node.source_range, comments)
+        end
+
+        # A heredoc's body outlives the collapse: only its marker sits inside
+        # the expression, so the body is written out again below the line.
+        def bodies
+          RuboCop::Callbacksystems::HeredocBodies.new(node)
         end
     end
 
@@ -162,7 +184,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       def offense?
-        multiline? && collapsible_shape? && chain_collapsible? && fits_on_one_line? && !needs_its_own_lines?
+        multiline? && collapsible_shape? && chain_collapsible? && fits_on_one_line? && !carries_comment?
       end
 
       def collapsible_shape?
@@ -171,6 +193,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
       def collapsed
         @collapsed ||= "#{collapsed_receiver_part}#{node.method_name}#{args_suffix}"
+      end
+
+      def apply(corrector)
+        corrector.replace(node, collapsed)
+        bodies.relocate(corrector)
       end
 
       private
@@ -265,11 +292,16 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           [ arg.source.strip ]
         end
 
-        # One line cannot hold an own-line comment, and a heredoc body only
-        # starts on the line below its marker, so a call carrying either keeps
+        # One line cannot hold an own-line comment, so a call carrying one keeps
         # the shape it has.
-        def needs_its_own_lines?
-          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
+        def carries_comment?
+          holds_comment?(node.source_range, comments)
+        end
+
+        # A heredoc's body outlives the collapse: only its marker sits inside
+        # the call, so the body is written out again below the line.
+        def bodies
+          RuboCop::Callbacksystems::HeredocBodies.new(node)
         end
     end
 end

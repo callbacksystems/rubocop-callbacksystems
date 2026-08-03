@@ -28,7 +28,7 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
   def on_block(node)
     setup_or_teardown_block?(node) do |method_name|
       hook = Hook.new(node, method_name, processed_source.comments)
-      add_offense(node, message: hook.offense_message) { it.replace(node, hook.braced) } if hook.offense?
+      add_offense(node, message: hook.offense_message) { hook.brace(it) } if hook.offense?
     end
   end
 
@@ -54,22 +54,28 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
         format(MESSAGE, method: method_name)
       end
 
-      def braced
-        "#{method_name} { #{node.body.source.strip} }"
+      def brace(corrector)
+        corrector.replace(node, "#{method_name} { #{node.body.source.strip} }")
+        bodies.relocate(corrector)
       end
 
       private
         attr_reader :node, :method_name, :comments
 
         def single_line_body?
-          node.body&.single_line? && statements_in(node.body).one? && !needs_its_own_lines?
+          node.body&.single_line? && statements_in(node.body).one? && !carries_comment?
         end
 
-        # A brace block is one line, which cannot hold an own-line comment nor
-        # the lines a heredoc body needs below its marker, so a block carrying
-        # either keeps the `do ... end` that can.
-        def needs_its_own_lines?
-          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
+        # A brace block is one line, which cannot hold an own-line comment, so a
+        # block carrying one keeps the `do ... end` that can.
+        def carries_comment?
+          holds_comment?(node.source_range, comments)
+        end
+
+        # Only a heredoc's marker is inside the block; its body sits below the
+        # `end`, so it is written out again under the braced line.
+        def bodies
+          RuboCop::Callbacksystems::HeredocBodies.new(node)
         end
     end
 end
