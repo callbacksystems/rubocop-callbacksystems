@@ -37,6 +37,7 @@ Callbacksystems/ControllerTestResponseFirstAssertion:
 Callbacksystems/DataClump:
   Enabled: true
   MinMethods: 3
+  MinMethodsForRepeatedSignature: 2
   MinMethodsForSingleParam: 6
 
 Callbacksystems/DeclarativeMethodNaming:
@@ -261,14 +262,6 @@ Callbacksystems/PrivateConstantsInPrivateSection:
 
 Callbacksystems/PrivateDelegatePlacement:
   Enabled: true
-
-Callbacksystems/PrivateMethodArgumentClump:
-  Enabled: true
-  MinParams: 2
-  MinMethods: 2
-  MinMethodsForSingleParam: 7
-  Exclude:
-    - "test/**/*"
 
 Callbacksystems/PrivateMethodsInPrivateSection:
   Enabled: true

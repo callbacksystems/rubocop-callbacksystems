@@ -17,3 +17,4 @@ loader.setup
 loader.eager_load
 
 RuboCop::ConfigLoader.inject_defaults!("#{__dir__}/../config/default.yml")
+RuboCop::ConfigObsoletion.files << "#{__dir__}/../config/obsoletion.yml"

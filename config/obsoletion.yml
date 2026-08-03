@@ -1,0 +1,11 @@
+# Cops that were removed or renamed, so a project inheriting an older config
+# gets a pointed error instead of a bare "unrecognized cop" warning.
+
+removed:
+  Callbacksystems/PrivateMethodArgumentClump:
+    alternatives: Callbacksystems/DataClump
+    reason: >
+      it reported a subset of what `Callbacksystems/DataClump` reports, so the
+      two put two messages on one refactor. `DataClump` now covers the repeated
+      signature from two methods (`MinMethodsForRepeatedSignature`), and catches
+      shared cores and names woven through varying combinations besides

@@ -11,9 +11,23 @@
 # around. Because membership follows the graph, not an exact repeated tuple, this
 # catches names sharing *varying* combinations: `m1(a, b)`, `m2(a, c)`,
 # `m3(b, c)`, where no single pair repeats. A lone name that spreads far enough
-# counts on its own. The recursion subject is exempt: a name passed both as
-# itself and as a derivative of itself in the same call (`walk(node.child, node)`)
-# changes at every step and cannot become shared state.
+# counts on its own.
+#
+# Only methods carrying two or more of the names count toward a set: one name is
+# a value arriving, not a concept being passed, and counting those bystanders
+# would let a lone name clear the set threshold instead of its own higher one.
+# The recursion subject is exempt: a name passed both as itself and as a
+# derivative of itself in the same call (`walk(node.child, node)`) changes at
+# every step and cannot become shared state.
+#
+# How far a set has to reach depends on how much its shape already tells us. A
+# signature repeated verbatim counts from two methods: nothing in those
+# parameter lists explains the co-occurrence except the concept itself. Names
+# that come with extras of their own might merely have met, so those need a
+# third method, and a lone name has to spread further still.
+#
+# Components partition the shared names, so a class holding two of them is
+# hiding two objects and gets one offense for each.
 #
 # @example
 #   # bad - same parameters repeated across methods
@@ -23,30 +37,43 @@
 #       save(name, email, phone)
 #     end
 #
-#     def validate(name, email, phone); end
-#     def save(name, email, phone); end
+#     private
+#       def validate(name, email, phone); end
+#       def save(name, email, phone); end
 #   end
 #
 #   # bad - the same names travel together in varying combinations
 #   class Order
-#     def create(name, email, phone); end
-#     def validate(name, email, address); end
-#     def save(name, phone, address); end
+#     private
+#       def create(name, email, phone); end
+#       def validate(name, email, address); end
+#       def save(name, phone, address); end
 #   end
 #
-#   # good - extract to parameter object
+#   # good - extract to a class the methods belong to
 #   class Order
 #     def create(contact)
-#       validate(contact)
-#       save(contact)
+#       Contact.new(contact).save
 #     end
 #
-#     def validate(contact); end
-#     def save(contact); end
+#     private
+#       class Contact
+#         def initialize(name, email, phone)
+#           @name, @email, @phone = name, email, phone
+#         end
+#
+#         def save
+#           validate
+#         end
+#
+#         private
+#           def validate; end
+#       end
 #   end
 #
 class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::Base
-  MESSAGE = "Parameters `%<params>s` appear together in %<count>d methods. Consider extracting to a parameter object."
+  TIGHT_MESSAGE = "Methods `%<methods>s` all take `%<params>s`. Those values are one concept: give it a class and let these become its methods."
+  WOVEN_MESSAGE = "Methods `%<methods>s` thread `%<params>s` between them. Those values are one concept: give it a class and let these become its methods."
 
   def on_class(node)
     ParameterClumps.new(node, cop_config).each_offense do |offense_node, message|
@@ -55,6 +82,7 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
   end
 
   alias on_module on_class
+  alias on_sclass on_class
 
   private
     class ParameterClumps
@@ -67,8 +95,7 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
 
       def each_offense(&block)
         if block
-          clump = ClumpSearch.new(signatures, limits).clump
-          yield clump.location, format(MESSAGE, params: clump.params.join(", "), count: clump.count) if clump
+          ClumpSearch.new(signatures, limits).clumps.each { yield it.location, it.message }
         else
           to_enum(__method__)
         end
@@ -97,10 +124,30 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
 
         def limits
-          {
-            min_methods: cop_config["MinMethods"],
-            min_methods_for_single_param: cop_config["MinMethodsForSingleParam"]
-          }
+          Limits.new \
+            repeated_signature: cop_config["MinMethodsForRepeatedSignature"],
+            shared_names: cop_config["MinMethods"],
+            single_param: cop_config["MinMethodsForSingleParam"]
+        end
+    end
+
+    # The reach a clump needs before it counts. A signature repeated verbatim is
+    # already telling at two methods: nothing in those parameter lists explains
+    # the co-occurrence except the concept itself. Once the methods carry extras
+    # of their own the names might merely have met, so a third method is what
+    # makes the pattern a pattern, and a lone name has to spread further still.
+    class Limits < Data.define(:repeated_signature, :shared_names, :single_param)
+      def reached_by?(clump)
+        clump.count >= reach_for(clump)
+      end
+
+      private
+        def reach_for(clump)
+          if clump.names.many?
+            clump.repeated_signature? ? repeated_signature : shared_names
+          else
+            single_param
+          end
         end
     end
 
@@ -109,8 +156,17 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
     class Signature < Data.define(:node, :exempt_names)
       include RuboCop::Callbacksystems::Helpers
 
+      # A method carrying one name of the component is a value arriving, not a
+      # concept being passed around. Counting those bystanders would let a lone
+      # name clear the multi-name threshold instead of the higher one the
+      # single-name shape has of its own, and would make the message claim a
+      # togetherness nothing checked.
       def reaches?(wanted)
-        names.any? { wanted.include?(it) }
+        shared_count_in(wanted) >= (wanted.many? ? 2 : 1)
+      end
+
+      def shared_count_in(wanted)
+        names.count { wanted.include?(it) }
       end
 
       def names
@@ -118,8 +174,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
       end
     end
 
-    # Searches a method group for the connected component of shared names that
-    # reaches the most methods, returning the single strongest clump.
+    # Searches a method group for the connected components of shared names and
+    # keeps every one that reaches far enough.
     class ClumpSearch
       MIN_SHARING_METHODS = 2
 
@@ -128,15 +184,15 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         @limits = limits
       end
 
-      def clump
-        qualifying_clumps.max_by { [ it.count, it.params.size ] }
+      def clumps
+        qualifying_clumps.sort_by { it.location.line }
       end
 
       private
         attr_reader :signatures, :limits
 
         def qualifying_clumps
-          components.filter_map { clump_for(it) }.select { it.qualifies?(limits) }
+          components.map { clump_for(it) }.select { limits.reached_by?(it) }
         end
 
         def components
@@ -157,10 +213,13 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
     end
 
     class Clump < Data.define(:signatures, :names)
-      # Two tiers, mirroring the JS rule no-data-clump: a multi-name clump needs
-      # min_methods reaches; a lone name needs the higher single-param threshold.
-      def qualifies?(limits)
-        count >= (names.many? ? limits[:min_methods] : limits[:min_methods_for_single_param])
+      def message
+        format(tight? ? TIGHT_MESSAGE : WOVEN_MESSAGE, methods: method_names.join(", "), params: params.join(", "))
+      end
+
+      # Stronger than tight: the methods take the set and nothing besides.
+      def repeated_signature?
+        signatures.map { it.names.sort }.uniq.one?
       end
 
       def count
@@ -171,9 +230,22 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         signatures.first.node.loc.name
       end
 
-      def params
-        names.sort
-      end
+      private
+        # Tight when every method takes the whole set, one object handed around;
+        # otherwise the names are woven through overlapping subsets. Same concept
+        # and same refactor, but the report should not claim the first when what
+        # it found was the second.
+        def tight?
+          signatures.all? { it.shared_count_in(names) == names.size }
+        end
+
+        def method_names
+          signatures.map { it.node.method_name }
+        end
+
+        def params
+          names.sort
+        end
     end
 
     # The co-occurrence graph of shared names.

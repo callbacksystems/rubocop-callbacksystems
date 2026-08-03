@@ -11,9 +11,8 @@
 # four times. The flow is not followed through a *recursive* method: there the
 # value is a moving cursor over a structure, not one value held as state.
 #
-# This complements DataClump and PrivateMethodArgumentClump, which catch *groups*
-# of arguments shared across method *signatures*. Here a *single* value threaded
-# around is the smell.
+# This complements DataClump, which catches *groups* of arguments shared across
+# method *signatures*. Here a *single* value threaded around is the smell.
 #
 # @example
 #   # bad - `node` is passed to every helper
