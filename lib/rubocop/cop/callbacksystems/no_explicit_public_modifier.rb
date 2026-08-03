@@ -49,9 +49,8 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
         bare_send?(node) && node.method?(:public) && !inside_nested_class?
       end
 
-      # Removing `public` is only safe when nothing turned the class private first.
       # A bare `public` reopening visibility after `private` would make the methods
-      # below it private, so that case is reported but left for a human to reorder.
+      # below it private, so that case is left for a human to reorder.
       def correct(corrector)
         corrector.remove(removal_range) if redundant?
       end
@@ -71,9 +70,8 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
           (node.parent&.children || []).take_while { it != node }
         end
 
-        # `public` and `public :foo` say nothing but visibility, so the whole line
-        # goes. `public attr_reader :token` also declares something, and only the
-        # keyword is redundant there: taking the line would take the reader too.
+        # `public attr_reader :token` also declares something, and taking its line
+        # would take the reader too.
         def removal_range
           visibility_only? ? line_removal_range_for(node) : keyword_range
         end

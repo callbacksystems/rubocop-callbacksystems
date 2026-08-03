@@ -60,8 +60,7 @@ class RuboCop::Cop::Callbacksystems::TooManyValidationGuards < RuboCop::Cop::Cal
           statement.if_type? && single_branch?(statement) && rejecting_return?(lone_branch_of(statement))
         end
 
-        # A guard clause has exactly one branch: a modifier `if`/`unless` or a
-        # one-armed `if`. A full `if`/`else` is a two-way choice, not a guard.
+        # A full `if`/`else` is a two-way choice, not a guard.
         def single_branch?(if_node)
           [ if_node.if_branch, if_node.else_branch ].compact.one?
         end

@@ -47,9 +47,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
     class VisibilityCheck
       include RuboCop::Callbacksystems::Helpers
 
-      # Ruby and its runtime call protocol methods structurally (a double splat
-      # calls to_hash, interpolation calls to_s, case calls ===, sorting calls
-      # <=>), so their names never appear near an instance.
+      # Called structurally by Ruby itself, so their names never appear near an
+      # instance.
       PROTOCOL_METHODS = %i[
         to_hash to_h to_str to_s to_ary to_a to_proc to_int to_i to_path
         == eql? hash <=> === each call inspect as_json to_json
@@ -77,8 +76,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
           instances_stay_here? ? uncalled_public_methods : []
         end
 
-        # An instance handed to another object is called from files this one does
-        # not show, so once one leaves nothing here proves a method unused.
+        # Once an instance leaves, nothing in this file proves a method unused.
         def instances_stay_here?
           constructions.none? { handed_off?(it) }
         end
@@ -111,10 +109,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
           public_methods_in(nested_class).reject { mentioned_outside?(it.method_name) }
         end
 
-        # An instance reaches other objects as an argument, an element of a
-        # collection or a return value, and no reading of one file follows it
-        # there. So any mention of the name outside the class counts as a use of
-        # it, and only a name nobody says at all is reported.
+        # One file cannot follow an instance out, so any mention of the name counts
+        # and only a name nobody says at all is reported.
         def mentioned_outside?(method_name)
           external_names.include?(method_name)
         end

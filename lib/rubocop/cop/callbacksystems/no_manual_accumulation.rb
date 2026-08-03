@@ -87,9 +87,8 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
           statements.any? { each_block?(it) && mutates_in_body?(it.body) }
         end
 
-        # The block must do nothing but the mutation (optionally behind a one-armed
-        # `if`/`unless` guard). Any extra statement means a declarative `map`/`select`
-        # would drop a side effect, so the loop is left alone.
+        # Any extra statement means a declarative `map`/`select` would drop a side
+        # effect.
         def mutates_in_body?(body)
           mutates_variable?(body, variable_name) || guarded_mutation?(body)
         end

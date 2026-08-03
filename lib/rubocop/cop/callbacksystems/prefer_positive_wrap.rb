@@ -32,8 +32,6 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
   alias on_defs on_def
 
   private
-    # The leading negative guard inside a method body, plus the happy path that
-    # follows it. Owns the wrap construction so the cop only routes nodes.
     class WrappableGuard
       include RuboCop::Callbacksystems::Helpers
 
@@ -102,8 +100,8 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
           body.source_range.source_buffer.source[happy_start...happy.last.source_range.end_pos]
         end
 
-        # A comment between the guard and the happy path was written about the
-        # happy path, so it travels into the wrap with it.
+        # A comment between the two was written about the happy path, so it
+        # travels into the wrap.
         def happy_start
           comment = first_comment_in(gap_after_guard, comments)
           comment ? comment.source_range.begin_pos : happy.first.source_range.begin_pos

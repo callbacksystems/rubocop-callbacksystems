@@ -143,8 +143,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           node.loc.end.source_line.length - node.loc.end.column - 1
         end
 
-        # One line cannot hold an own-line comment, so an expression carrying one
-        # keeps the shape it has.
+        # One line cannot hold an own-line comment.
         def carries_comment?
           holds_comment?(node.source_range, comments)
         end
@@ -154,8 +153,6 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
     end
 
-    # The bracket pair a literal collapses into, and how to reach the items
-    # between them.
     class Shape < Data.define(:open, :close, :items)
       def opens?(node)
         node.loc.begin&.source == open
@@ -290,8 +287,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           [ arg.source.strip ]
         end
 
-        # One line cannot hold an own-line comment, so a call carrying one keeps
-        # the shape it has.
+        # One line cannot hold an own-line comment.
         def carries_comment?
           holds_comment?(node.source_range, comments)
         end

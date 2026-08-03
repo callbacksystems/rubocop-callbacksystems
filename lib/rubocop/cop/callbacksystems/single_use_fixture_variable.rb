@@ -61,7 +61,6 @@ class RuboCop::Cop::Callbacksystems::SingleUseFixtureVariable < RuboCop::Cop::Ca
       [ variable_name, fixture ] if fixture.valid?
     end
 
-    # Every reference to one variable within a test body.
     class Occurrences
       include RuboCop::Callbacksystems::Helpers
 

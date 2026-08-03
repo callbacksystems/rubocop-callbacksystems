@@ -59,8 +59,7 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         format(MESSAGE, receiver: receiver_names.join("."))
       end
 
-      # A one-line `delegate` has nowhere to put a comment written inside the
-      # method body, so that stays reported but uncorrected.
+      # A one-line `delegate` has nowhere to put a comment from the method body.
       def correct(corrector)
         Conversion.new(node, receiver_names).apply(corrector) unless holds_comment?(node.source_range, comments)
       end
@@ -77,9 +76,8 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
           @receiver_names ||= chain_names_in(body&.receiver) || []
         end
 
-        # A delegatable receiver is a chain of argumentless calls on self
-        # (`config.postgres`), which the macro can express as a dotted target.
-        # Anything else in the chain gives up the whole reading.
+        # Anything but a chain of argumentless calls on self gives up the whole
+        # reading.
         def chain_names_in(receiver)
           if receiver.nil?
             []
@@ -98,10 +96,8 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         end
     end
 
-    # Rewrites the method as the delegate macro: folded into a same-target
-    # `delegate` if one exists, otherwise a new macro placed after the section's
-    # declarations (attr_reader/delegate) or its `private` modifier. With
-    # neither to anchor it, the offense is reported without a correction.
+    # With no declaration and no `private` to anchor the macro, the offense is
+    # reported without a correction.
     class Conversion
       include RuboCop::Callbacksystems::Helpers
 
@@ -168,9 +164,8 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
           end
         end
 
-        # Corrections run in a loop, and another cop moving this method can bring
-        # it past here a second time. A name the sibling already delegates is not
-        # added again: `delegate :about, :about` defines the method twice.
+        # Corrections run in a loop, so this can come past twice:
+        # `delegate :about, :about` defines the method twice.
         def merge_into_sibling(corrector)
           return if sibling_delegate.method_names.include?(node.method_name)
 

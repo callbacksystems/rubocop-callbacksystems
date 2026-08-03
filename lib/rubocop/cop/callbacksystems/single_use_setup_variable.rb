@@ -73,9 +73,6 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
       SetupBlock.new(setup, processed_source, test_blocks).each_offense(&block)
     end
 
-    # One setup block. Yields an offense per assignment whose variable is unused or
-    # used once, and decides how each rewrites away: inline the single reference,
-    # drop its line, or drop the whole block once nothing else is left in it.
     class SetupBlock
       include RuboCop::Callbacksystems::Helpers
 
@@ -105,9 +102,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           SetupAssignment.new(assignment, ast, tests).offense
         end
 
-        # A removal that would take a comment with it is dropped, and the inlining
-        # goes with it: rewriting the reference while the assignment stays would
-        # leave the value in two places.
+        # The inlining goes with the removal: doing one without the other would leave
+        # the value in two places.
         def correction_for(offense)
           range = removal_range_for(offense)
           spared?(range) ? [ offense[:inline_target], range ] : [ nil, nil ]
@@ -125,9 +121,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           end
         end
 
-        # Clearing the block would take any comment written in it too, and the
-        # note has nowhere else to go, so those assignments come out a line at a
-        # time and the block stays behind to hold it.
+        # A note in the block has nowhere else to go, so the block stays behind to
+        # hold it and the assignments come out a line at a time.
         def cleared?
           nothing_left? && !holds_comment?(block_range, comments)
         end
@@ -163,9 +158,6 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
     end
 
-    # A single `@name = value` inside a setup block, classified by how its variable
-    # is used across the tests. Reports itself as an offense and works out the target
-    # to inline into and whether its line can be removed.
     class SetupAssignment
       include RuboCop::Callbacksystems::Helpers
 
@@ -281,11 +273,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           discardable? || !inline_target.nil?
         end
 
-        # An unread assignment still runs whatever built it, and in a setup block
-        # that call is often the precondition the tests rely on: deleting
-        # `@record = Record.create!` takes the record with it. A literal does
-        # nothing on its own and a fixture call only reads, so those still go; any
-        # other call is reported and left for whoever knows whether it matters.
+        # An unread assignment still runs what built it: deleting
+        # `@record = Record.create!` takes the record the tests rely on.
         def discardable?
           unused? && inert_value?
         end

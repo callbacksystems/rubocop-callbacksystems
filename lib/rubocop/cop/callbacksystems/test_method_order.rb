@@ -123,10 +123,8 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksys
         end
     end
 
-    # Reorders recognized tests only within uninterrupted runs of `test` blocks.
-    # Unknown tests keep their slots, while comments directly above a test travel
-    # with it. Any executable class-body statement is a hard boundary so an
-    # autocorrection cannot move a test across setup or configuration.
+    # An executable class-body statement is a hard boundary, so a correction
+    # cannot move a test across setup or configuration.
     class Reorder
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers

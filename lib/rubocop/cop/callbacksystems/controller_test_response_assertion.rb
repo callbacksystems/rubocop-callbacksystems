@@ -31,8 +31,7 @@ class RuboCop::Cop::Callbacksystems::ControllerTestResponseAssertion < RuboCop::
   include RuboCop::Callbacksystems::TestCopHelpers
 
   MESSAGE = "Controller test makes an HTTP request but has no response assertion (assert_response or assert_redirected_to)."
-  # If a test asserts an exception, the request didn't complete normally,
-  # so checking the response status is unnecessary.
+  # An asserted exception means the request never completed.
   REQUEST_ABORTING_ASSERTIONS = %i[assert_raises].freeze
 
   def on_block(node)

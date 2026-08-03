@@ -15,8 +15,6 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
     node&.sclass_type? && node.identifier.self_type?
   end
 
-  # The constant a class or module definition names, as opposed to one its body
-  # or superclass reads.
   def definition_identifier?(node)
     node.parent&.type?(:class, :module) && node.parent.identifier.equal?(node)
   end
@@ -25,8 +23,6 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
     node&.type?(:lvar, :ivar) && node.name == variable_name
   end
 
-  # A class definition carrying behavior, written as a class or built from
-  # `Data.define`, `Struct.new` or `Class.new` with a block.
   def class_with_body?(node)
     node.class_type? ? node.body.present? : class_builder_with_block?(node)
   end

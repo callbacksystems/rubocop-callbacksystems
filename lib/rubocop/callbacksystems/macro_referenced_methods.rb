@@ -15,8 +15,8 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     Set.new(ordered)
   end
 
-  # References in source order, so a caller ordering these methods can lead with
-  # them in the order the macros mention them.
+  # In source order, so a caller can order these methods the way the macros
+  # mention them.
   def ordered
     collect(body).uniq
   end
@@ -24,9 +24,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
   private
     attr_reader :body
 
-    # Macros live at the class/module body level, never inside a method body;
-    # skipping bodies keeps ordinary symbol arguments and calls from looking like
-    # macro uses.
+    # Method bodies are skipped: an ordinary symbol argument in one is not a macro.
     def collect(node)
       if node.is_a?(RuboCop::AST::Node) && !node.type?(:def, :defs)
         Node.new(node).references + node.children.flat_map { collect(it) }
@@ -35,19 +33,15 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       end
     end
 
-    # One node at the body level, resolved to the method names it references as a macro.
     class Node
       include RuboCop::Callbacksystems::Helpers
 
-      # Options whose symbol names a method the macro calls: the conditions that
-      # guard a callback, and the handler `rescue_from` hands control to.
+      # Options whose symbol names a method: a callback guard, a `rescue_from`
+      # handler.
       METHOD_OPTIONS = %i[if unless with].freeze
 
-      # Macros whose leading symbol names something they declare rather than a
-      # method the class calls: an accessor or association they define
-      # (`attr_writer :x` names `x=`, not `x`), a queue, a token purpose.
-      # `delegate` is here for its leading names; its `to:` target still counts
-      # through the hash options.
+      # Their leading symbol names what they declare, not a method the class calls:
+      # an accessor, an association, a queue, a token purpose.
       DECLARING_MACROS = %i[
         attr_reader attr_writer attr_accessor
         mattr_reader mattr_writer mattr_accessor
@@ -60,8 +54,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
         composed_of enum scope queue_as
       ].freeze
 
-      # Macros that name the method they define first and the one they call
-      # second, the other way round from every other macro here.
+      # These name what they define first and what they call second.
       ALIASING_MACROS = %i[alias_attribute alias_method].freeze
 
       def initialize(node)
@@ -79,8 +72,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
       private
         attr_reader :node
 
-        # A callback condition (`if:`/`unless:`) is evaluated before the action it
-        # guards, so it comes first, keeping guard-then-action in the order.
+        # A guard runs before the action it guards, so it comes first.
         def from_send
           hash_option_references + symbol_argument_reference + lambda_argument_calls
         end
@@ -121,9 +113,6 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
           end
         end
 
-        # The symbol argument naming a method the macro will call. Most macros
-        # lead with it, a declaring one has none, and an aliasing one calls the
-        # second of its two.
         def symbol_argument_reference
           case node.method_name
           when *ALIASING_MACROS then symbol_values.drop(1).take(1)

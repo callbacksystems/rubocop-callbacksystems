@@ -1,7 +1,5 @@
-# The cop reference, built from the cops themselves so it cannot drift out of
-# date. Every cop's file opens with a comment saying what it is for; that first
-# sentence is its description here and in `config/default.yml`, so the two can
-# never disagree and neither is written twice.
+# Built from the cops themselves. The sentence opening each cop's file is its
+# description here and in `config/default.yml`, so neither is written twice.
 class CopReference
   ROOT = File.expand_path("../..", __dir__)
   COP_DIR = "lib/rubocop/cop/callbacksystems"
@@ -32,9 +30,8 @@ class CopReference
     @cops ||= RuboCop::Cop::Registry.global.cops.select { own?(it) }.sort_by(&:cop_name).map { Cop.new(it) }
   end
 
-  # The shipped config with each cop's description written in above its options.
-  # Edited line by line rather than round-tripped through YAML, which would drop
-  # the comments and the order the file is kept in.
+  # Edited line by line rather than round-tripped through YAML, which would
+  # drop the comments and the order the file is kept in.
   def configured
     described_lines.join("\n")
   end
@@ -56,14 +53,13 @@ class CopReference
       File.read(File.join(ROOT, CONFIG_PATH)).split("\n").reject { it.start_with?("  Description:") }
     end
 
-    # Quoted by YAML itself: a description is prose, and one holding a colon, a
-    # backslash or a leading backtick needs a different quoting from the next.
+    # Quoted by YAML itself: prose holding a colon, a backslash or a leading
+    # backtick each needs different quoting.
     def description_for(line)
       cop = cops.find { line == "#{it.badge}:" }
       [ line, "  Description: #{YAML.dump(cop.description, line_width: -1).delete_prefix("---").strip}" ] if cop
     end
 
-    # One cop, and what the reference says about it.
     class Cop
       def initialize(cop_class)
         @cop_class = cop_class
@@ -77,8 +73,7 @@ class CopReference
         cop_class.support_autocorrect? ? "yes" : ""
       end
 
-      # The first sentence of the header comment, unwrapped. A pipe would end
-      # the table cell it sits in, so it travels escaped.
+      # A pipe would end the table cell it sits in.
       def description
         header.gsub("|", "\\|")
       end

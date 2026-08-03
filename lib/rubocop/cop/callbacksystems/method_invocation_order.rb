@@ -92,9 +92,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
       statements_in(node.body).select { it.type == type }
     end
 
-    # Rewrites each contiguous run of method definitions into canonical order,
-    # carrying leading comments with their method. A non-method statement between
-    # methods (a `private`, a macro) keeps the runs on either side separate.
+    # A non-method statement between methods keeps the runs on either side
+    # separate.
     class Reorder
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers
@@ -137,10 +136,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           end
         end
 
-        # Rebuilding the run copies each member's block, so a comment outside every
-        # one of them, a note between two methods with a blank line on both sides,
-        # would be dropped. Whose it is cannot be read off the source, so a run
-        # holding one stays in the order its author left it.
+        # A note between two methods, blank lines on both sides, belongs to neither,
+        # and rebuilding the run would drop it.
         def carries_all_comments?(run)
           blocks = run.map { block_range_of(it) }
           comments_within(run_range(run)).all? { |comment| blocks.any? { it.contains?(comment.source_range) } }
@@ -204,10 +201,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         end
       end
 
-      # All three groups, in the order Ruby classes conventionally declare them.
-      # Leaving `protected` out made the canonical list shorter than the methods
-      # it was compared against, so a class holding one drew an offense whose
-      # correction had nothing to move.
+      # All three: a group left out makes the canonical list shorter than what it
+      # is compared against, and the offense has nothing to move.
       def canonical_order
         @canonical_order ||= VISIBILITIES.flat_map { ordered_by_visibility(it) }
       end
@@ -224,8 +219,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           yield offense_node(index), offense_message(index) if index
         end
 
-        # The first position where the methods as written diverge from the order
-        # callers-before-callees would put them in.
         def divergence_index
           method_names.each_index.find { method_names[it] != canonical_order[it] }
         end
@@ -238,12 +231,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           full_order.select { visibilities[it] == visibility }
         end
 
-        # One depth-first pass in reading priority: a method referenced by a macro
-        # is called by that macro, which reads at the top, so those methods lead
-        # their group in the order the macros mention them (a guard before its
-        # action). Then the plain entry points and everything they reach, then any
-        # cycle. Visibility groups are partitioned afterwards. A method a real
-        # method body calls is placed by that call, not hoisted here.
+        # Depth-first in reading priority: macro-referenced methods first, since the
+        # macro reads at the top, then the entry points and what they reach.
         def full_order
           @full_order ||= begin
             ordering_seeds.each { visit(it) }
@@ -255,8 +244,6 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           macro_led + real_roots + method_names
         end
 
-        # Macro-referenced methods that no method body calls: the macro is their
-        # caller and it reads at the top, so they lead, in reference order.
         def macro_led
           if macro_references
             reference_order.reject { called_methods.include?(it) }

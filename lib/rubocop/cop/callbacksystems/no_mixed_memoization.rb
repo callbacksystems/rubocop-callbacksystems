@@ -100,8 +100,7 @@ class RuboCop::Cop::Callbacksystems::NoMixedMemoization < RuboCop::Cop::Callback
           end
         end
 
-        # `@user ||= load; @user` (or `; return @user`) reads back the field it just
-        # memoized: still a single concern, so it is allowed.
+        # Reading back the field it just memoized is still a single concern.
         def memoization_then_field_return?
           body&.begin_type? && body.children.size == 2 &&
             ivar_memoization?(body.children.first) && returns_memoized_ivar?(body.children.last)

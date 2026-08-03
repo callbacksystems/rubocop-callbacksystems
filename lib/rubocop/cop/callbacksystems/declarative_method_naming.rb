@@ -97,9 +97,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     resolve
   ].to_set.freeze
 
-  # Prepositions that relate a returned value to a method's arguments
-  # (`user_for(id)`, `node_at(i)`, `scope_from(node)`). An open class; this is
-  # the common core, enough to tell a relating name from a bare one.
+  # An open class; this is the common core, enough to tell a relating name from
+  # a bare one.
   CONNECTORS = %w[
     for of from at in on by with within without
     into onto over under above below beneath behind
@@ -108,9 +107,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     since against among around near beyond
   ].to_set.freeze
 
-  # Method names that change state in place, plus iteration for effect. A
-  # producer-verb method calling one (or assigning to @ivar/@@cvar/$global) is
-  # doing something, not just delivering a value.
+  # A producer-verb method calling one is doing something, not delivering a
+  # value.
   MUTATORS = %i[
     save update create build destroy delete insert
     push pop shift unshift prepend concat append << store replace add clear
@@ -119,8 +117,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     cp cp_r mv ln_s chmod chown
   ].to_set.freeze
 
-  # Macros that declare a reader, so a producer-verb method whose suggested noun
-  # matches one is the separate-builder helper for an already-named value.
+  # A producer-verb method whose noun matches one of these is that value's
+  # separate builder.
   READER_MACROS = %i[attr_reader attr_accessor attr_writer].to_set.freeze
 
   IMPERATIVE_NAME = "Rename `%<name>s` to `%<suggestion>s`: name it for the value, not the action `%<verb>s`."
@@ -134,8 +132,6 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
   alias on_defs on_def
 
   private
-    # A method judged against the producer-verb set: reads as a command when its
-    # name leads with a producer verb.
     class Producer
       def initialize(node)
         @node = node
@@ -153,16 +149,14 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
       private
         attr_reader :node
 
-        # Predicates, bang methods, setters, operators, and `initialize` are owned
-        # by Ruby convention; a producer-verb query name never applies to them.
+        # These names are owned by Ruby convention.
         def eligible?
           !node.predicate_method? && !node.bang_method? && !node.assignment_method? &&
             !node.operator_method? && !node.method?(:initialize)
         end
 
-        # Leads with a producer verb and carries a noun we could rename it to. The
-        # bare verb (`fetch`) and a verb glued to a connector (`load_for`) leave no
-        # noun, so there is nothing to rename to.
+        # A bare verb (`fetch`) and a verb glued to a connector (`load_for`) leave no
+        # noun to rename to.
         def imperative_producer?
           PRODUCER_VERBS.include?(verb) && !noun.nil?
         end
@@ -175,9 +169,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           @segments ||= node.method_name.to_s.split("_")
         end
 
-        # The verb-stripped noun, or nil when there is none (`compute`) or it
-        # leads with a connector, leaving a prepositional phrase that names
-        # nothing on its own (`find_in_block`).
+        # Nil when the name leads with a connector, leaving a prepositional phrase
+        # that names nothing on its own (`find_in_block`).
         def noun
           rest.join("_") if rest.any? && !CONNECTORS.include?(rest.first)
         end
@@ -186,8 +179,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           segments.drop(1)
         end
 
-        # Ruby always returns its last expression, so "delivers" is the absence of
-        # effects: it changes no state, calls no mutator, does no I/O.
+        # Ruby always returns its last expression, so delivering is the absence of
+        # effects.
         def delivers_only?
           node.each_descendant(:ivasgn, :cvasgn, :gvasgn, :casgn, :send).none? { side_effect?(it) }
         end
@@ -200,15 +193,11 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           send.bang_method? || send.setter_method? || MUTATORS.include?(send.method_name)
         end
 
-        # Calls a method of its own verb family (`format_money` calling
-        # `format_short`, `find_x` calling `find_by`). The name mirrors a real
-        # operation of the same name, so it is intentional, not a careless query.
+        # The name mirrors a real operation of the same name, so it is intentional.
         def delegates_within_verb_family?
           node.each_descendant(:send).any? { it.method_name.to_s.split("_").first == verb }
         end
 
-        # The value already has its declarative name on a sibling, so this is its
-        # separate builder (`build_prices` beside `attr_reader :prices`).
         def value_already_named?
           container&.each_descendant(:any_def, :send)&.any? { names_value?(it) } || false
         end
@@ -234,9 +223,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           needs_relator? ? IMPERATIVE_NAME_RELATE : IMPERATIVE_NAME
         end
 
-        # A value built from an argument should relate to it; a bare noun
-        # (`user(id)`) does not, unless its name already carries a connector
-        # (`user_by_id`).
+        # A bare noun (`user(id)`) does not relate to its argument, unless the name
+        # already carries a connector (`user_by_id`).
         def needs_relator?
           arguments? && !carries_connector?
         end

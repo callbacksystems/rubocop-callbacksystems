@@ -69,9 +69,6 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
   alias on_defs on_def
 
   private
-    # The method's final statement when it just hands back a local variable. Inlines
-    # the value only when that variable is assigned immediately above and read just
-    # once (here); mutation in between or any extra read is left for a human.
     class ReturnedLocal
       include RuboCop::Callbacksystems::Helpers
 
@@ -84,11 +81,8 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
         variable&.lvar_type?
       end
 
-      # The expression takes the place of the read and the assignment goes away,
-      # rather than one replacement spanning both: a comment written between them
-      # belongs to the line that survives, and a replacement over the whole span
-      # would delete it. Replacing the read also leaves an explicit `return` where
-      # its author put it.
+      # Two edits rather than one over the whole span, so a comment between them
+      # survives and an explicit `return` stays where its author put it.
       def inline(corrector)
         if inlineable?
           corrector.remove(assignment_removal_range)

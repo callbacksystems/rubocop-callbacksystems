@@ -58,8 +58,7 @@ class RuboCop::Cop::Callbacksystems::DelegateModuleFunctions < RuboCop::Cop::Cal
         @visibility = RuboCop::Callbacksystems::NodeVisibility.new(node)
       end
 
-      # A one-line `delegate` has nowhere to put a comment written inside the
-      # method body, so that stays reported but uncorrected.
+      # A one-line `delegate` has nowhere to put a comment from the method body.
       def correctable?
         offense? && forwards_own_parameters? && !holds_comment?(node.source_range, comments)
       end

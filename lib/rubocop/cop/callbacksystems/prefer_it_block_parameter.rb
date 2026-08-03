@@ -84,8 +84,8 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
           node.each_ancestor(:any_block).any? { it.arguments.size == 1 && it.braces? && it.single_line? }
         end
 
-        # Once converted the reference reads as `it`, and inside another block `it`
-        # is that block's own parameter. Rewriting would rebind it silently.
+        # Inside another block `it` is that block's own parameter, so rewriting would
+        # rebind it silently.
         def captured_by_nested_block?
           node.body.each_node(:lvar).any? { captured?(it) }
         end

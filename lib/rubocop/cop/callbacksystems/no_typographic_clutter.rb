@@ -16,19 +16,15 @@ class RuboCop::Cop::Callbacksystems::NoTypographicClutter < RuboCop::Cop::Callba
   MESSAGE = "Remove typographic character `%<char>s` (U+%<code>s). Use ASCII equivalents."
   DOUBLE_HYPHEN_MESSAGE = "Avoid `--` in comments; use a comma, colon, or parentheses."
 
-  # Individual clutter code points: no-break space, guillemets, soft hyphen,
-  # en/em dash, ellipsis, bullets, narrow no-break space, word joiner, minus
-  # sign, check/x marks, BOM.
+  # Written as ordinals so this file stays ASCII-clean under its own cop.
   CLUTTER_POINTS = Set[
     0x00A0, 0x00AB, 0x00AD, 0x00BB, 0x2013, 0x2014, 0x2022, 0x2023, 0x2026,
     0x2039, 0x203A, 0x2043, 0x202F, 0x2060, 0x2212, 0x25E6, 0x2713, 0x2717, 0xFEFF
   ].freeze
   # Clutter ranges: zero-width space/joiner, smart quotes, the arrows block.
   CLUTTER_RANGES = [ 0x200B..0x200D, 0x2018..0x201F, 0x2190..0x21FF ].freeze
-  # Characters with one unambiguous, meaning-preserving ASCII spelling, the only
-  # ones autocorrected. Dashes, arrows, bullets, guillemets and check marks have
-  # several plausible forms (or none), so they stay report-only. Keys are written
-  # as escapes so this file remains ASCII-clean under its own cop.
+  # Only these have one unambiguous ASCII spelling, so only these autocorrect.
+  # Written as escapes so this file stays ASCII-clean under its own cop.
   ASCII_EQUIVALENT = {
     "\u2018" => "'", "\u2019" => "'",
     "\u201C" => "\"", "\u201D" => "\"",
@@ -60,8 +56,8 @@ class RuboCop::Cop::Callbacksystems::NoTypographicClutter < RuboCop::Cop::Callba
       processed_source.ast&.each_node(:str) || []
     end
 
-    # One clutter character inside a comment or string. The fix runs only when the
-    # ASCII form is unambiguous and will not close the string.
+    # The fix runs only when the ASCII form is unambiguous and will not close the
+    # string.
     class Clutter
       def initialize(node, text)
         @node = node

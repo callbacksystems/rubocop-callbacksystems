@@ -37,9 +37,8 @@ class RuboCop::Cop::Callbacksystems::ComplexConditional < RuboCop::Cop::Callback
       add_offense(condition, message: format(MESSAGE, count: count, max: max_operators)) if count > max_operators
     end
 
-    # Counts only the operators on the condition's top-level boolean spine. An
-    # `and`/`or` buried inside a sub-expression (a method-call argument, say) is
-    # that expression's own complexity, not the predicate's.
+    # An `and`/`or` buried in a sub-expression is that expression's complexity,
+    # not the predicate's.
     def operator_count_in(node)
       if node&.type?(:and, :or)
         1 + node.children.sum { operator_count_in(it) }

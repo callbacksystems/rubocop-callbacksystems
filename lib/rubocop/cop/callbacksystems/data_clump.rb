@@ -110,9 +110,7 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
           internal_methods.map { Signature.new(it, exempt_names) }.select { it.names.any? }
         end
 
-        # Public methods answer to an interface and are not ours to reshape, so
-        # only private methods clump. A private nested class is itself internal,
-        # so all of its methods count.
+        # A public signature answers to an interface and is not ours to reshape.
         def internal_methods
           direct_method_nodes_in(node.body).select { internal_method?(it) }
         end
@@ -133,11 +131,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
     end
 
-    # The reach a clump needs before it counts. A signature repeated verbatim is
-    # already telling at two methods: nothing in those parameter lists explains
-    # the co-occurrence except the concept itself. Once the methods carry extras
-    # of their own the names might merely have met, so a third method is what
-    # makes the pattern a pattern, and a lone name has to spread further still.
+    # A signature repeated verbatim tells at two methods; with extras the names
+    # might merely have met, so a third is what makes the pattern.
     class Limits < Data.define(:repeated_signature, :shared_names, :single_param)
       def reached_by?(clump)
         clump.count >= reach_for(clump)
@@ -153,16 +148,11 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
     end
 
-    # One method's eligible parameter names: its significant names, deduplicated,
-    # minus the exempt ones.
     class Signature < Data.define(:node, :exempt_names)
       include RuboCop::Callbacksystems::Helpers
 
-      # A method carrying one name of the component is a value arriving, not a
-      # concept being passed around. Counting those bystanders would let a lone
-      # name clear the multi-name threshold instead of the higher one the
-      # single-name shape has of its own, and would make the message claim a
-      # togetherness nothing checked.
+      # One name of the component is a value arriving, not a concept being passed
+      # around, and counting those bystanders would clear the wrong threshold.
       def reaches?(wanted)
         shared_count_in(wanted) >= (wanted.many? ? 2 : 1)
       end
@@ -176,8 +166,6 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
       end
     end
 
-    # Searches a method group for the connected components of shared names and
-    # keeps every one that reaches far enough.
     class ClumpSearch
       MIN_SHARING_METHODS = 2
 
@@ -233,10 +221,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
       end
 
       private
-        # Tight when every method takes the whole set, one object handed around;
-        # otherwise the names are woven through overlapping subsets. Same concept
-        # and same refactor, but the report should not claim the first when what
-        # it found was the second.
+        # Every method takes the whole set rather than overlapping subsets. Same
+        # refactor either way, but the message should not claim the wrong one.
         def tight?
           signatures.all? { it.shared_count_in(names) == names.size }
         end
@@ -250,7 +236,6 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
     end
 
-    # The co-occurrence graph of shared names.
     class Graph
       def initialize(shared_names, signatures)
         @adjacency = shared_names.to_h { [ it, Set.new ] }

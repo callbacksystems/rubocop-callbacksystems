@@ -144,9 +144,8 @@ class RuboCop::Cop::Callbacksystems::PreferBackslashContinuation < RuboCop::Cop:
           node.last_argument.each_node(:any_str).any?(&:heredoc?)
         end
 
-        # A backslash joins its line to the next one, so a comment before the
-        # first argument would swallow it, and the closing parenthesis goes away
-        # taking whatever sits in front of it. Both move above the statement.
+        # The backslash would swallow a comment before the first argument, and the
+        # closing parenthesis takes whatever sits in front of it.
         def lift_displaced_comments(corrector)
           RuboCop::Callbacksystems::LiftedComments.new(node, displaced_comments).lift(corrector)
           leading_comments.each { corrector.remove(line_removal_range_for(it)) }

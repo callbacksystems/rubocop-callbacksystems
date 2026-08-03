@@ -85,8 +85,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
       private
         attr_reader :node, :cop_config
 
-        # A self-recursive method walks a structure: its values are moving cursors
-        # over that structure, not one value held as state, so none are reported.
+        # A self-recursive method walks a structure: its values are cursors, not state.
         def threaded
           return {} if recursive_origin?
 
@@ -141,10 +140,8 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
         end
     end
 
-    # Walks the data-flow graph from a value, collecting the distinct methods it
-    # reaches and detecting whether the flow loops back onto a method already on the
-    # path. A value that cycles through mutually recursive helpers is a cursor over a
-    # structure, not state, so it is exempt.
+    # A value that cycles through mutually recursive helpers is a cursor over a
+    # structure, not state.
     class Reach < Struct.new(:index)
       def initialize(index)
         super
@@ -175,7 +172,6 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
         end
     end
 
-    # One call being followed and the method names walked through to reach it.
     class Step < Data.define(:call, :path)
       delegate :method_name, :position, to: :call
 
@@ -188,9 +184,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
       end
     end
 
-    # Resolves a receiverless call's method name and argument position to the
-    # value flow it lands on in the callee, so a value can be followed across a
-    # method boundary.
+    # What lets a value be followed across a method boundary.
     class MethodIndex < Struct.new(:container)
       include RuboCop::Callbacksystems::Helpers
 
@@ -213,8 +207,6 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
         end
     end
 
-    # A method parameter resolved by position, exposing the value flow it carries:
-    # the parameter name scoped to its method body.
     class Parameter < Data.define(:method_node, :position, :index)
       include RuboCop::Callbacksystems::Helpers
 
@@ -228,8 +220,6 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
       end
     end
 
-    # One value (a name within a single method body) and the receiverless
-    # calls it is passed to. The unit followed by the transitive search.
     class ValueFlow < Data.define(:name, :method_node, :index)
       include RuboCop::Callbacksystems::Helpers
 
@@ -247,10 +237,8 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
           argument.lvar_type? && argument.children.first.to_s == name && !shadowed?(argument)
         end
 
-        # A block between the reference and the method that binds an argument of the
-        # same name introduces a different value: the reference is no longer the
-        # parameter being followed. Numbered and `it` blocks bind `_1`/`it`, which
-        # never collide with a named parameter, so they cannot shadow.
+        # A block binding an argument of the same name introduces a different value.
+        # Numbered and `it` blocks bind `_1`/`it`, which never collide.
         def shadowed?(argument)
           blocks_above(argument).any? { rebinds_name?(it) }
         end

@@ -1,16 +1,14 @@
 module RuboCop::Callbacksystems::Helpers::Ranges
   include RuboCop::Cop::RangeHelp
 
-  # The statement's own lines plus one adjacent blank line, the one above when
-  # there is one and the one below otherwise, so removing a statement does not
-  # leave a stray blank where it used to sit.
+  # Takes one adjacent blank line too, so removing a statement leaves no stray
+  # blank where it sat.
   def statement_removal_range_for(node)
     range = line_removal_range_for(node)
     blank_line_above(range) || blank_line_below(range) || range
   end
 
-  # Passing the buffer explicitly is what frees this from the cop's
-  # processed source, so plain objects can use it too.
+  # The buffer travels explicitly so plain objects can use this too.
   def line_removal_range_for(node)
     range_by_whole_lines(node.source_range, include_final_newline: true, buffer: node.source_range.source_buffer)
   end

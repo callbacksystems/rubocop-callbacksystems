@@ -54,7 +54,6 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callback
   alias on_defs on_def
 
   private
-    # The `nil` a method ends with, together with the separator that goes with it.
     class TrailingNil
       include RuboCop::Callbacksystems::Helpers
 
@@ -69,9 +68,8 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callback
         node&.nil_type?
       end
 
-      # Drop the `nil` and the separator before it (newline or `;`), so the fix
-      # works for both multi-line bodies and one-liners. A `nil` with no preceding
-      # sibling, a lone statement in a `begin` block, is reported but left alone.
+      # The separator goes too, so the fix works for a one-liner. A `nil` with no
+      # preceding sibling is reported but left alone.
       def remove(corrector)
         corrector.remove(removal_range) if previous
       end

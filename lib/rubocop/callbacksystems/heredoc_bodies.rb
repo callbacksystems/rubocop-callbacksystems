@@ -15,8 +15,7 @@ class RuboCop::Callbacksystems::HeredocBodies
     corrector.insert_before(landing_after(destination), text) if heredocs.any?
   end
 
-  # Lines the caller already removes are left to it: two removals over one range
-  # is an overlap the corrector refuses.
+  # Two removals over one range is an overlap the corrector refuses.
   def remove(corrector, covered_by:)
     heredocs.map { whole_lines_of(it) }.reject { covered_by&.contains?(it) }.each { corrector.remove(it) }
   end

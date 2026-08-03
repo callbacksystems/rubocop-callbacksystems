@@ -44,9 +44,7 @@ class RuboCop::Callbacksystems::MethodRecursion
       slots.include?(name) && slots[index] != name
     end
 
-    # One entry per parameter position, so an argument can be compared against
-    # the slot it lands in. Only a required positional parameter can shift;
-    # anything else has no position to move between.
+    # Only a required positional parameter has a slot to move between.
     def slots
       @slots ||= method_node.arguments.map { it.name.to_s if it.arg_type? }
     end

@@ -38,8 +38,7 @@ class RuboCop::Cop::Callbacksystems::AssertWithExpectedArgument < RuboCop::Cop::
   alias on_csend on_send
 
   private
-    # A predicate first argument rules out the expected/actual confusion, so the
-    # second argument is a message by intention even when it is poorly chosen.
+    # A predicate first argument rules out the expected/actual confusion.
     def predicate?(argument)
       argument.send_type? && argument.predicate_method?
     end

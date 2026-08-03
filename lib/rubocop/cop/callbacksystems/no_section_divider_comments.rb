@@ -18,8 +18,7 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
   PURE_MESSAGE = "Section-divider comments add no information. Remove."
   WRAPPED_MESSAGE = "Strip the divider decorations; keep the inner text as a normal comment."
 
-  # Divider code points: ASCII `-=*_~#`, en/em dash, and the Box Drawing plus
-  # Block Elements Unicode blocks. Detected by ordinal so this file stays ASCII.
+  # Detected by ordinal so this file stays ASCII.
   DIVIDER_POINTS = Set[0x2D, 0x3D, 0x2A, 0x5F, 0x7E, 0x23, 0x2013, 0x2014].freeze
   DIVIDER_RANGE = (0x2500..0x259F)
 
@@ -34,7 +33,6 @@ class RuboCop::Cop::Callbacksystems::NoSectionDividerComments < RuboCop::Cop::Ca
       add_offense(comment, message: WRAPPED_MESSAGE) { divider.rewrite(it) } if divider.wrapped?
     end
 
-    # One comment under inspection.
     class DividerComment
       include RuboCop::Callbacksystems::Helpers
 

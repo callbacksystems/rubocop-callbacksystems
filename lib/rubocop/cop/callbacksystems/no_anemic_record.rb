@@ -55,7 +55,6 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
   end
 
   private
-    # Every hash literal in the file, each holding the reaches that belong to it.
     class FileRecords
       def initialize(ast, cop_config)
         @ast = ast
@@ -73,9 +72,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
       private
         attr_reader :ast, :cop_config
 
-        # Each record takes the reaches whose base it matches best, so a narrow
-        # hash next door keeps its own instead of being swallowed by a wider one
-        # that happens to contain its keys.
+        # Best match first, so a narrow hash keeps its own reaches instead of being
+        # swallowed by a wider one that happens to contain its keys.
         def records
           @records ||= candidates.each { it.claim(reaches_owned_by(it)) }
         end
@@ -104,8 +102,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           @best_matches ||= {}
         end
 
-        # Most keys in common first, then the tightest fit. Under two shared keys
-        # is a coincidence of vocabulary rather than the same hash.
+        # Under two shared keys is a coincidence of vocabulary, not the same hash.
         def strongest_for(reached)
           candidates.map { [ it, it.match_for(reached) ] }
             .select { it.last.strong? }
@@ -120,8 +117,6 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
 
     Limits = Data.define(:min_fields, :min_readers)
 
-    # How well a base's reached keys line up with a record: how many match, and
-    # how much of the record they cover.
     class Match < Data.define(:shared, :fit)
       MIN_SHARED_FIELDS = 2
 
@@ -173,14 +168,13 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           pair.pair_type? && pair.key.sym_type? && !pair.value.any_block_type?
         end
 
-        # A pair whose value is a callable makes it an object already, and a
-        # double-splat means the shape is not this literal's to own.
+        # A callable value makes it an object already; a double-splat means the shape
+        # is not this literal's to own.
         def plain_record?
           fields.size >= limits.min_fields && node.children.all? { data_pair?(it) }
         end
 
-        # A hash consumed where it is built is a value, not a concept. It travels
-        # when it leaves its own statement: named, or handed back.
+        # A hash consumed where it is built is a value, not a concept.
         def travels?
           assigned? || returned?
         end
@@ -189,8 +183,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           named.parent&.assignment?
         end
 
-        # A record on its way to a constant is usually frozen first, so the
-        # literal's parent is the `freeze` call rather than the assignment.
+        # A record bound to a constant is usually frozen first, so `freeze` is the
+        # parent rather than the assignment.
         def named
           frozen? ? node.parent : node
         end
@@ -212,9 +206,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           node.each_ancestor(:any_def).first
         end
 
-        # Scattering is the whole symptom: each consumer reaches for one key, so
-        # counting per method has to stay at one. What stops an unrelated
-        # `options[:name]` from counting is the match that assigned the reach.
+        # Scattering is the symptom, so each consumer counts once however many keys
+        # it reaches for.
         def reader_count
           @reader_count ||= key_reaches.map(&:reader).uniq.size
         end
@@ -224,7 +217,6 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
         end
     end
 
-    # What one call reaches for: `base[:key]` or `base.fetch(:key)`.
     class Reach
       READERS = %i[[] fetch dig].freeze
 
@@ -247,9 +239,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           node.arguments.one? && node.first_argument.sym_type? && base_name.present?
         end
 
-        # A local, an ivar or a constant names the hash directly; a bare call
-        # names it too, since the Ruby way to build one in a place and read it in
-        # another is a memoized method rather than a binding.
+        # A bare call names the hash too: the Ruby way to build one here and read it
+        # there is a memoized method, not a binding.
         def base_name
           @base_name ||= named_base_of(node.receiver)
         end
@@ -273,7 +264,6 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
         end
     end
 
-    # One `base[:key]` reach, and the questions asked of it.
     class Read < Data.define(:base, :field, :node)
       def on?(other)
         base == other
@@ -283,8 +273,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
         other.source_range.contains?(node.source_range)
       end
 
-      # The method the reach sits in. Reaches at file level share one reader, so a
-      # script pulling three keys apart at the top level still counts as one.
+      # Reaches at file level share one reader.
       def reader
         node.each_ancestor(:any_def).first
       end

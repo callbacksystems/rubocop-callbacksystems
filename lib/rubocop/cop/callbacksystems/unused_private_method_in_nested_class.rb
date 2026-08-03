@@ -75,8 +75,7 @@ class RuboCop::Cop::Callbacksystems::UnusedPrivateMethodInNestedClass < RuboCop:
           provable? ? uncalled_methods : []
         end
 
-        # A superclass calls the hooks its subclass overrides, and that call is
-        # nowhere in this file, so an inherited class proves nothing here.
+        # A superclass calls the hooks its subclass overrides, from outside this file.
         def provable?
           nested_class.parent_class.nil?
         end

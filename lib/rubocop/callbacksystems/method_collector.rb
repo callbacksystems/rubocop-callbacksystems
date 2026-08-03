@@ -20,7 +20,6 @@ class RuboCop::Callbacksystems::MethodCollector
       end
     end
 
-    # The body of a class, module, or scope-defining construct.
     class Body
       include RuboCop::Callbacksystems::Helpers
 
@@ -44,7 +43,6 @@ class RuboCop::Callbacksystems::MethodCollector
         end
     end
 
-    # One node within a body, resolved to the method or scope entries it defines.
     class Member
       include RuboCop::Callbacksystems::Helpers
 

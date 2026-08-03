@@ -13,15 +13,12 @@ class ClashAudit
   PROBE_FILE = "app/models/report.rb"
   TEST_PROBE_FILE = "test/models/report_test.rb"
 
-  # Shapes no single cop's test file carries. The first needs two cops to want
-  # the same region; the rest hold a heredoc, whose body sits on the lines below
-  # its marker and so falls outside the range a fixer reasons about. Nesting one
-  # in a cop's own test heredoc would confuse the scanner that reads them, so
-  # they live here.
+  # Shapes no single cop's test file carries: one needs two cops to want the
+  # same region, the rest hold a heredoc, which nesting in a cop's own test
+  # heredoc would hide from the scanner that reads them.
   PROBES = [
-    # `delegate :about, :about`: PreferDelegate folding a method into a macro
-    # that already names it, while MethodInvocationOrder moves the methods
-    # around it.
+    # `delegate :about, :about`: PreferDelegate folds a method into a macro that
+    # already names it.
     <<~RUBY,
       class Report
         delegate :about, to: :account, private: true
@@ -112,9 +109,8 @@ class ClashAudit
   end
 
   private
-    # A body lifted out of a cop's test heredoc is raw text, so one that escaped
-    # a backslash for the heredoc does not stand as Ruby on its own. Nothing
-    # reports on it and nothing corrects it, so there is nothing to check.
+    # A body lifted out of a test heredoc is raw text, so one that escaped a
+    # backslash for the heredoc does not stand as Ruby on its own.
     def sources
       @sources ||= (own_probes + FixerAudit.new.probe_sources).select(&:parses?)
     end
@@ -134,8 +130,7 @@ class ClashAudit
       @correcting_cops ||= FixerAudit::CorrectingCops.new.classes
     end
 
-    # Syntax first: an unparseable source reports no offenses at all, so reading
-    # the lint alone would take a broken file for a clean one.
+    # Syntax first: an unparseable source reports no offenses at all.
     def regression_between(source, corrected)
       if corrected.parses?
         introduced = lint_names_in(corrected) - lint_names_in(source)
@@ -149,9 +144,7 @@ class ClashAudit
       Investigation.new(source, lint_cops, lint_config).offenses.map(&:cop_name).uniq
     end
 
-    # Only the Lint department, and only the cops a default run would have on:
-    # the point is code that stopped being correct, not code that stopped
-    # matching a style or that an opt-in cop happens to dislike.
+    # Code that stopped being correct, not code that stopped matching a style.
     def lint_cops
       @lint_cops ||= RuboCop::Cop::Registry.global.cops.select { enabled_lint?(it) }
     end
@@ -160,14 +153,13 @@ class ClashAudit
       cop_class.badge.department == :Lint && lint_config.for_cop(cop_class.badge.to_s)["Enabled"] == true
     end
 
-    # The config a project actually gets, not RuboCop's bare defaults: a core cop
-    # this style guide turns off should not be able to fail the audit.
+    # The config a project gets, so a core cop this style guide turns off cannot
+    # fail the audit.
     def lint_config
       @lint_config ||= RuboCop::ConfigLoader.configuration_from_file(STYLE_CONFIG_PATH)
     end
 
-    # One source, with the file name its cops were written against: a cop scoped
-    # to `test/` reports nothing on the same code under `app/`.
+    # A cop scoped to `test/` reports nothing on the same code under `app/`.
     class Source < Data.define(:code, :file)
       def to_s
         code
@@ -182,9 +174,8 @@ class ClashAudit
       end
     end
 
-    # One pass of every correcting cop over a source, repeated until it settles,
-    # which is what `rubocop -a` does. A cop whose edit overlaps one already made
-    # in this pass is skipped and picked up by the next, as the real runner does.
+    # A cop whose edit overlaps one already made in this pass is skipped and
+    # picked up by the next, as `rubocop -a` does.
     class Correction
       def initialize(source, cops)
         @source = source
@@ -221,12 +212,10 @@ class ClashAudit
         end
     end
 
-    # Cops are built fresh for every investigation. Some carry state across
-    # files, `Lint/DuplicateMethods` among them, and reusing an instance made
-    # this audit report clashes that were only its own bookkeeping.
+    # Some cops carry state across files, `Lint/DuplicateMethods` among them, so
+    # they are built fresh for every investigation.
     class Investigation
-      # Built once and held: the corrector and the offenses have to be ranges
-      # over the same buffer, and a `Source` builds a fresh one on every call.
+      # The corrector and the offenses have to be ranges over the same buffer.
       attr_reader :processed_source
 
       def initialize(source, cop_classes, config)
@@ -235,9 +224,8 @@ class ClashAudit
         @config = config
       end
 
-      # Mobilized as a team rather than handed to a bare Commissioner: the team
-      # is what assembles the forces cops depend on, and `Lint/UselessAssignment`
-      # and its neighbours see nothing at all without `VariableForce`.
+      # A team assembles the forces cops depend on; `Lint/UselessAssignment` sees
+      # nothing without `VariableForce`.
       def offenses
         if processed_source.valid_syntax?
           RuboCop::Cop::Team.mobilize(cop_classes, config).investigate(processed_source).offenses

@@ -69,7 +69,7 @@ class RuboCop::Cop::Callbacksystems::MixinsFirst < RuboCop::Cop::Callbacksystems
     end
 
     # A mixin reading a constant declared above it cannot move over that
-    # declaration, so its placement is not the author's choice.
+    # declaration.
     class MixinArguments
       include RuboCop::Callbacksystems::Helpers
 

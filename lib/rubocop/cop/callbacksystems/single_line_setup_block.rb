@@ -36,7 +36,6 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
   alias on_itblock on_block
 
   private
-    # A `setup` or `teardown` block, and the one-line form it collapses into.
     class Hook
       include RuboCop::Callbacksystems::Helpers
 
@@ -66,8 +65,7 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
           node.body&.single_line? && statements_in(node.body).one? && !carries_comment?
         end
 
-        # A brace block is one line, which cannot hold an own-line comment, so a
-        # block carrying one keeps the `do ... end` that can.
+        # A brace block cannot hold an own-line comment.
         def carries_comment?
           holds_comment?(node.source_range, comments)
         end

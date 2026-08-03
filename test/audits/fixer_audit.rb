@@ -8,7 +8,6 @@ class FixerAudit
   HEREDOC_TAGS = %w[RUBY CORRECTED SOURCE EXPECTED].freeze
   COP_TEST_DIR = File.expand_path("../rubocop/cop/callbacksystems", __dir__)
 
-  # Removing comments is what these are for, so losing one is the fix working.
   COMMENT_REMOVERS = %w[
     Callbacksystems/NoCommentsInTestClassBody
     Callbacksystems/NoSectionDividerComments
@@ -16,7 +15,6 @@ class FixerAudit
 
   EM_DASH = 0x2014.chr(Encoding::UTF_8)
 
-  # Cops whose tests build their sources some way other than a heredoc.
   EXTRA_PROBES = { "Callbacksystems/NoTypographicClutter" => "# name#{EM_DASH}required\nx = 1\n" }.freeze
 
   def failure_report
@@ -31,8 +29,7 @@ class FixerAudit
     correcting_cops.map { it.badge.to_s } - probes.map(&:badge).uniq
   end
 
-  # The shapes themselves, for an audit that corrects them with the whole cop set
-  # rather than one cop at a time.
+  # For the audit that corrects a shape with the whole cop set at once.
   def probe_sources
     probes.map { ClashAudit::Source.new(code: it.source, file: it.file) }.uniq
   end
@@ -58,7 +55,6 @@ class FixerAudit
       Dir["#{COP_TEST_DIR}/*_test.rb"].flat_map { CopTestFile.new(it).probes }
     end
 
-    # The cops of this gem that carry a corrector.
     class CorrectingCops
       def classes
         RuboCop::Cop::Registry.global.cops.select { own_corrector?(it) }
@@ -70,8 +66,6 @@ class FixerAudit
         end
     end
 
-    # One source a cop claims to handle, checked against the comment it must not
-    # eat and the syntax it must not break.
     class Probe
       attr_reader :cop_class, :source, :file
 
@@ -81,8 +75,7 @@ class FixerAudit
         @file = file
       end
 
-      # A source the cop leaves alone has no correction to go wrong, so only the
-      # ones it rewrites are worth the variants.
+      # A source the cop leaves alone has no correction to go wrong.
       def failures
         probeable? ? variants.filter_map(&:failure) : []
       end
@@ -114,7 +107,6 @@ class FixerAudit
         end
     end
 
-    # One source put through a cop's fixer, and what came back.
     class Variant
       def initialize(probe, code)
         @probe = probe
@@ -166,9 +158,7 @@ class FixerAudit
           COMMENT_REMOVERS.include?(probe.badge) || !reads_as_comment? || corrected.include?(MARKER)
         end
 
-        # A marker that landed inside a heredoc body is content of that string,
-        # not a comment, and a fixer deleting the statement holding it is doing
-        # its job. Only a marker the parser reads as a comment has to survive.
+        # A marker inside a heredoc body is content of that string, not a comment.
         def reads_as_comment?
           processed_source.comments.any? { it.text.include?(MARKER) }
         end
@@ -189,8 +179,7 @@ class FixerAudit
         attr_reader :badge, :input, :output
     end
 
-    # One cop's test file, read for the heredocs it uses as examples. The suite is
-    # the best record of the shapes each fixer claims to handle.
+    # The suite is the best record of the shapes each fixer claims to handle.
     class CopTestFile
       def initialize(path)
         @path = path
@@ -203,8 +192,8 @@ class FixerAudit
       private
         attr_reader :path
 
-        # Resolved through the registry rather than the constant, so a test file
-        # naming a cop that no longer exists is skipped instead of raising.
+        # Through the registry, so a test file naming a cop that no longer exists is
+        # skipped instead of raising.
         def cop_class
           @cop_class ||= RuboCop::Cop::Registry.global.cops.find { it.name == declared_cop_name }
         end
@@ -249,8 +238,7 @@ class FixerAudit
           HEREDOC_TAGS & lines[index].scan(/<<~(\w+)/).flatten
         end
 
-        # A cop scoped to app/ or test/ reports nothing under another path, so use
-        # whichever one its own tests use.
+        # A cop scoped to app/ reports nothing under another path.
         def file
           @file ||= lines.find { it =~ /file: "[^"]+"/ }&.[](/file: "([^"]+)"/, 1) || DEFAULT_FILE
         end

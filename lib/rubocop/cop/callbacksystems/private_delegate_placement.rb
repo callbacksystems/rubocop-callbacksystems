@@ -110,8 +110,7 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           statement.casgn_type? || declaration_macro?(statement)
         end
 
-        # Moving up over the assignment of a constant the delegate reads would
-        # break the class at load time, so that placement is not a choice.
+        # Moving above a constant it reads would break the class at load time.
         def blocked_by_constant?
           referenced_constant_names.intersect?(constant_names_crossed_moving_up)
         end
@@ -130,8 +129,6 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           anchor_index && anchor_index < node_index ? statements[(anchor_index + 1)...node_index] : []
         end
 
-        # Beside the private declarations when the section is already open,
-        # otherwise at the end of the body, where the new section goes.
         def anchor
           declarations_after_private_modifier.last || private_modifier || statements.excluding(node).last
         end
@@ -148,8 +145,8 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           "\n#{section_indentation}#{node.source}"
         end
 
-        # The section's members sit one step deeper than the `private` keyword,
-        # so an existing member is what says how deep that is.
+        # Members sit one step deeper than `private`, so an existing one says how
+        # deep.
         def section_indentation
           statements_after_private_modifier.first&.then { indentation_of(it) } || "#{body_indentation}#{indentation_step}"
         end

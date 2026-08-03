@@ -91,9 +91,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           notes.empty? || starts_its_line?
         end
 
-        # A trailing note on a list written across lines was written about the
-        # module on that line. One trailing a list that fits on a single line was
-        # written about the statement, so it stays where the author put it.
+        # A trailing note on a list written across lines belongs to the module on
+        # that line; one on a single-line list belongs to the statement.
         def notes
           @notes ||= comments.select { notes_range.contains?(it.source_range) }
         end
@@ -178,8 +177,6 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           "#{indentation}  "
         end
 
-        # One module with the notes written about it, so sorting moves them
-        # together.
         class Mixin
           attr_reader :name
 

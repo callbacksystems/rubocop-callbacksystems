@@ -16,8 +16,7 @@ class CopTestCase < ActiveSupport::TestCase
   class << self
     attr_accessor :cop_class
 
-    # The bare Commissioner these tests use resolves no configuration, so the
-    # thresholds the cops read come from here.
+    # These tests resolve no configuration, so the thresholds come from here.
     def default_config
       @default_config ||= RuboCop::ConfigLoader.merge_with_default(
         RuboCop::ConfigLoader.load_file(DEFAULT_CONFIG_PATH), DEFAULT_CONFIG_PATH

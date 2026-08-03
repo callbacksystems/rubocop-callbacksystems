@@ -43,8 +43,7 @@ class RuboCop::Cop::Callbacksystems::ExpandedEmptyClassOrModule < RuboCop::Cop::
       private
         attr_reader :node
 
-        # A nested empty class becomes a constant instead of keeping its
-        # definition, so its own rule has the last word.
+        # A nested empty class becomes a constant, so its own rule has the last word.
         def stays_a_definition?
           node.module_type? || enclosing_class_or_module_of(node).nil?
         end

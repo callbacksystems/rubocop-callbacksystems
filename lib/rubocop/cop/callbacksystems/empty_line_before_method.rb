@@ -84,8 +84,8 @@ class RuboCop::Cop::Callbacksystems::EmptyLineBeforeMethod < RuboCop::Cop::Callb
           statement.left_sibling if statement.parent&.begin_type?
         end
 
-        # A macro describing the method below it belongs to that method, so the
-        # empty line goes above the macro instead of between the two.
+        # A macro describing the method below belongs to it, so the blank line goes
+        # above the macro.
         def leading_node
           @leading_node ||= topmost_of(node)
         end

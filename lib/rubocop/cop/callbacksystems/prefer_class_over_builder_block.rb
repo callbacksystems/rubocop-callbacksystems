@@ -52,8 +52,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop:
         format(MESSAGE, name: class_name_of(node), builder: builder_name)
       end
 
-      # Only the `do ... end` form is rewritten. Anything else would need the
-      # body moved onto its own lines to stay valid.
+      # Anything else would need the body moved onto its own lines to stay valid.
       def rewrite(corrector)
         corrector.replace(header, "class #{class_name_of(node)}#{inheritance}") if rewritable?
       end
@@ -81,8 +80,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop:
           node.source_range.with(end_pos: block.loc.begin.end_pos)
         end
 
-        # `Class.new(Base)` is a subclass of `Base` and nothing more, so the
-        # definition inherits from `Base` itself. `Data.define` and `Struct.new`
+        # `Class.new(Base)` is a subclass of `Base`; `Data.define` and `Struct.new`
         # build the class they are given, so the call stays the superclass.
         def inheritance
           plain_subclass? ? argument_inheritance : " < #{builder_call.source}"

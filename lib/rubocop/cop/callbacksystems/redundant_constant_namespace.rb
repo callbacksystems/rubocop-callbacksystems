@@ -76,9 +76,8 @@ class RuboCop::Cop::Callbacksystems::RedundantConstantNamespace < RuboCop::Cop::
           node.each_ancestor(:class, :module).to_a.reverse
         end
 
-        # The link of the chain whose own namespace is the enclosing scope, so
-        # dropping everything before its name leaves a constant that still
-        # resolves through that scope.
+        # Dropping everything before this link leaves a constant that still resolves
+        # through the enclosing scope.
         def qualified_node
           @qualified_node ||= constant_chain.find { constant_name_of(it.namespace) == enclosing_scope_name }
         end

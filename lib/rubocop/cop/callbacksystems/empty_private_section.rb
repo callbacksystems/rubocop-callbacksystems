@@ -55,8 +55,7 @@ class RuboCop::Cop::Callbacksystems::EmptyPrivateSection < RuboCop::Cop::Callbac
           statements_in(enclosing_body).last.equal?(node)
         end
 
-        # Not `enclosing_body_for`: a body holding nothing but the modifier is a
-        # single statement, and that helper only reports multi-statement bodies.
+        # Not `enclosing_body_for`, which only reports multi-statement bodies.
         def enclosing_body
           enclosing_definition_of(node)&.body
         end

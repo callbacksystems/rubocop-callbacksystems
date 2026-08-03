@@ -21,8 +21,7 @@ class RuboCop::Cop::Callbacksystems::MaxSafeNavigationDepth < RuboCop::Cop::Call
   end
 
   private
-    # No safe-navigation link sits above this one in the same chain, so it is the
-    # chain's outermost `&.`: every chain is evaluated exactly once, from the top.
+    # The chain's outermost `&.`, so the chain is counted once.
     def outermost_safe_navigation?(node)
       child = node
       ancestor = node.parent
@@ -39,8 +38,7 @@ class RuboCop::Cop::Callbacksystems::MaxSafeNavigationDepth < RuboCop::Cop::Call
       parent&.call_type? && parent.receiver.equal?(child)
     end
 
-    # Counts every safe-navigation link in the whole chain, not just a consecutive
-    # run: `a&.b.c&.d` is depth 2. Mirrors the JS rule max-optional-chain-depth.
+    # Every link in the chain, not just a consecutive run: `a&.b.c&.d` is depth 2.
     def safe_navigation_count_in(node)
       if node&.call_type?
         (node.csend_type? ? 1 : 0) + safe_navigation_count_in(node.receiver)

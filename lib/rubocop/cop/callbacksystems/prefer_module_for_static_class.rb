@@ -78,8 +78,7 @@ class RuboCop::Cop::Callbacksystems::PreferModuleForStaticClass < RuboCop::Cop::
           bare_send?(statement) && statement.method?(:extend)
         end
 
-        # Only the sections the core cop refuses to touch, so the two do not
-        # report the same class twice.
+        # Only what the core cop refuses to touch, so neither reports twice.
         def private_singleton_section?
           statements.select { singleton_section?(it) }.any? { holds_private_section?(it) }
         end

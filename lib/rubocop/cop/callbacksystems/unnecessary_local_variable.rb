@@ -50,12 +50,9 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
   end
 
   private
-    # One step from the reference up towards the statement that would absorb it,
-    # and whether Ruby may skip that position.
     class Step < Data.define(:child, :parent)
-      # A short-circuit, a condition and a case subject all evaluate their first
-      # child before deciding, and a safe navigation its receiver; whatever comes
-      # after that may never run.
+      # These evaluate their first child before deciding; whatever comes after may
+      # never run.
       GATED = %i[and or if while until case case_match csend].freeze
       SKIPPABLE = %i[block numblock itblock resbody].freeze
 
@@ -91,8 +88,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
         format(MESSAGE, name: variable_name)
       end
 
-      # Inline only when the single read sits in the very next statement: nothing
-      # runs between the call and its use, so its evaluation order cannot change.
+      # Only into the very next statement, where nothing runs in between and the
+      # evaluation order cannot change.
       def inline(corrector)
         if inlineable?
           corrector.remove(removal_range)
@@ -164,10 +161,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           references.first
         end
 
-        # Inlining moves the call down to where the reference sits, so it keeps
-        # the original evaluation only when that place is always reached. Behind a
-        # short-circuit, a branch, a block or a safe navigation the call would
-        # stop happening when the assignment used to run it every time.
+        # Behind a short-circuit, a branch, a block or a safe navigation the call
+        # would stop happening where the assignment ran it every time.
         def unconditionally_reached?
           steps_to_next_statement.none?(&:deferred?)
         end
@@ -177,9 +172,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           nodes.map { Step.new(child: it, parent: it.parent) }
         end
 
-        # The assignment and the whitespace up to the statement that absorbs it,
-        # stopping short of any comment in that gap: it was written about the
-        # statement that survives.
+        # Stops short of a comment in the gap: it was written about the statement
+        # that survives.
         def removal_range
           range_ending_at_first_comment(assignment_gap, comments)
         end
@@ -188,10 +182,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           node.source_range.with(end_pos: next_statement.source_range.begin_pos)
         end
 
-        # An assignment gives a bare call its own statement, so `find_account "id"`
-        # keeps its arguments there. The read is a receiver or an argument, where the
-        # same source would take the following `.method` or comma as its own argument,
-        # so the arguments travel with parentheses around them.
+        # In a receiver or argument position, `find_account "id"` would swallow the
+        # following `.method` or comma, so the arguments get parentheses.
         def inlined_source
           if value.arguments? && !value.parenthesized?
             "#{call_source_through_selector}(#{value.arguments.map(&:source).join(", ")})"

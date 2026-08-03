@@ -60,8 +60,6 @@ class RuboCop::Cop::Callbacksystems::RoutesModuleScope < RuboCop::Cop::Callbacks
       end
     end
 
-    # Rewrites a contiguous run of routes that share a `module:` into a single
-    # `scope module: ... do` block, dropping the now-redundant option from each.
     class Consolidation
       include RuboCop::Cop::RangeHelp
 

@@ -120,8 +120,6 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           format(template_for(argument.value.to_s), name: argument.value)
         end
 
-        # The marker on a constant already sitting in the private section says
-        # nothing the section does not.
         def template_for(name)
           declared_privately?(declaration_of(name)) ? REDUNDANT_MESSAGE : MESSAGE
         end
@@ -142,9 +140,8 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         end
     end
 
-    # A constant read that would break if the declaration moved: one made by
-    # class-level code, from above the private section the declaration would
-    # move into.
+    # Read by class-level code above the section, so the declaration cannot move
+    # below it.
     class ConstantRead
       include RuboCop::Callbacksystems::Helpers
 
@@ -164,8 +161,6 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
       private
         attr_reader :node, :body
 
-        # `Other::Namespace::NAME` reads a constant of its own that happens to
-        # end in the same name.
         def own_constant?
           node.namespace.nil?
         end
@@ -174,8 +169,8 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           !runs_later? && !definition_identifier?(node)
         end
 
-        # A method body and a block held for later both run once the class body
-        # is done, so what they read can be declared anywhere in it.
+        # Both run after the class body, so what they read can be declared
+        # anywhere in it.
         def runs_later?
           node.each_ancestor(:any_def).any? || inside_deferred_block?
         end
