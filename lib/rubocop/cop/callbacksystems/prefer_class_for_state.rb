@@ -7,9 +7,11 @@
 # The value is followed by *data flow*: every receiverless method it is passed to
 # as an argument, then (through that callee's matching parameter) wherever it
 # flows next, transitively across the class. So a value handed from `rewrite` to
-# `process` to `decorate` counts all three, even though no single method passes it
-# four times. The flow is not followed through a *recursive* method: there the
-# value is a moving cursor over a structure, not one value held as state.
+# `process` to `decorate` reaches all three, even though no single method passes
+# it more than once. What is counted is the methods that *receive* the value, not
+# the one that first held it. The flow is not followed through a *recursive*
+# method: there the value is a moving cursor over a structure, not one value held
+# as state.
 #
 # This complements DataClump, which catches *groups* of arguments shared across
 # method *signatures*. Here a *single* value threaded around is the smell.

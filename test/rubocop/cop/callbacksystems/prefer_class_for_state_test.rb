@@ -196,4 +196,32 @@ class RuboCop::Cop::Callbacksystems::PreferClassForStateTest < CopTestCase
       end
     RUBY
   end
+
+  test "counts the methods that receive the value, not the one that first held it" do
+    offenses = assert_offense <<~RUBY
+      class Pipe
+        private
+          def first(node)
+            second(node)
+          end
+
+          def second(node)
+            third(node)
+          end
+
+          def third(node)
+            fourth(node)
+          end
+
+          def fourth(node)
+            fifth(node)
+          end
+
+          def fifth(node)
+            node.a
+          end
+      end
+    RUBY
+    assert_includes offenses.first.message, "threaded through 4 methods"
+  end
 end
