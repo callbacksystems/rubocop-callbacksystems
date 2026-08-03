@@ -72,7 +72,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
     end
 
     def yield_block_offenses(setup, &block)
-      SetupBlock.new(setup, processed_source.ast, test_blocks).each_offense(&block)
+      SetupBlock.new(setup, processed_source, test_blocks).each_offense(&block)
     end
 
     # One setup block. Yields an offense per assignment whose variable is unused or
@@ -81,18 +81,19 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
     class SetupBlock
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(setup, ast, tests)
+      def initialize(setup, processed_source, tests)
         @setup = setup
-        @ast = ast
+        @processed_source = processed_source
         @tests = tests
       end
 
       def each_offense
-        offenses.each { yield it[:node], it[:message], it[:inline_target], removal_range_for(it) }
+        offenses.each { yield it[:node], it[:message], *correction_for(it) }
       end
 
       private
-        attr_reader :setup, :ast, :tests
+        attr_reader :setup, :processed_source, :tests
+        delegate :ast, :comments, to: :processed_source, private: true
 
         def offenses
           @offenses ||= assignments.filter_map { offense_for(it) }
@@ -104,6 +105,14 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
 
         def offense_for(assignment)
           SetupAssignment.new(assignment, ast, tests).offense
+        end
+
+        # A removal that would take a comment with it is dropped, and the inlining
+        # goes with it: rewriting the reference while the assignment stays would
+        # leave the value in two places.
+        def correction_for(offense)
+          range = removal_range_for(offense)
+          spared?(range) ? [ offense[:inline_target], range ] : [ nil, nil ]
         end
 
         def removal_range_for(offense)
@@ -118,16 +127,19 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           end
         end
 
+        # Clearing the block would take any comment written in it too, and the
+        # note has nowhere else to go, so those assignments come out a line at a
+        # time and the block stays behind to hold it.
         def cleared?
+          nothing_left? && !holds_comment?(block_range, comments)
+        end
+
+        def nothing_left?
           removable_nodes.size == statements_in(setup.body).size
         end
 
         def removable_nodes
           offenses.filter_map { it[:node] if it[:removable] }
-        end
-
-        def first_removable
-          removable_nodes.min_by { it.source_range.begin_pos }
         end
 
         def block_range
@@ -142,6 +154,14 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
 
         def skip_newline(source, position)
           source[position] == "\n" ? position + 1 : position
+        end
+
+        def first_removable
+          removable_nodes.min_by { it.source_range.begin_pos }
+        end
+
+        def spared?(range)
+          range.nil? || !holds_comment?(range, comments)
         end
     end
 

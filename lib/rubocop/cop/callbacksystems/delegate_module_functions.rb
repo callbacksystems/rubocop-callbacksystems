@@ -39,7 +39,7 @@ class RuboCop::Cop::Callbacksystems::DelegateModuleFunctions < RuboCop::Cop::Cal
 
   def on_def(node)
     if wrapped_constant_call?(node)
-      delegation = ConstantDelegation.new(node)
+      delegation = ConstantDelegation.new(node, processed_source.comments)
       if delegation.correctable?
         add_offense(node, message: delegation.offense_message) { delegation.replace(it) }
       elsif delegation.offense?
@@ -50,13 +50,18 @@ class RuboCop::Cop::Callbacksystems::DelegateModuleFunctions < RuboCop::Cop::Cal
 
   private
     class ConstantDelegation
-      def initialize(node)
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, comments)
         @node = node
+        @comments = comments
         @visibility = RuboCop::Callbacksystems::NodeVisibility.new(node)
       end
 
+      # A one-line `delegate` has nowhere to put a comment written inside the
+      # method body, so that stays reported but uncorrected.
       def correctable?
-        offense? && forwards_own_parameters?
+        offense? && forwards_own_parameters? && !holds_comment?(node.source_range, comments)
       end
 
       def offense?
@@ -76,7 +81,7 @@ class RuboCop::Cop::Callbacksystems::DelegateModuleFunctions < RuboCop::Cop::Cal
       end
 
       private
-        attr_reader :node, :visibility
+        attr_reader :node, :comments, :visibility
 
         def forwards_own_parameters?
           node.body.arguments.map(&:source) == node.arguments.map(&:source)

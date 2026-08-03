@@ -38,7 +38,7 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
   MESSAGE = "Use the `delegate` macro instead of a hand-written delegation to `%<receiver>s`."
 
   def on_def(node)
-    delegation = ManualDelegation.new(node)
+    delegation = ManualDelegation.new(node, processed_source.comments)
     add_offense(node, message: delegation.offense_message) { delegation.correct(it) } if delegation.offense?
   end
 
@@ -46,8 +46,9 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
     class ManualDelegation
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, comments)
         @node = node
+        @comments = comments
       end
 
       def offense?
@@ -58,12 +59,14 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         format(MESSAGE, receiver: receiver_names.join("."))
       end
 
+      # A one-line `delegate` has nowhere to put a comment written inside the
+      # method body, so that stays reported but uncorrected.
       def correct(corrector)
-        Conversion.new(node, receiver_names).apply(corrector)
+        Conversion.new(node, receiver_names).apply(corrector) unless holds_comment?(node.source_range, comments)
       end
 
       private
-        attr_reader :node
+        attr_reader :node, :comments
         delegate :body, to: :node, private: true
 
         def delegates_to_same_name?

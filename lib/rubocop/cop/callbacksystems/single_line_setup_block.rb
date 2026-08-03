@@ -39,7 +39,10 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
   alias on_itblock on_block
 
   private
+    # A brace block is one line, which cannot hold an own-line comment, so a
+    # block carrying one keeps the `do ... end` that can.
     def single_line_body?(node)
-      node.body&.single_line? && statements_in(node.body).one?
+      node.body&.single_line? && statements_in(node.body).one? &&
+        !holds_comment?(node.source_range, processed_source.comments)
     end
 end

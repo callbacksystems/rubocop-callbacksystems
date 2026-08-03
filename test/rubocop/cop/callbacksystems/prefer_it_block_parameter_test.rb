@@ -146,4 +146,10 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameterTest < CopTestCase
       greet = Proc.new { |name| puts name }
     RUBY
   end
+
+  test "allows a parameter referenced inside a nested block, where it would rebind" do
+    assert_no_offense <<~RUBY
+      comments.all? { |comment| blocks.any? { it.contains?(comment.range) } }
+    RUBY
+  end
 end

@@ -103,4 +103,22 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrapTest < CopTestCase
       end
     CORRECTED
   end
+
+  test "carries a comment between the guard and the happy path into the wrap" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        def label
+          return unless ready?
+          # keep this note
+          compute_label
+        end
+      RUBY
+        def label
+          if ready?
+            # keep this note
+            compute_label
+          end
+        end
+      CORRECTED
+  end
 end

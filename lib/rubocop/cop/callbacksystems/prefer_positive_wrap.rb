@@ -25,7 +25,7 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
   MESSAGE = "Wrap positively: `if cond; ...; end` instead of a leading negative guard."
 
   def on_def(node)
-    wrap = WrappableGuard.new(node.body)
+    wrap = WrappableGuard.new(node.body, processed_source.comments)
     add_offense(wrap.guard, message: MESSAGE) { wrap.correct(it) } if wrap.offense?
   end
 
@@ -40,8 +40,9 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
       MAX_TOTAL_DEPTH = 3
       NESTING_TYPES = %i[if case while until while_post until_post for rescue].to_set.freeze
 
-      def initialize(body)
+      def initialize(body, comments)
         @body = body
+        @comments = comments
       end
 
       def offense?
@@ -57,7 +58,7 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
       end
 
       private
-        attr_reader :body
+        attr_reader :body, :comments
 
         def statements
           statements_in(body)
@@ -98,7 +99,18 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
         end
 
         def happy_source
-          body.source_range.source_buffer.source[happy.first.source_range.begin_pos...happy.last.source_range.end_pos]
+          body.source_range.source_buffer.source[happy_start...happy.last.source_range.end_pos]
+        end
+
+        # A comment between the guard and the happy path was written about the
+        # happy path, so it travels into the wrap with it.
+        def happy_start
+          comment = first_comment_in(gap_after_guard, comments)
+          comment ? comment.source_range.begin_pos : happy.first.source_range.begin_pos
+        end
+
+        def gap_after_guard
+          guard.source_range.end.join(happy.first.source_range.begin)
         end
 
         def indent

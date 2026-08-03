@@ -126,7 +126,7 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
 
         def reorder_run(run)
           ordered = ordered_run(run)
-          corrector.replace(run_range(run), join_blocks(ordered)) unless ordered == run
+          corrector.replace(run_range(run), join_blocks(ordered)) if ordered != run && carries_all_comments?(run)
         end
 
         def ordered_run(run)
@@ -137,8 +137,17 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           end
         end
 
-        def run_range(run)
-          range_between(block_start_of(run.first), run.last.source_range.end_pos)
+        # Rebuilding the run copies each member's block, so a comment outside every
+        # one of them, a note between two methods with a blank line on both sides,
+        # would be dropped. Whose it is cannot be read off the source, so a run
+        # holding one stays in the order its author left it.
+        def carries_all_comments?(run)
+          blocks = run.map { block_range_of(it) }
+          comments_within(run_range(run)).all? { |comment| blocks.any? { it.contains?(comment.source_range) } }
+        end
+
+        def block_range_of(member)
+          range_between(block_start_of(member), member.source_range.end_pos)
         end
 
         def block_start_of(member)
@@ -159,12 +168,20 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           processed_source.comments.find { it.loc.line == line && own_line_comment?(it) }
         end
 
+        def comments_within(range)
+          processed_source.comments.select { range.contains?(it.source_range) }
+        end
+
+        def run_range(run)
+          range_between(block_start_of(run.first), run.last.source_range.end_pos)
+        end
+
         def join_blocks(members)
           members.map { block_source_of(it) }.join("\n\n")
         end
 
         def block_source_of(member)
-          range_between(block_start_of(member), member.source_range.end_pos).source
+          block_range_of(member).source
         end
     end
 

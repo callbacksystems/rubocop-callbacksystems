@@ -28,7 +28,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassNewForEmptyNestedClass < RuboCop
   MESSAGE = "Declare `%<name>s` as `Class.new` instead of a class definition with no body."
 
   def on_class(node)
-    definition = EmptyNestedClass.new(node)
+    definition = EmptyNestedClass.new(node, processed_source.comments)
     add_offense(node, message: definition.offense_message) { definition.rewrite(it) } if definition.offense?
   end
 
@@ -36,12 +36,13 @@ class RuboCop::Cop::Callbacksystems::PreferClassNewForEmptyNestedClass < RuboCop
     class EmptyNestedClass
       include RuboCop::Callbacksystems::Helpers
 
-      def initialize(node)
+      def initialize(node, comments)
         @node = node
+        @comments = comments
       end
 
       def offense?
-        node.body.nil? && nested?
+        empty_body? && nested?
       end
 
       def offense_message
@@ -53,7 +54,13 @@ class RuboCop::Cop::Callbacksystems::PreferClassNewForEmptyNestedClass < RuboCop
       end
 
       private
-        attr_reader :node
+        attr_reader :node, :comments
+
+        # A body holding nothing but a comment is no body to the parser, but it is
+        # one to the reader, and `Class.new` has nowhere to put the note.
+        def empty_body?
+          node.body.nil? && !holds_comment?(node.source_range, comments)
+        end
 
         def nested?
           enclosing_class_or_module_of(node).present?

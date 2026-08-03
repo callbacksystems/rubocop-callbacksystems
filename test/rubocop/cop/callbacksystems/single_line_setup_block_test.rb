@@ -100,4 +100,15 @@ class SingleLineSetupBlockTest < CopTestCase
 
     assert_correction original, corrected
   end
+
+  test "allows a setup block holding a comment, which braces could not keep" do
+    assert_no_offense <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        setup do
+          # keep this note
+          @user = users(:bruno)
+        end
+      end
+    RUBY
+  end
 end

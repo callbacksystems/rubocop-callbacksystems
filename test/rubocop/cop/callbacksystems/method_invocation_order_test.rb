@@ -750,4 +750,21 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrderTest < CopTestCase
       end
     RUBY
   end
+
+  test "leaves a run alone when it holds a comment belonging to neither method" do
+    code = <<~RUBY
+      class Example
+        def helper
+        end
+
+        # a note about nothing in particular
+
+        def process
+          helper
+        end
+      end
+    RUBY
+
+    assert_correction code, code
+  end
 end

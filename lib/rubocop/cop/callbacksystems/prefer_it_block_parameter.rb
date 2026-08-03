@@ -37,9 +37,10 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
   MESSAGE = "Use `it` instead of explicit block parameter `|%<param>s|`."
 
   def on_block(node)
-    if Candidate.new(node).convertible?
+    candidate = Candidate.new(node)
+    if candidate.convertible?
       add_offense(node, message: format(MESSAGE, param: node.first_argument.source)) do |corrector|
-        Correction.new(corrector, node).apply
+        Correction.new(corrector, candidate).apply
       end
     end
   end
@@ -51,18 +52,22 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
     class Candidate
       METHOD_DEFINITIONS = %i[define_method define_singleton_method].freeze
 
+      attr_reader :node
+
       def initialize(node)
         @node = node
       end
 
       def convertible?
-        single_line_braced? && single_replaceable_parameter? &&
-          !node.lambda_or_proc? && !method_definition? && !nested_in_convertible_block?
+        single_line_braced? && single_replaceable_parameter? && !node.lambda_or_proc? &&
+          !method_definition? && !nested_in_convertible_block? && !captured_by_nested_block?
+      end
+
+      def references_parameter?(lvar_node)
+        lvar_node.name.to_s == node.first_argument.source
       end
 
       private
-        attr_reader :node
-
         def single_line_braced?
           node.body && node.braces? && node.single_line?
         end
@@ -78,12 +83,22 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
         def nested_in_convertible_block?
           node.each_ancestor(:any_block).any? { it.arguments.size == 1 && it.braces? && it.single_line? }
         end
+
+        # Once converted the reference reads as `it`, and inside another block `it`
+        # is that block's own parameter. Rewriting would rebind it silently.
+        def captured_by_nested_block?
+          node.body.each_node(:lvar).any? { captured?(it) }
+        end
+
+        def captured?(lvar_node)
+          references_parameter?(lvar_node) && lvar_node.each_ancestor(:any_block).first != node
+        end
     end
 
     class Correction
-      def initialize(corrector, node)
+      def initialize(corrector, candidate)
         @corrector = corrector
-        @node = node
+        @candidate = candidate
       end
 
       def apply
@@ -92,15 +107,12 @@ class RuboCop::Cop::Callbacksystems::PreferItBlockParameter < RuboCop::Cop::Call
       end
 
       private
-        attr_reader :corrector, :node
+        attr_reader :corrector, :candidate
+        delegate :node, :references_parameter?, to: :candidate, private: true
 
         def replace_parameter_references
           node.body.each_node(:lvar).each { corrector.replace(it, "it") if references_parameter?(it) }
           corrector.replace(node.body, "it") if node.body.lvar_type? && references_parameter?(node.body)
-        end
-
-        def references_parameter?(lvar_node)
-          lvar_node.name.to_s == node.first_argument.source
         end
 
         def remove_arguments
