@@ -31,6 +31,12 @@ class FixerAudit
     correcting_cops.map { it.badge.to_s } - probes.map(&:badge).uniq
   end
 
+  # The shapes themselves, for an audit that corrects them with the whole cop set
+  # rather than one cop at a time.
+  def probe_sources
+    probes.map { ClashAudit::Source.new(code: it.source, file: it.file) }.uniq
+  end
+
   private
     def probes
       @probes ||= extra_probes + corpus_probes
@@ -45,15 +51,23 @@ class FixerAudit
     end
 
     def correcting_cops
-      @correcting_cops ||= RuboCop::Cop::Registry.global.cops.select { own_corrector?(it) }
-    end
-
-    def own_corrector?(cop_class)
-      cop_class.support_autocorrect? && cop_class.badge.to_s.start_with?("Callbacksystems/")
+      @correcting_cops ||= CorrectingCops.new.classes
     end
 
     def corpus_probes
       Dir["#{COP_TEST_DIR}/*_test.rb"].flat_map { CopTestFile.new(it).probes }
+    end
+
+    # The cops of this gem that carry a corrector.
+    class CorrectingCops
+      def classes
+        RuboCop::Cop::Registry.global.cops.select { own_corrector?(it) }
+      end
+
+      private
+        def own_corrector?(cop_class)
+          cop_class.support_autocorrect? && cop_class.badge.to_s.start_with?("Callbacksystems/")
+        end
     end
 
     # One source a cop claims to handle, checked against the comment it must not

@@ -195,7 +195,7 @@ class CollapseMultilineExpressionTest < CopTestCase
   end
 
   test "allows multiline method call that would exceed max length" do
-    assert_no_offense <<~'RUBY'
+    assert_no_offense <<~RUBY
       redirect_to \
         very_long_path_helper_method_name,
         notice: "A very long notice message that makes this exceed the maximum line length configured"
@@ -377,6 +377,45 @@ class CollapseMultilineExpressionTest < CopTestCase
         # keep this note
         name: "John"
       )
+    RUBY
+  end
+
+  test "allows a multiline literal holding a heredoc, whose body needs the lines below" do
+    assert_no_offense <<~RUBY
+      PROBES = [
+        <<~SQL
+          select 1
+        SQL
+      ].freeze
+    RUBY
+  end
+
+  test "allows a multiline hash whose value is a heredoc" do
+    assert_no_offense <<~RUBY
+      QUERIES = {
+        report: <<~SQL
+          select 1
+        SQL
+      }.freeze
+    RUBY
+  end
+
+  test "allows a multiline call whose argument is a heredoc" do
+    assert_no_offense <<~RUBY
+      wrap(
+        <<~TEXT
+          hello
+        TEXT
+      )
+    RUBY
+  end
+
+  test "allows a backslash continuation onto a heredoc" do
+    assert_no_offense <<~RUBY
+      wrap \
+        <<~TEXT
+          hello
+        TEXT
     RUBY
   end
 end

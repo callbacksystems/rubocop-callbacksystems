@@ -111,4 +111,16 @@ class SingleLineSetupBlockTest < CopTestCase
       end
     RUBY
   end
+
+  test "allows a setup block holding a heredoc, whose body braces could not keep" do
+    assert_no_offense <<~RUBY
+      class UserTest < ActiveSupport::TestCase
+        setup do
+          @body = <<~TEXT
+            hello
+          TEXT
+        end
+      end
+    RUBY
+  end
 end

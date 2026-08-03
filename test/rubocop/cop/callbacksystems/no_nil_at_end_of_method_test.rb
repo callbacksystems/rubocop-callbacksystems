@@ -133,4 +133,22 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethodTest < CopTestCase
         end
       CORRECTED
   end
+
+  test "keeps the heredoc body written below the statement above the nil" do
+    assert_correction \
+      <<~RUBY, <<~CORRECTED
+        def process
+          wrap(<<~TEXT)
+            hello
+          TEXT
+          nil
+        end
+      RUBY
+        def process
+          wrap(<<~TEXT)
+            hello
+          TEXT
+        end
+      CORRECTED
+  end
 end

@@ -65,4 +65,20 @@ class RuboCop::Callbacksystems::Helpers::RangesTest < HelpersTestCase
 
     assert_equal "", Helpers.indentation_of(processed.ast)
   end
+
+  test "source_end_of reaches past the body of a heredoc the node holds" do
+    node = processed_source(<<~RUBY).ast
+      wrap(<<~TEXT)
+        hello
+      TEXT
+    RUBY
+
+    assert_equal "wrap(<<~TEXT)\n  hello\nTEXT", node.source_range.with(end_pos: Helpers.source_end_of(node)).source
+  end
+
+  test "source_end_of is the node's own end when it holds no heredoc" do
+    node = processed_source("wrap(body)\n").ast
+
+    assert_equal node.source_range.end_pos, Helpers.source_end_of(node)
+  end
 end

@@ -88,8 +88,11 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callback
           range_starting_after_last_comment(separator, comments)
         end
 
+        # Measured from where the statement above really ends rather than from
+        # its range, so a heredoc body hanging below that range is not swept up
+        # with the separator.
         def separator
-          node.source_range.with(begin_pos: previous.source_range.end_pos)
+          node.source_range.with(begin_pos: source_end_of(previous))
         end
     end
 end

@@ -151,6 +151,34 @@ class RuboCop::Callbacksystems::Helpers::NodeTypesTest < HelpersTestCase
     assert_not Helpers.any_block_type?(nil)
   end
 
+  test "holds_heredoc? is true for a literal built from a heredoc" do
+    node = processed_source(<<~RUBY).ast
+      PROBES = [
+        <<~SQL
+          select 1
+        SQL
+      ].freeze
+    RUBY
+
+    assert Helpers.holds_heredoc?(node)
+  end
+
+  test "holds_heredoc? is true for the heredoc itself" do
+    node = processed_source(<<~RUBY).ast.expression
+      BODY = <<~SQL
+        select 1
+      SQL
+    RUBY
+
+    assert Helpers.holds_heredoc?(node)
+  end
+
+  test "holds_heredoc? is false for a plain multiline literal" do
+    node = processed_source("PROBES = [\n  1,\n  2\n]\n").ast
+
+    assert_not Helpers.holds_heredoc?(node)
+  end
+
   test "class_name_of returns the name a class definition declares" do
     node = processed_source("class Foo::Bar\n  def baz; end\nend").ast
 

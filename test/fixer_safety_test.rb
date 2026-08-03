@@ -1,9 +1,16 @@
 require "test_helper"
 require "fixer_audit"
+require "clash_audit"
 
 class FixerSafetyTest < ActiveSupport::TestCase
   test "no autocorrecting cop drops a comment or breaks the syntax" do
     audit = FixerAudit.new
+
+    assert_empty audit.failures, audit.failure_report
+  end
+
+  test "correcting with the whole cop set introduces no lint offense" do
+    audit = ClashAudit.new
 
     assert_empty audit.failures, audit.failure_report
   end

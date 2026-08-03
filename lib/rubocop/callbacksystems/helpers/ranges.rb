@@ -19,6 +19,13 @@ module RuboCop::Callbacksystems::Helpers::Ranges
     " " * node.source_range.column
   end
 
+  # Where a node's source really ends. A heredoc body sits below the line its
+  # marker is on, past the end of the node holding it, so a range built from
+  # that end would reach back over the body and delete it.
+  def source_end_of(node)
+    [ node.source_range.end_pos, *heredoc_ends_in(node) ].max
+  end
+
   private
     def blank_line_above(range)
       buffer = range.source_buffer
@@ -34,5 +41,10 @@ module RuboCop::Callbacksystems::Helpers::Ranges
       buffer = range.source_buffer
       line = buffer.line_for_position(range.end_pos)
       range.with(end_pos: [ buffer.line_range(line).end_pos + 1, buffer.source.length ].min) if blank_line?(buffer, line)
+    end
+
+    def heredoc_ends_in(node)
+      [ node, *node.each_descendant(:str, :dstr, :xstr) ]
+        .filter_map { it.loc.heredoc_end.end_pos if heredoc_literal?(it) }
     end
 end

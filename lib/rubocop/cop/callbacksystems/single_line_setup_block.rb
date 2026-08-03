@@ -27,11 +27,8 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
 
   def on_block(node)
     setup_or_teardown_block?(node) do |method_name|
-      next if node.braces? || !single_line_body?(node)
-
-      add_offense(node, message: format(MESSAGE, method: method_name)) do |corrector|
-        corrector.replace(node, "#{method_name} { #{node.body.source.strip} }")
-      end
+      hook = Hook.new(node, method_name, processed_source.comments)
+      add_offense(node, message: hook.offense_message) { it.replace(node, hook.braced) } if hook.offense?
     end
   end
 
@@ -39,10 +36,40 @@ class RuboCop::Cop::Callbacksystems::SingleLineSetupBlock < RuboCop::Cop::Callba
   alias on_itblock on_block
 
   private
-    # A brace block is one line, which cannot hold an own-line comment, so a
-    # block carrying one keeps the `do ... end` that can.
-    def single_line_body?(node)
-      node.body&.single_line? && statements_in(node.body).one? &&
-        !holds_comment?(node.source_range, processed_source.comments)
+    # A `setup` or `teardown` block, and the one-line form it collapses into.
+    class Hook
+      include RuboCop::Callbacksystems::Helpers
+
+      def initialize(node, method_name, comments)
+        @node = node
+        @method_name = method_name
+        @comments = comments
+      end
+
+      def offense?
+        !node.braces? && single_line_body?
+      end
+
+      def offense_message
+        format(MESSAGE, method: method_name)
+      end
+
+      def braced
+        "#{method_name} { #{node.body.source.strip} }"
+      end
+
+      private
+        attr_reader :node, :method_name, :comments
+
+        def single_line_body?
+          node.body&.single_line? && statements_in(node.body).one? && !needs_its_own_lines?
+        end
+
+        # A brace block is one line, which cannot hold an own-line comment nor
+        # the lines a heredoc body needs below its marker, so a block carrying
+        # either keeps the `do ... end` that can.
+        def needs_its_own_lines?
+          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
+        end
     end
 end

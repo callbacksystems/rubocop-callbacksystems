@@ -35,6 +35,14 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
     node && BLOCK_NODE_TYPES.include?(node.type)
   end
 
+  # Whether anything in the node is a heredoc. Its body sits on the lines below
+  # the `<<~TAG` marker, outside the node's own range but inside the range a
+  # fixer rewrites, so collapsing that range swallows the body and leaves the
+  # marker with nothing to close it.
+  def holds_heredoc?(node)
+    [ node, *node.each_descendant(:str, :dstr, :xstr) ].any? { heredoc_literal?(it) }
+  end
+
   def class_name_of(node)
     node.class_type? ? node.identifier.source : node.name.to_s
   end
@@ -65,5 +73,9 @@ module RuboCop::Callbacksystems::Helpers::NodeTypes
 
     def builder_name_of(call)
       call.receiver.short_name if call.receiver&.const_type?
+    end
+
+    def heredoc_literal?(node)
+      node.type?(:str, :dstr, :xstr) && node.heredoc?
     end
 end

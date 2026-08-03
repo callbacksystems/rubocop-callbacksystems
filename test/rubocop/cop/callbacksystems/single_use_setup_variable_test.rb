@@ -445,4 +445,42 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariableTest < CopTestCase
     assert_offense code
     assert_correction code, code
   end
+
+  test "reports a single-use heredoc but leaves it, since its body would stay behind" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @body = <<~TEXT
+            hello
+          TEXT
+        end
+
+        test "renders" do
+          assert_equal "hello\n", @body
+        end
+      end
+    RUBY
+
+    assert_offense code, file: "test/models/order_test.rb"
+    assert_correction code, code, file: "test/models/order_test.rb"
+  end
+
+  test "reports an unread heredoc but leaves it, since dropping its line orphans the body" do
+    code = <<~RUBY
+      class OrderTest < ActiveSupport::TestCase
+        setup do
+          @body = <<~TEXT
+            hello
+          TEXT
+        end
+
+        test "listing works" do
+          assert Record.count.positive?
+        end
+      end
+    RUBY
+
+    assert_offense code, file: "test/models/order_test.rb"
+    assert_correction code, code, file: "test/models/order_test.rb"
+  end
 end

@@ -264,6 +264,11 @@ Lint/UnmodifiedReduceAccumulator:
 Lint/UnusedMethodArgument:
   Enabled: false
 
+# `private` marks the implementation section here, and everything that serves the
+# implementation lives in it: nested classes, constants and delegate macros as
+# well as methods. This cop only knows Ruby's method visibility, so it calls the
+# modifier useless whenever a section holds no plain `def`. PrivateNestedClasses,
+# PrivateConstantsInPrivateSection and EmptyPrivateSection govern that space.
 Lint/UselessAccessModifier:
   Enabled: false
 

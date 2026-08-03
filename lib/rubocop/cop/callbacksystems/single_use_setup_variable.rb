@@ -220,7 +220,15 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
 
         def inlinable_value?
-          INLINABLE_TYPES.include?(value.type) || primary_call?
+          movable_value? && (INLINABLE_TYPES.include?(value.type) || primary_call?)
+        end
+
+        # A heredoc's body sits on the lines below its marker, outside the
+        # assignment. Inlining would carry the marker away from its body and
+        # dropping the line would leave the body behind, so the offense is
+        # reported and the code left as it is.
+        def movable_value?
+          !holds_heredoc?(value)
         end
 
         def value
@@ -293,7 +301,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
 
         def inert_value?
-          INLINABLE_TYPES.include?(value.type) || fixture_read?
+          movable_value? && (INLINABLE_TYPES.include?(value.type) || fixture_read?)
         end
 
         def fixture_read?

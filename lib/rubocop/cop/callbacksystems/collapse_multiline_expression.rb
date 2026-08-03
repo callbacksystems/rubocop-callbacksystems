@@ -88,7 +88,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       def offense?
-        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line? && !carries_comment?
+        delimiter_match? && multiline? && no_multiline_items? && fits_on_one_line? && !needs_its_own_lines?
       end
 
       def collapsed
@@ -126,10 +126,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           node.loc.end.source_line.length - node.loc.end.column - 1
         end
 
-        # One line cannot hold an own-line comment, so an expression carrying one
+        # One line cannot hold an own-line comment, and a heredoc body only
+        # starts on the line below its marker, so an expression carrying either
         # keeps the shape it has.
-        def carries_comment?
-          holds_comment?(node.source_range, comments)
+        def needs_its_own_lines?
+          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
         end
     end
 
@@ -161,7 +162,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       def offense?
-        multiline? && collapsible_shape? && chain_collapsible? && fits_on_one_line? && !carries_comment?
+        multiline? && collapsible_shape? && chain_collapsible? && fits_on_one_line? && !needs_its_own_lines?
       end
 
       def collapsible_shape?
@@ -264,10 +265,11 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
           [ arg.source.strip ]
         end
 
-        # One line cannot hold an own-line comment, so a call carrying one keeps
+        # One line cannot hold an own-line comment, and a heredoc body only
+        # starts on the line below its marker, so a call carrying either keeps
         # the shape it has.
-        def carries_comment?
-          holds_comment?(node.source_range, comments)
+        def needs_its_own_lines?
+          holds_comment?(node.source_range, comments) || holds_heredoc?(node)
         end
     end
 end
