@@ -42,15 +42,12 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
 
   MESSAGE = "This expression can fit on a single line."
 
-  HASH_SHAPE = { open: "{", close: "}", items: :children }.freeze
-  ARRAY_SHAPE = { open: "[", close: "]", items: :values }.freeze
-
   def on_hash(node)
-    collapse LiteralCollapser.new(node, max_line_length, HASH_SHAPE, comments)
+    collapse LiteralCollapser.new(node, max_line_length, hash_shape, comments)
   end
 
   def on_array(node)
-    collapse LiteralCollapser.new(node, max_line_length, ARRAY_SHAPE, comments)
+    collapse LiteralCollapser.new(node, max_line_length, array_shape, comments)
   end
 
   def on_send(node)
@@ -70,6 +67,14 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       cop_config["MaxLineLength"]
     end
 
+    def hash_shape
+      Shape.new(open: "{", close: "}", items: :children)
+    end
+
+    def array_shape
+      Shape.new(open: "[", close: "]", items: :values)
+    end
+
     class LiteralCollapser
       include RuboCop::Callbacksystems::Helpers
 
@@ -87,14 +92,14 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
       end
 
       def collapsed
-        @collapsed ||= "#{shape[:open]} #{items_source} #{shape[:close]}"
+        @collapsed ||= shape.wrap(items_source)
       end
 
       private
         attr_reader :max_line_length, :shape, :comments
 
         def delimiter_match?
-          node.loc.begin&.source == shape[:open]
+          shape.opens?(node)
         end
 
         def multiline?
@@ -106,7 +111,7 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         end
 
         def items
-          node.public_send(shape[:items])
+          shape.items_of(node)
         end
 
         def fits_on_one_line?
@@ -126,6 +131,22 @@ class RuboCop::Cop::Callbacksystems::CollapseMultilineExpression < RuboCop::Cop:
         def carries_comment?
           holds_comment?(node.source_range, comments)
         end
+    end
+
+    # The bracket pair a literal collapses into, and how to reach the items
+    # between them.
+    class Shape < Data.define(:open, :close, :items)
+      def opens?(node)
+        node.loc.begin&.source == open
+      end
+
+      def items_of(node)
+        node.public_send(items)
+      end
+
+      def wrap(inner)
+        "#{open} #{inner} #{close}"
+      end
     end
 
     class SendCollapser

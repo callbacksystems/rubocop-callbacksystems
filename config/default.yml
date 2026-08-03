@@ -99,6 +99,11 @@ Callbacksystems/NoAbbreviations:
 Callbacksystems/NoAnemicDelegation:
   Enabled: true
 
+Callbacksystems/NoAnemicRecord:
+  Enabled: true
+  MinFields: 3
+  MinReaders: 2
+
 Callbacksystems/NoAssertSelect:
   Enabled: true
   Include:

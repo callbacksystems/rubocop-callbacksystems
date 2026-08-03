@@ -28,6 +28,9 @@
 # Components partition the shared names, so a class holding two of them is
 # hiding two objects and gets one offense for each.
 #
+# This sees parameter lists only. The same concept bagged into a hash and reached
+# into is the identical smell in another spelling, and belongs to NoAnemicRecord.
+#
 # @example
 #   # bad - same parameters repeated across methods
 #   class Order
