@@ -1,14 +1,12 @@
-# Requires nested classes to be declared in the private section. A nested class
-# is an implementation detail, so the class holding one says as much by where it
-# puts it. One that other files build has no business being nested at all: it
+# Requires nested classes to be declared in the private section. A nested class is an implementation detail, so the
+# class holding one says as much by where it puts it. One that other files build has no business being nested at all: it
 # goes in its own file, where Zeitwerk expects it.
 #
-# A constant assigned from `Data.define`, `Struct.new` or `Class.new` defines a
-# class in everything but syntax, so it reads under the same rule.
+# A constant assigned from `Data.define`, `Struct.new` or `Class.new` defines a class in everything but syntax, so it
+# reads under the same rule.
 #
-# A definition with no body is left alone. An error class or a bare list of
-# members declares what something is rather than how it works, and a file of its
-# own would cost more than it says.
+# A definition with no body is left alone. An error class or a bare list of members declares what something is rather
+# than how it works, and a file of its own would cost more than it says.
 #
 # @example
 #   # bad - public nested class

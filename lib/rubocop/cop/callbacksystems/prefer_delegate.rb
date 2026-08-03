@@ -1,15 +1,12 @@
-# Detects methods that only delegate to a same-named method on a plain
-# receiver (`def size; node.size; end`). The `delegate` macro says it
-# declaratively.
+# Detects methods that only delegate to a same-named method on a plain receiver (`def size; node.size; end`). The
+# `delegate` macro says it declaratively.
 #
-# Rails/Delegate covers the public single-receiver case, so what is left here
-# is the private one (the macro defines public methods unless told otherwise)
-# and the nested one, where a chain of calls becomes a dotted target that
+# Rails/Delegate covers the public single-receiver case, so what is left here is the private one (the macro defines
+# public methods unless told otherwise) and the nested one, where a chain of calls becomes a dotted target that
 # Rails/Delegate does not recognize.
 #
-# The autocorrection folds the method into an existing same-target `delegate`
-# when one is present, keeping them on one line; otherwise it writes a fresh
-# macro beside the section's other declarations.
+# The autocorrection folds the method into an existing same-target `delegate` when one is present, keeping them on one
+# line; otherwise it writes a fresh macro beside the section's other declarations.
 #
 # @example
 #   # bad - hand-written private delegation
@@ -76,8 +73,7 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
           @receiver_names ||= chain_names_in(body&.receiver) || []
         end
 
-        # Anything but a chain of argumentless calls on self gives up the whole
-        # reading.
+        # Anything but a chain of argumentless calls on self gives up the whole reading.
         def chain_names_in(receiver)
           if receiver.nil?
             []
@@ -96,8 +92,7 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
         end
     end
 
-    # With no declaration and no `private` to anchor the macro, the offense is
-    # reported without a correction.
+    # With no declaration and no `private` to anchor the macro, the offense is reported without a correction.
     class Conversion
       include RuboCop::Callbacksystems::Helpers
 
@@ -164,8 +159,7 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
           end
         end
 
-        # Corrections run in a loop, so this can come past twice:
-        # `delegate :about, :about` defines the method twice.
+        # Corrections run in a loop, so this can come past twice: `delegate :about, :about` defines the method twice.
         def merge_into_sibling(corrector)
           return if sibling_delegate.method_names.include?(node.method_name)
 

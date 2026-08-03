@@ -1,12 +1,10 @@
-# Ensures all public methods in classes and modules have corresponding tests.
-# Private nested class methods are excluded since they are implementation details.
-# Methods referenced by macros (callbacks, delegates) are excluded.
-# Methods returning a plain literal are excluded since a test would only restate the literal.
-# Scopes and methods in class_methods blocks are included.
+# Ensures all public methods in classes and modules have corresponding tests. Private nested class methods are excluded
+# since they are implementation details. Methods referenced by macros (callbacks, delegates) are excluded. Methods
+# returning a plain literal are excluded since a test would only restate the literal. Scopes and methods in
+# class_methods blocks are included.
 #
-# Test files are located based on the source file path:
-# - lib/foo/bar.rb -> test/lib/foo/bar_test.rb or test/foo/bar_test.rb
-# - app/models/user.rb -> test/models/user_test.rb
+# Test files are located based on the source file path: - lib/foo/bar.rb -> test/lib/foo/bar_test.rb or
+# test/foo/bar_test.rb - app/models/user.rb -> test/models/user_test.rb
 #
 # Tests must follow the naming convention: test "method_name ..." do
 #

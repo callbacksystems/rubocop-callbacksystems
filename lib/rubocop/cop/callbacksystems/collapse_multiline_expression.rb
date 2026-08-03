@@ -1,6 +1,5 @@
-# Detects multiline expressions that can fit on a single line and collapses them.
-# Applies to hash literals, array literals, and method calls with backslash
-# continuation or parenthesized arguments.
+# Detects multiline expressions that can fit on a single line and collapses them. Applies to hash literals, array
+# literals, and method calls with backslash continuation or parenthesized arguments.
 #
 # @example
 #   # bad - hash that fits on one line

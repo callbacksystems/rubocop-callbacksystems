@@ -1,6 +1,5 @@
-# Deeply chained safe navigation (`a&.b&.c&.d&.e`) signals deep coupling or
-# poor data modelling. Refactor: pre-validate, restructure the object, or
-# extract an intermediate.
+# Deeply chained safe navigation (`a&.b&.c&.d&.e`) signals deep coupling or poor data modelling. Refactor: pre-validate,
+# restructure the object, or extract an intermediate.
 #
 # @example MaxDepth: 3 (default)
 #   # bad - four safe-navigation links

@@ -1,8 +1,7 @@
-# Forbids using `class << self` inside modules.
-# Use `extend self` instead to define module-level methods.
+# Forbids using `class << self` inside modules. Use `extend self` instead to define module-level methods.
 #
-# `class << self` in modules is an imperative way to define methods
-# when a more declarative `extend self` approach exists.
+# `class << self` in modules is an imperative way to define methods when a more declarative `extend self` approach
+# exists.
 #
 # @example
 #   # bad - using class << self in module

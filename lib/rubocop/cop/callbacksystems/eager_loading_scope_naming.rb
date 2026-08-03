@@ -1,7 +1,5 @@
-# Ensures eager loading scopes follow naming conventions.
-# - Must use `with_*` prefix
-# - Must not contain controller action names (index, show, etc.)
-# - Must not contain generic terms (associations, relations)
+# Ensures eager loading scopes follow naming conventions. - Must use `with_*` prefix - Must not contain controller
+# action names (index, show, etc.) - Must not contain generic terms (associations, relations)
 #
 # @example
 #   # bad - missing with_ prefix

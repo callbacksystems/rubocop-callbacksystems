@@ -1,5 +1,5 @@
-# Detects memoization methods that delegate to another method in the same class.
-# The computation should be inlined directly in the memoizing method.
+# Detects memoization methods that delegate to another method in the same class. The computation should be inlined
+# directly in the memoizing method.
 #
 # @example
 #   # bad - delegates to another method

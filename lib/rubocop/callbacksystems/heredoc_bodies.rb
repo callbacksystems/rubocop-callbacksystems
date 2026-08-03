@@ -1,5 +1,5 @@
-# A heredoc body sits below the line its marker is on, outside the range a fixer
-# rewrites, so a collapse has to write it out again under the line that survives.
+# A heredoc body sits below the line its marker is on, outside the range a fixer rewrites, so a collapse has to write it
+# out again under the line that survives.
 class RuboCop::Callbacksystems::HeredocBodies
   include RuboCop::Callbacksystems::Helpers
 

@@ -1,11 +1,8 @@
-# Detects methods that only wrap the same-named method on a constant.
-# `delegate` declares the relationship in one line.
+# Detects methods that only wrap the same-named method on a constant. `delegate` declares the relationship in one line.
 #
-# A wrapper that forwards its own parameters is replaced verbatim, so it is
-# autocorrected; PrivateDelegatePlacement then moves the resulting line beside
-# the other declarations. A wrapper that supplies arguments from its own state
-# changes arity when delegated, so every call site must start passing the
-# arguments and the offense is only reported.
+# A wrapper that forwards its own parameters is replaced verbatim, so it is autocorrected; PrivateDelegatePlacement then
+# moves the resulting line beside the other declarations. A wrapper that supplies arguments from its own state changes
+# arity when delegated, so every call site must start passing the arguments and the offense is only reported.
 #
 # @example
 #   # bad - autocorrected to `delegate :subunit_factor, to: Currency, private: true`

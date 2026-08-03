@@ -1,6 +1,5 @@
-# Detects local variable assignments that could be methods instead.
-# Assigning to a variable with the same name as the method being called
-# suggests the code would be more declarative with a method or delegate.
+# Detects local variable assignments that could be methods instead. Assigning to a variable with the same name as the
+# method being called suggests the code would be more declarative with a method or delegate.
 #
 # @example
 #   # bad - variable name matches method call (simple receiver)

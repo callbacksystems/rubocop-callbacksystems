@@ -1,9 +1,8 @@
-# Ensures methods that enqueue jobs follow the `_later` naming convention.
-# This cop only flags when there's a corresponding method that does the actual work.
+# Ensures methods that enqueue jobs follow the `_later` naming convention. This cop only flags when there's a
+# corresponding method that does the actual work.
 #
-# The convention is to have paired methods:
-# - `process` - does the actual work
-# - `process_later` - enqueues a job that calls `process`
+# The convention is to have paired methods: - `process` - does the actual work - `process_later` - enqueues a job that
+# calls `process`
 #
 # @example
 #   # bad - work method exists, job method should be named process_later

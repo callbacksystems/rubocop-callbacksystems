@@ -1,6 +1,5 @@
-# `delegate` does not inherit the visibility of the surrounding section.
-# A `delegate` placed under a `private` keyword still defines public methods
-# unless `private: true` is passed explicitly.
+# `delegate` does not inherit the visibility of the surrounding section. A `delegate` placed under a `private` keyword
+# still defines public methods unless `private: true` is passed explicitly.
 #
 # @example
 #   # bad - `body` ends up public despite the surrounding `private`

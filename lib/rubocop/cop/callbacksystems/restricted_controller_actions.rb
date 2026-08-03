@@ -1,5 +1,5 @@
-# Restricts controller actions to the 7 standard Rails actions.
-# Only applies to classes that inherit from ActionController::Base/API.
+# Restricts controller actions to the 7 standard Rails actions. Only applies to classes that inherit from
+# ActionController::Base/API.
 #
 # @example
 #   # bad - custom public action

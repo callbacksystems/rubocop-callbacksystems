@@ -1,11 +1,9 @@
-# Corrections do not run one cop at a time. `rubocop -a` loops over the whole
-# enabled set, and two cops rewriting the same region can leave something neither
-# would produce alone: this is how `delegate :about, :about` got written, which
+# Corrections do not run one cop at a time. `rubocop -a` loops over the whole enabled set, and two cops rewriting the
+# same region can leave something neither would produce alone: this is how `delegate :about, :about` got written, which
 # parses and holds every comment but defines the method twice.
 #
-# So each shape the suite declares is corrected by every correcting cop at once,
-# the way a real run would, and the result is checked: it has to still parse, and
-# a `Lint` offense that was not there before the correction is one the fix
+# So each shape the suite declares is corrected by every correcting cop at once, the way a real run would, and the
+# result is checked: it has to still parse, and a `Lint` offense that was not there before the correction is one the fix
 # introduced.
 class ClashAudit
   MAX_PASSES = 5
@@ -13,12 +11,10 @@ class ClashAudit
   PROBE_FILE = "app/models/report.rb"
   TEST_PROBE_FILE = "test/models/report_test.rb"
 
-  # Shapes no single cop's test file carries: one needs two cops to want the
-  # same region, the rest hold a heredoc, which nesting in a cop's own test
-  # heredoc would hide from the scanner that reads them.
+  # Shapes no single cop's test file carries: one needs two cops to want the same region, the rest hold a heredoc, which
+  # nesting in a cop's own test heredoc would hide from the scanner that reads them.
   PROBES = [
-    # `delegate :about, :about`: PreferDelegate folds a method into a macro that
-    # already names it.
+    # `delegate :about, :about`: PreferDelegate folds a method into a macro that already names it.
     <<~RUBY,
       class Report
         delegate :about, to: :account, private: true
@@ -109,8 +105,8 @@ class ClashAudit
   end
 
   private
-    # A body lifted out of a test heredoc is raw text, so one that escaped a
-    # backslash for the heredoc does not stand as Ruby on its own.
+    # A body lifted out of a test heredoc is raw text, so one that escaped a backslash for the heredoc does not stand as
+    # Ruby on its own.
     def sources
       @sources ||= (own_probes + FixerAudit.new.probe_sources).select(&:parses?)
     end
@@ -153,8 +149,7 @@ class ClashAudit
       cop_class.badge.department == :Lint && lint_config.for_cop(cop_class.badge.to_s)["Enabled"] == true
     end
 
-    # The config a project gets, so a core cop this style guide turns off cannot
-    # fail the audit.
+    # The config a project gets, so a core cop this style guide turns off cannot fail the audit.
     def lint_config
       @lint_config ||= RuboCop::ConfigLoader.configuration_from_file(STYLE_CONFIG_PATH)
     end
@@ -174,8 +169,8 @@ class ClashAudit
       end
     end
 
-    # A cop whose edit overlaps one already made in this pass is skipped and
-    # picked up by the next, as `rubocop -a` does.
+    # A cop whose edit overlaps one already made in this pass is skipped and picked up by the next, as `rubocop -a`
+    # does.
     class Correction
       def initialize(source, cops)
         @source = source
@@ -212,8 +207,8 @@ class ClashAudit
         end
     end
 
-    # Some cops carry state across files, `Lint/DuplicateMethods` among them, so
-    # they are built fresh for every investigation.
+    # Some cops carry state across files, `Lint/DuplicateMethods` among them, so they are built fresh for every
+    # investigation.
     class Investigation
       # The corrector and the offenses have to be ranges over the same buffer.
       attr_reader :processed_source
@@ -224,8 +219,7 @@ class ClashAudit
         @config = config
       end
 
-      # A team assembles the forces cops depend on; `Lint/UselessAssignment` sees
-      # nothing without `VariableForce`.
+      # A team assembles the forces cops depend on; `Lint/UselessAssignment` sees nothing without `VariableForce`.
       def offenses
         if processed_source.valid_syntax?
           RuboCop::Cop::Team.mobilize(cop_classes, config).investigate(processed_source).offenses

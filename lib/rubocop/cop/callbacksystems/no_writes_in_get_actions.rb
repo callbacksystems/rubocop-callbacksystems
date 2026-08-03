@@ -1,7 +1,6 @@
-# Keeps GET actions free of writes and enqueued side effects.
-# Only applies to index, show, new, and edit in controller classes, and only
-# to calls made directly in the action body, so a write pushed into a model
-# method stays a deliberate choice.
+# Keeps GET actions free of writes and enqueued side effects. Only applies to index, show, new, and edit in controller
+# classes, and only to calls made directly in the action body, so a write pushed into a model method stays a deliberate
+# choice.
 #
 # @example
 #   # bad - GET action persists a change

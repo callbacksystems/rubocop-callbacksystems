@@ -1,5 +1,5 @@
-# Comments a fixer is about to write over. They move to their own lines above
-# the statement, the only place left that still reads as being about it.
+# Comments a fixer is about to write over. They move to their own lines above the statement, the only place left that
+# still reads as being about it.
 class RuboCop::Callbacksystems::LiftedComments
   include RuboCop::Callbacksystems::Helpers
 

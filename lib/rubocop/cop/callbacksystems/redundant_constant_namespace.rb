@@ -1,9 +1,7 @@
-# A constant reference does not need to repeat the namespace it is already
-# written inside.
+# A constant reference does not need to repeat the namespace it is already written inside.
 #
-# Only the innermost lexical scope counts. Under the compact class style a
-# definition like `class PgBox::Configuration` opens a single scope, so `PgBox`
-# itself is never searched and its prefix has to stay.
+# Only the innermost lexical scope counts. Under the compact class style a definition like `class PgBox::Configuration`
+# opens a single scope, so `PgBox` itself is never searched and its prefix has to stay.
 #
 # @example
 #   # bad
@@ -76,8 +74,7 @@ class RuboCop::Cop::Callbacksystems::RedundantConstantNamespace < RuboCop::Cop::
           node.each_ancestor(:class, :module).to_a.reverse
         end
 
-        # Dropping everything before this link leaves a constant that still resolves
-        # through the enclosing scope.
+        # Dropping everything before this link leaves a constant that still resolves through the enclosing scope.
         def qualified_node
           @qualified_node ||= constant_chain.find { constant_name_of(it.namespace) == enclosing_scope_name }
         end

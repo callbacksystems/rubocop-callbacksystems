@@ -1,7 +1,6 @@
-# Flags private methods with too many instance variable assignments.
-# Too many instance variable assignments often indicates a method is doing too much.
-# The `initialize` method and public methods are excluded.
-# Public methods (like controller actions) often need multiple instance variables.
+# Flags private methods with too many instance variable assignments. Too many instance variable assignments often
+# indicates a method is doing too much. The `initialize` method and public methods are excluded. Public methods (like
+# controller actions) often need multiple instance variables.
 #
 # @example MaxAssignments: 2 (default)
 #   # bad - too many instance variable assignments in private method

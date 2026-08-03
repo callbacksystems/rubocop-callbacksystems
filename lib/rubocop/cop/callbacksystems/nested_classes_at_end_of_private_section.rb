@@ -1,9 +1,8 @@
-# Ensures private nested classes are defined at the end of the private section.
-# Methods should not appear after nested class definitions.
+# Ensures private nested classes are defined at the end of the private section. Methods should not appear after nested
+# class definitions.
 #
-# A constant built from `Data.define`, `Struct.new` or `Class.new` with a block
-# defines a class too, so it reads under the same rule. One with no block only
-# declares its members and stays wherever it is.
+# A constant built from `Data.define`, `Struct.new` or `Class.new` with a block defines a class too, so it reads under
+# the same rule. One with no block only declares its members and stays wherever it is.
 #
 # @example
 #   # bad - method after nested class

@@ -1,5 +1,5 @@
-# Built from the cops themselves. The sentence opening each cop's file is its
-# description here and in `config/default.yml`, so neither is written twice.
+# Built from the cops themselves. The sentence opening each cop's file is its description here and in
+# `config/default.yml`, so neither is written twice.
 class CopReference
   ROOT = File.expand_path("../..", __dir__)
   COP_DIR = "lib/rubocop/cop/callbacksystems"
@@ -30,8 +30,8 @@ class CopReference
     @cops ||= RuboCop::Cop::Registry.global.cops.select { own?(it) }.sort_by(&:cop_name).map { Cop.new(it) }
   end
 
-  # Edited line by line rather than round-tripped through YAML, which would
-  # drop the comments and the order the file is kept in.
+  # Edited line by line rather than round-tripped through YAML, which would drop the comments and the order the file is
+  # kept in.
   def configured
     described_lines.join("\n")
   end
@@ -53,8 +53,7 @@ class CopReference
       File.read(File.join(ROOT, CONFIG_PATH)).split("\n").reject { it.start_with?("  Description:") }
     end
 
-    # Quoted by YAML itself: prose holding a colon, a backslash or a leading
-    # backtick each needs different quoting.
+    # Quoted by YAML itself: prose holding a colon, a backslash or a leading backtick each needs different quoting.
     def description_for(line)
       cop = cops.find { line == "#{it.badge}:" }
       [ line, "  Description: #{YAML.dump(cop.description, line_width: -1).delete_prefix("---").strip}" ] if cop

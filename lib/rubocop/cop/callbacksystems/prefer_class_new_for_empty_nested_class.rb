@@ -1,9 +1,8 @@
-# A nested class with no body declares that something exists, most often an
-# error. Written as a constant it says so in one line and stops looking like a
-# class that lost its body.
+# A nested class with no body declares that something exists, most often an error. Written as a constant it says so in
+# one line and stops looking like a class that lost its body.
 #
-# Only nested definitions are reported. A class living in its own file is that
-# file's subject, and `class` reads as the heading it is.
+# Only nested definitions are reported. A class living in its own file is that file's subject, and `class` reads as the
+# heading it is.
 #
 # @example
 #   # bad

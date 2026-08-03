@@ -1,10 +1,9 @@
-# A `Data.define`, `Struct.new` or `Class.new` given a block defines a class
-# with behavior, so it reads better as the class it is.
+# A `Data.define`, `Struct.new` or `Class.new` given a block defines a class with behavior, so it reads better as the
+# class it is.
 #
-# The block form also changes what the code inside it means. A constant
-# declared there lands in the enclosing namespace instead of the new class,
-# `Module.nesting` never mentions the class, and the rules that govern a class
-# body do not reach inside a block.
+# The block form also changes what the code inside it means. A constant declared there lands in the enclosing namespace
+# instead of the new class, `Module.nesting` never mentions the class, and the rules that govern a class body do not
+# reach inside a block.
 #
 # A builder with no block only lists its members and stays as it is.
 #
@@ -80,8 +79,8 @@ class RuboCop::Cop::Callbacksystems::PreferClassOverBuilderBlock < RuboCop::Cop:
           node.source_range.with(end_pos: block.loc.begin.end_pos)
         end
 
-        # `Class.new(Base)` is a subclass of `Base`; `Data.define` and `Struct.new`
-        # build the class they are given, so the call stays the superclass.
+        # `Class.new(Base)` is a subclass of `Base`; `Data.define` and `Struct.new` build the class they are given, so
+        # the call stays the superclass.
         def inheritance
           plain_subclass? ? argument_inheritance : " < #{builder_call.source}"
         end

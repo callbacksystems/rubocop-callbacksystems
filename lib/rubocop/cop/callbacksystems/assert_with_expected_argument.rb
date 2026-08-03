@@ -1,8 +1,7 @@
-# `assert expected, actual` passes whenever `expected` is truthy, so a
-# two-argument `assert` usually means `assert_equal`. The second argument is
-# legitimate when it reads as a failure message: a string, or a variable or
-# method whose name says so. This replaces `Minitest/AssertWithExpectedArgument`,
-# which only recognizes string literals and the bare names `message` and `msg`.
+# `assert expected, actual` passes whenever `expected` is truthy, so a two-argument `assert` usually means
+# `assert_equal`. The second argument is legitimate when it reads as a failure message: a string, or a variable or
+# method whose name says so. This replaces `Minitest/AssertWithExpectedArgument`, which only recognizes string literals
+# and the bare names `message` and `msg`.
 #
 # @example
 #   # bad

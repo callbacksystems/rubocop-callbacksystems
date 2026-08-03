@@ -1,11 +1,9 @@
-# Detects `Hash.new` with a default block that initializes missing keys to an
-# empty collection. The pattern reaches for an imperative accumulator when the
-# declarative equivalent (`group_by`, `group_by + transform_values`) is almost
-# always clearer.
+# Detects `Hash.new` with a default block that initializes missing keys to an empty collection. The pattern reaches for
+# an imperative accumulator when the declarative equivalent (`group_by`, `group_by + transform_values`) is almost always
+# clearer.
 #
-# `NoTapCollectionBuilding` only catches the `.tap { ... }` flavour of this
-# pattern; this cop also catches it when used standalone, passed to
-# `each_with_object`, assigned to a variable, etc.
+# `NoTapCollectionBuilding` only catches the `.tap { ... }` flavour of this pattern; this cop also catches it when used
+# standalone, passed to `each_with_object`, assigned to a variable, etc.
 #
 # @example
 #   # bad - building a hash of groups imperatively

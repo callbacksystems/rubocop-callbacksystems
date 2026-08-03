@@ -1,5 +1,5 @@
-# Detects instance variables assigned in setup blocks that are used in at most one test.
-# Such variables should be inlined into the test where they are used (or removed if unused).
+# Detects instance variables assigned in setup blocks that are used in at most one test. Such variables should be
+# inlined into the test where they are used (or removed if unused).
 #
 # @example
 #   # bad - @order is only used in one test
@@ -102,8 +102,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           SetupAssignment.new(assignment, ast, tests).offense
         end
 
-        # The inlining goes with the removal: doing one without the other would leave
-        # the value in two places.
+        # The inlining goes with the removal: doing one without the other would leave the value in two places.
         def correction_for(offense)
           range = removal_range_for(offense)
           spared?(range) ? [ offense[:inline_target], range ] : [ nil, nil ]
@@ -121,8 +120,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           end
         end
 
-        # A note in the block has nowhere else to go, so the block stays behind to
-        # hold it and the assignments come out a line at a time.
+        # A note in the block has nowhere else to go, so the block stays behind to hold it and the assignments come out
+        # a line at a time.
         def cleared?
           nothing_left? && !holds_comment?(block_range, comments)
         end
@@ -273,8 +272,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
           discardable? || !inline_target.nil?
         end
 
-        # An unread assignment still runs what built it: deleting
-        # `@record = Record.create!` takes the record the tests rely on.
+        # An unread assignment still runs what built it: deleting `@record = Record.create!` takes the record the tests
+        # rely on.
         def discardable?
           unused? && inert_value?
         end
@@ -327,8 +326,8 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
     end
 
-    # How one offending assignment rewrites away. A heredoc value travels in two
-    # pieces: its marker moves, its body follows.
+    # How one offending assignment rewrites away. A heredoc value travels in two pieces: its marker moves, its body
+    # follows.
     class Rewrite
       def initialize(assignment, inline_target, removal_range)
         @assignment = assignment

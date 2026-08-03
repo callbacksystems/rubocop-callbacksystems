@@ -1,8 +1,7 @@
 # Detects unnecessary extend ActiveSupport::Concern.
 #
-# If a module extends ActiveSupport::Concern but doesn't use any of its
-# features (included, class_methods, prepended blocks), the extend is
-# redundant and adds unnecessary complexity.
+# If a module extends ActiveSupport::Concern but doesn't use any of its features (included, class_methods, prepended
+# blocks), the extend is redundant and adds unnecessary complexity.
 #
 # @example
 #   # bad - extend without using concern features

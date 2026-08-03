@@ -1,5 +1,5 @@
-# Keeps routes on the standard resource actions, so a custom action becomes
-# its own resource instead of a member or collection addition.
+# Keeps routes on the standard resource actions, so a custom action becomes its own resource instead of a member or
+# collection addition.
 #
 # @example
 #   # bad - custom action through an option

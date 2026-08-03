@@ -1,8 +1,8 @@
-# An empty class or module keeps its `end` on a line of its own, the way
-# `Style/EmptyMethod` already asks of an empty method.
+# An empty class or module keeps its `end` on a line of its own, the way `Style/EmptyMethod` already asks of an empty
+# method.
 #
-# A nested empty class is left to `PreferClassNewForEmptyNestedClass`, which
-# turns it into a constant rather than a definition.
+# A nested empty class is left to `PreferClassNewForEmptyNestedClass`, which turns it into a constant rather than a
+# definition.
 #
 # @example
 #   # bad

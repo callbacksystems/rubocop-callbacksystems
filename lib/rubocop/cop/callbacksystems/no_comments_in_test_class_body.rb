@@ -1,5 +1,4 @@
-# Detects comments in the direct body of test classes.
-# Tests should be self-documenting through descriptive test names.
+# Detects comments in the direct body of test classes. Tests should be self-documenting through descriptive test names.
 # Comments inside test blocks are allowed if highly relevant.
 #
 # This cop should only be enabled for test files.

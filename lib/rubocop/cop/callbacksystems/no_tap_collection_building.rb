@@ -1,5 +1,4 @@
-# Detects using tap to build collections imperatively.
-# Use declarative methods like map, select, index_by instead.
+# Detects using tap to build collections imperatively. Use declarative methods like map, select, index_by instead.
 #
 # @example
 #   # bad - building array with tap

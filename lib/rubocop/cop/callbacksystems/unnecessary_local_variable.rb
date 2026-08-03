@@ -1,6 +1,5 @@
-# Detects local variables that alias a method call that already reads as a name.
-# Call the method directly or extract a well-named declarative method instead.
-# A variable that names a computed expression (operator, block-pass, literal
+# Detects local variables that alias a method call that already reads as a name. Call the method directly or extract a
+# well-named declarative method instead. A variable that names a computed expression (operator, block-pass, literal
 # receiver) or a multiline call is left alone: there the name does real work.
 #
 # @example
@@ -51,8 +50,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
 
   private
     class Step < Data.define(:child, :parent)
-      # These evaluate their first child before deciding; whatever comes after may
-      # never run.
+      # These evaluate their first child before deciding; whatever comes after may never run.
       GATED = %i[and or if while until case case_match csend].freeze
       SKIPPABLE = %i[block numblock itblock resbody].freeze
 
@@ -88,8 +86,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
         format(MESSAGE, name: variable_name)
       end
 
-      # Only into the very next statement, where nothing runs in between and the
-      # evaluation order cannot change.
+      # Only into the very next statement, where nothing runs in between and the evaluation order cannot change.
       def inline(corrector)
         if inlineable?
           corrector.remove(removal_range)
@@ -161,8 +158,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           references.first
         end
 
-        # Behind a short-circuit, a branch, a block or a safe navigation the call
-        # would stop happening where the assignment ran it every time.
+        # Behind a short-circuit, a branch, a block or a safe navigation the call would stop happening where the
+        # assignment ran it every time.
         def unconditionally_reached?
           steps_to_next_statement.none?(&:deferred?)
         end
@@ -172,8 +169,7 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           nodes.map { Step.new(child: it, parent: it.parent) }
         end
 
-        # Stops short of a comment in the gap: it was written about the statement
-        # that survives.
+        # Stops short of a comment in the gap: it was written about the statement that survives.
         def removal_range
           range_ending_at_first_comment(assignment_gap, comments)
         end
@@ -182,8 +178,8 @@ class RuboCop::Cop::Callbacksystems::UnnecessaryLocalVariable < RuboCop::Cop::Ca
           node.source_range.with(end_pos: next_statement.source_range.begin_pos)
         end
 
-        # In a receiver or argument position, `find_account "id"` would swallow the
-        # following `.method` or comma, so the arguments get parentheses.
+        # In a receiver or argument position, `find_account "id"` would swallow the following `.method` or comma, so the
+        # arguments get parentheses.
         def inlined_source
           if value.arguments? && !value.parenthesized?
             "#{call_source_through_selector}(#{value.arguments.map(&:source).join(", ")})"

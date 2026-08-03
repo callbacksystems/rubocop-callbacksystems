@@ -1,10 +1,8 @@
-# Prohibits files in service object-style directories under `app/`.
-# These patterns (services, decorators, interactors, presenters, forms)
-# are not allowed. Use models and POROs in app/models instead.
+# Prohibits files in service object-style directories under `app/`. These patterns (services, decorators, interactors,
+# presenters, forms) are not allowed. Use models and POROs in app/models instead.
 #
-# Only applies to Rails applications (paths under `app/`). Gems or libraries
-# that use directories like `commands/` or `queries/` outside of `app/` are
-# untouched.
+# Only applies to Rails applications (paths under `app/`). Gems or libraries that use directories like `commands/` or
+# `queries/` outside of `app/` are untouched.
 #
 # @example
 #   # bad - file in app/services/

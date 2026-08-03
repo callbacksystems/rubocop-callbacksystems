@@ -1,6 +1,5 @@
-# Prohibits returning nil at the end of a method.
-# Having `nil` as the last line is unnecessary and indicates poor design.
-# Exception: when `nil` is the only statement (clearly intentional, e.g., interface methods).
+# Prohibits returning nil at the end of a method. Having `nil` as the last line is unnecessary and indicates poor
+# design. Exception: when `nil` is the only statement (clearly intentional, e.g., interface methods).
 #
 # @example
 #   # bad
@@ -68,8 +67,8 @@ class RuboCop::Cop::Callbacksystems::NoNilAtEndOfMethod < RuboCop::Cop::Callback
         node&.nil_type?
       end
 
-      # The separator goes too, so the fix works for a one-liner. A `nil` with no
-      # preceding sibling is reported but left alone.
+      # The separator goes too, so the fix works for a one-liner. A `nil` with no preceding sibling is reported but left
+      # alone.
       def remove(corrector)
         corrector.remove(removal_range) if previous
       end

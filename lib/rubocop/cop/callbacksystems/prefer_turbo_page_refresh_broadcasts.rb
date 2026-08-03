@@ -1,10 +1,8 @@
 # Enforces Turbo page refreshes over targeted stream broadcasts.
 #
-# Targeted broadcasts (append, prepend, replace, remove, and friends) and the
-# macros that generate them tie the server to specific partials and DOM targets.
-# Page refresh broadcasts let the client morph the current page instead, which
-# keeps the broadcasting code declarative and the views as the single source of
-# truth.
+# Targeted broadcasts (append, prepend, replace, remove, and friends) and the macros that generate them tie the server
+# to specific partials and DOM targets. Page refresh broadcasts let the client morph the current page instead, which
+# keeps the broadcasting code declarative and the views as the single source of truth.
 #
 # @example
 #   # bad

@@ -1,5 +1,5 @@
-# A `private` keyword with nothing after it declares a section that holds
-# nothing. Remove it and let the class end where it ends.
+# A `private` keyword with nothing after it declares a section that holds nothing. Remove it and let the class end where
+# it ends.
 #
 # @example
 #   # bad

@@ -1,5 +1,5 @@
-# Prohibits returning a local variable as the last statement of a method.
-# Use `.tap`, `.then`, `each_with_object`, or return the expression directly instead.
+# Prohibits returning a local variable as the last statement of a method. Use `.tap`, `.then`, `each_with_object`, or
+# return the expression directly instead.
 #
 # @example
 #   # bad - returning a local variable
@@ -81,8 +81,8 @@ class RuboCop::Cop::Callbacksystems::NoLocalVariableReturn < RuboCop::Cop::Callb
         variable&.lvar_type?
       end
 
-      # Two edits rather than one over the whole span, so a comment between them
-      # survives and an explicit `return` stays where its author put it.
+      # Two edits rather than one over the whole span, so a comment between them survives and an explicit `return` stays
+      # where its author put it.
       def inline(corrector)
         if inlineable?
           corrector.remove(assignment_removal_range)

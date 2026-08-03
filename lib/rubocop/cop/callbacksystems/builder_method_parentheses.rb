@@ -1,6 +1,5 @@
-# Requires parentheses on builder method calls (`.new`, ActiveRecord persistence,
-# finders, strong parameters) when they have arguments. Bang methods and
-# backslash continuations are exempt.
+# Requires parentheses on builder method calls (`.new`, ActiveRecord persistence, finders, strong parameters) when they
+# have arguments. Bang methods and backslash continuations are exempt.
 #
 # @example
 #   # bad

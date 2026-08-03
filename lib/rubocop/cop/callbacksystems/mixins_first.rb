@@ -1,9 +1,8 @@
-# Mixins come before anything else in a class or module body, constants
-# included. What a class is made of reads first, then what it holds.
+# Mixins come before anything else in a class or module body, constants included. What a class is made of reads first,
+# then what it holds.
 #
-# `Layout/ClassStructure` only orders the categories listed in its
-# `ExpectedOrder`, and adding constants there would also forbid declaring them
-# in the private section, so the rule lives here instead.
+# `Layout/ClassStructure` only orders the categories listed in its `ExpectedOrder`, and adding constants there would
+# also forbid declaring them in the private section, so the rule lives here instead.
 #
 # @example
 #   # bad - the constant comes first
@@ -68,8 +67,7 @@ class RuboCop::Cop::Callbacksystems::MixinsFirst < RuboCop::Cop::Callbacksystems
         end
     end
 
-    # A mixin reading a constant declared above it cannot move over that
-    # declaration.
+    # A mixin reading a constant declared above it cannot move over that declaration.
     class MixinArguments
       include RuboCop::Callbacksystems::Helpers
 

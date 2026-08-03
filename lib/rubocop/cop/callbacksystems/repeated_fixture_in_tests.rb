@@ -1,5 +1,5 @@
-# Detects when the same fixture is called in multiple tests.
-# If a fixture is used in multiple tests, it should be moved to setup.
+# Detects when the same fixture is called in multiple tests. If a fixture is used in multiple tests, it should be moved
+# to setup.
 #
 # @example
 #   # bad - same fixture in multiple tests

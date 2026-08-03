@@ -1,17 +1,14 @@
 # Ensures the modules of one mixin call are sorted alphabetically.
 #
-# Putting several modules in one `include` is a claim that their order does not
-# matter, and once that holds they may as well read alphabetically. When the
-# order does matter, the modules belong on separate lines where the precedence
-# is written down rather than implied. Separate calls are left alone: it is the
-# comma that makes the claim, so only what shares one is sorted.
+# Putting several modules in one `include` is a claim that their order does not matter, and once that holds they may as
+# well read alphabetically. When the order does matter, the modules belong on separate lines where the precedence is
+# written down rather than implied. Separate calls are left alone: it is the comma that makes the claim, so only what
+# shares one is sorted.
 #
-# Ruby resolves `include A, B` to the ancestors `[A, B]` and `include B, A` to
-# `[B, A]`, so sorting is only a rewrite of the appearance when no two modules
-# define the same method. The cop cannot see the modules to know, which is why
-# the correction is marked unsafe, so the unsafe autocorrect pass sorts and the
-# safe one leaves it alone, and a collision is the case to split onto separate lines
-# instead.
+# Ruby resolves `include A, B` to the ancestors `[A, B]` and `include B, A` to `[B, A]`, so sorting is only a rewrite of
+# the appearance when no two modules define the same method. The cop cannot see the modules to know, which is why the
+# correction is marked unsafe, so the unsafe autocorrect pass sorts and the safe one leaves it alone, and a collision is
+# the case to split onto separate lines instead.
 #
 # @example
 #   # bad - unsorted
@@ -85,14 +82,14 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           @sorted_names ||= names.sort
         end
 
-        # Rewriting an annotated list writes the statement out again, which a
-        # call sharing its line with other code has no room for.
+        # Rewriting an annotated list writes the statement out again, which a call sharing its line with other code has
+        # no room for.
         def correctable?
           notes.empty? || starts_its_line?
         end
 
-        # A trailing note on a list written across lines belongs to the module on
-        # that line; one on a single-line list belongs to the statement.
+        # A trailing note on a list written across lines belongs to the module on that line; one on a single-line list
+        # belongs to the statement.
         def notes
           @notes ||= comments.select { notes_range.contains?(it.source_range) }
         end
@@ -133,8 +130,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           notes.empty? ? sorted_names.join(", ") : annotated_source
         end
 
-        # The notes of whichever module now leads move above the statement: the
-        # line it shares with `include` has no room for them.
+        # The notes of whichever module now leads move above the statement: the line it shares with `include` has no
+        # room for them.
         def annotated_source
           "#{leading_notes}#{indentation}#{node.method_name} #{listed_mixins}"
         end
@@ -155,8 +152,8 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
           notes.select { owner_of(it).equal?(argument) }.map(&:text)
         end
 
-        # A note on its own line was written above the module it belongs to; one
-        # trailing a line was written about the module ending on that line.
+        # A note on its own line was written above the module it belongs to; one trailing a line was written about the
+        # module ending on that line.
         def owner_of(note)
           if own_line_comment?(note)
             arguments.find { it.source_range.begin_pos > note.source_range.end_pos }
@@ -185,14 +182,12 @@ class RuboCop::Cop::Callbacksystems::OrderedMixinArguments < RuboCop::Cop::Callb
             @notes = notes
           end
 
-          # A module carrying a note takes a line of its own; one without stays
-          # on the line already running.
+          # A module carrying a note takes a line of its own; one without stays on the line already running.
           def after(indentation)
             notes.any? ? "\n#{notes_at(indentation)}#{indentation}#{name}" : " #{name}"
           end
 
-          # Above the module, never trailing it: a trailing note would land
-          # before the comma once the list is rebuilt.
+          # Above the module, never trailing it: a trailing note would land before the comma once the list is rebuilt.
           def notes_at(indentation)
             notes.map { "#{indentation}#{it}\n" }.join
           end

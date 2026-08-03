@@ -1,8 +1,7 @@
-# In controller tests, the first assertion after an HTTP request must be a
-# response assertion (assert_response or assert_redirected_to). Non-assertion
-# code between the request and the response assertion is allowed.
-# ActiveJob and ActionMailer assertions (assert_enqueued_jobs, assert_enqueued_emails,
-# etc.) are also allowed before the response assertion.
+# In controller tests, the first assertion after an HTTP request must be a response assertion (assert_response or
+# assert_redirected_to). Non-assertion code between the request and the response assertion is allowed. ActiveJob and
+# ActionMailer assertions (assert_enqueued_jobs, assert_enqueued_emails, etc.) are also allowed before the response
+# assertion.
 #
 # @example
 #   # bad - first assertion is not about the response

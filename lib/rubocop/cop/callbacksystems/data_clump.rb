@@ -1,35 +1,29 @@
-# Detects a set of parameter names that travel together across a class's or
-# module's private methods. Those values are one concept, and the methods passing
-# them around should be its methods instead. Only private methods are examined: a
-# public method's signature answers to an interface, not internal threading: the
-# same reason the JS rule skips exported functions and public members.
+# Detects a set of parameter names that travel together across a class's or module's private methods. Those values are
+# one concept, and the methods passing them around should be its methods instead. Only private methods are examined: a
+# public method's signature answers to an interface, not internal threading: the same reason the JS rule skips exported
+# functions and public members.
 #
-# The set is found as a connected component in the co-occurrence graph of shared
-# parameter names: names used by two or more methods, linked whenever they appear
-# together in one method's signature. A component that reaches enough methods is
-# the object those methods should hold as state instead of passing the values
-# around. Because membership follows the graph, not an exact repeated tuple, this
-# catches names sharing *varying* combinations: `m1(a, b)`, `m2(a, c)`,
-# `m3(b, c)`, where no single pair repeats. A lone name that spreads far enough
-# counts on its own.
+# The set is found as a connected component in the co-occurrence graph of shared parameter names: names used by two or
+# more methods, linked whenever they appear together in one method's signature. A component that reaches enough methods
+# is the object those methods should hold as state instead of passing the values around. Because membership follows the
+# graph, not an exact repeated tuple, this catches names sharing *varying* combinations: `m1(a, b)`, `m2(a, c)`,
+# `m3(b, c)`, where no single pair repeats. A lone name that spreads far enough counts on its own.
 #
-# Only methods carrying two or more of the names count toward a set: one name is
-# a value arriving, not a concept being passed, and counting those bystanders
-# would let a lone name clear the set threshold instead of its own higher one.
-# What a recursion moves is exempt too, since it is a different value at every
-# step: see the Recursion helper for the two shapes that say so.
+# Only methods carrying two or more of the names count toward a set: one name is a value arriving, not a concept being
+# passed, and counting those bystanders would let a lone name clear the set threshold instead of its own higher one.
+# What a recursion moves is exempt too, since it is a different value at every step: see the Recursion helper for the
+# two shapes that say so.
 #
-# How far a set has to reach depends on how much its shape already tells us. A
-# signature repeated verbatim counts from two methods: nothing in those
-# parameter lists explains the co-occurrence except the concept itself. Names
-# that come with extras of their own might merely have met, so those need a
-# third method, and a lone name has to spread further still.
+# How far a set has to reach depends on how much its shape already tells us. A signature repeated verbatim counts from
+# two methods: nothing in those parameter lists explains the co-occurrence except the concept itself. Names that come
+# with extras of their own might merely have met, so those need a third method, and a lone name has to spread further
+# still.
 #
-# Components partition the shared names, so a class holding two of them is
-# hiding two objects and gets one offense for each.
+# Components partition the shared names, so a class holding two of them is hiding two objects and gets one offense for
+# each.
 #
-# This sees parameter lists only. The same concept bagged into a hash and reached
-# into is the identical smell in another spelling, and belongs to NoAnemicRecord.
+# This sees parameter lists only. The same concept bagged into a hash and reached into is the identical smell in another
+# spelling, and belongs to NoAnemicRecord.
 #
 # @example
 #   # bad - same parameters repeated across methods
@@ -131,8 +125,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
         end
     end
 
-    # A signature repeated verbatim tells at two methods; with extras the names
-    # might merely have met, so a third is what makes the pattern.
+    # A signature repeated verbatim tells at two methods; with extras the names might merely have met, so a third is
+    # what makes the pattern.
     class Limits < Data.define(:repeated_signature, :shared_names, :single_param)
       def reached_by?(clump)
         clump.count >= reach_for(clump)
@@ -151,8 +145,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
     class Signature < Data.define(:node, :exempt_names)
       include RuboCop::Callbacksystems::Helpers
 
-      # One name of the component is a value arriving, not a concept being passed
-      # around, and counting those bystanders would clear the wrong threshold.
+      # One name of the component is a value arriving, not a concept being passed around, and counting those bystanders
+      # would clear the wrong threshold.
       def reaches?(wanted)
         shared_count_in(wanted) >= (wanted.many? ? 2 : 1)
       end
@@ -221,8 +215,8 @@ class RuboCop::Cop::Callbacksystems::DataClump < RuboCop::Cop::Callbacksystems::
       end
 
       private
-        # Every method takes the whole set rather than overlapping subsets. Same
-        # refactor either way, but the message should not claim the wrong one.
+        # Every method takes the whole set rather than overlapping subsets. Same refactor either way, but the message
+        # should not claim the wrong one.
         def tight?
           signatures.all? { it.shared_count_in(names) == names.size }
         end

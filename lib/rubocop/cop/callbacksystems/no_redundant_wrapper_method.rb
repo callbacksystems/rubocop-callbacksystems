@@ -1,6 +1,5 @@
-# Detects private methods that only call another method without adding value.
-# Such wrapper methods add indirection without purpose.
-# Public methods and predicates are excluded as they often provide semantic value.
+# Detects private methods that only call another method without adding value. Such wrapper methods add indirection
+# without purpose. Public methods and predicates are excluded as they often provide semantic value.
 #
 # @example
 #   # bad - private wrapper just calls another method

@@ -1,6 +1,5 @@
-# Detects memoization mixed with other statements in the same method.
-# A method that memoizes should only do memoization - nothing else.
-# Conditional memoization (with if/unless) and rescue blocks are allowed.
+# Detects memoization mixed with other statements in the same method. A method that memoizes should only do memoization
+# - nothing else. Conditional memoization (with if/unless) and rescue blocks are allowed.
 #
 # @example
 #   # bad - memoization with other statements before

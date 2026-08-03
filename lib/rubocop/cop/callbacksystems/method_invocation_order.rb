@@ -1,11 +1,8 @@
-# Ensures methods are ordered by invocation: callers before callees, and a
-# caller's callees in the order it first invokes them (depth-first). Public
-# methods are ordered before private ones. A macro, block, or lambda that names a
-# method (a callback, a delegate target, a validation) calls it too, and it reads
-# at the top of the class, so a method reached only that way leads its visibility
-# group in the order the macros mention it (a guard before its action, since the
-# guard is evaluated first). A method a real method body calls follows that caller
-# instead.
+# Ensures methods are ordered by invocation: callers before callees, and a caller's callees in the order it first
+# invokes them (depth-first). Public methods are ordered before private ones. A macro, block, or lambda that names a
+# method (a callback, a delegate target, a validation) calls it too, and it reads at the top of the class, so a method
+# reached only that way leads its visibility group in the order the macros mention it (a guard before its action, since
+# the guard is evaluated first). A method a real method body calls follows that caller instead.
 #
 # @example
 #   # bad - called method defined before caller
@@ -92,8 +89,7 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
       statements_in(node.body).select { it.type == type }
     end
 
-    # A non-method statement between methods keeps the runs on either side
-    # separate.
+    # A non-method statement between methods keeps the runs on either side separate.
     class Reorder
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers
@@ -136,8 +132,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           end
         end
 
-        # A note between two methods, blank lines on both sides, belongs to neither,
-        # and rebuilding the run would drop it.
+        # A note between two methods, blank lines on both sides, belongs to neither, and rebuilding the run would drop
+        # it.
         def carries_all_comments?(run)
           blocks = run.map { block_range_of(it) }
           comments_within(run_range(run)).all? { |comment| blocks.any? { it.contains?(comment.source_range) } }
@@ -201,8 +197,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
         end
       end
 
-      # All three: a group left out makes the canonical list shorter than what it
-      # is compared against, and the offense has nothing to move.
+      # All three: a group left out makes the canonical list shorter than what it is compared against, and the offense
+      # has nothing to move.
       def canonical_order
         @canonical_order ||= VISIBILITIES.flat_map { ordered_by_visibility(it) }
       end
@@ -231,8 +227,8 @@ class RuboCop::Cop::Callbacksystems::MethodInvocationOrder < RuboCop::Cop::Callb
           full_order.select { visibilities[it] == visibility }
         end
 
-        # Depth-first in reading priority: macro-referenced methods first, since the
-        # macro reads at the top, then the entry points and what they reach.
+        # Depth-first in reading priority: macro-referenced methods first, since the macro reads at the top, then the
+        # entry points and what they reach.
         def full_order
           @full_order ||= begin
             ordering_seeds.each { visit(it) }

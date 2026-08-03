@@ -1,6 +1,5 @@
-# Flags methods with too many local variable assignments.
-# Too many local variables often indicates imperative code that could
-# be made more declarative by extracting methods.
+# Flags methods with too many local variable assignments. Too many local variables often indicates imperative code that
+# could be made more declarative by extracting methods.
 #
 # @example MaxAssignments: 3 (default)
 #   # bad - imperative with local variables

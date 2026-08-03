@@ -1,5 +1,4 @@
-# Detects when a fixture is assigned to a variable but only used once.
-# In that case, inline the fixture call instead.
+# Detects when a fixture is assigned to a variable but only used once. In that case, inline the fixture call instead.
 #
 # @example
 #   # bad - fixture stored in variable but only used once

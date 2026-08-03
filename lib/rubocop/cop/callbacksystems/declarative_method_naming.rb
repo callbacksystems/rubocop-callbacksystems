@@ -1,42 +1,33 @@
-# A method that returns a value should be named for the value it hands back, not
-# for the imperative action it performs. `compute_total` is really `total` and
-# `get_user` is `user_by_id`: the imperative name reads as a command when the
-# thing is really a query. We flag a method whose name leads with a producer verb
-# and carries a noun we can rename it to (`compute_total` -> `total`). A bare verb
-# (`fetch`) is left alone: with no noun there is nothing to rename to. A verb
-# followed straight by a connector (`find_in_scope`, `load_for`) is left alone
-# too: the phrase that remains (`in_scope`, `for`) names no value on its own, and
-# the leading word often reads as a noun in context (`load_for person` is "the
-# load for a person"), so the rename is too contextual to pick. With arguments and
-# no connector in the name we only flag it (`get_user(id)`): a bare noun beside an
-# argument (`user(id)`) relates nothing, and the relator is the author's call.
+# A method that returns a value should be named for the value it hands back, not for the imperative action it performs.
+# `compute_total` is really `total` and `get_user` is `user_by_id`: the imperative name reads as a command when the
+# thing is really a query. We flag a method whose name leads with a producer verb and carries a noun we can rename it to
+# (`compute_total` -> `total`). A bare verb (`fetch`) is left alone: with no noun there is nothing to rename to. A verb
+# followed straight by a connector (`find_in_scope`, `load_for`) is left alone too: the phrase that remains (`in_scope`,
+# `for`) names no value on its own, and the leading word often reads as a noun in context (`load_for person` is "the
+# load for a person"), so the rename is too contextual to pick. With arguments and no connector in the name we only flag
+# it (`get_user(id)`): a bare noun beside an argument (`user(id)`) relates nothing, and the relator is the author's
+# call.
 #
-# The verb list is curated, not taken from a lexicon: `get`/`find`/`build` are not
-# dropped from any dictionary, but are bad as method prefixes by code convention.
-# Excluded on purpose: noun-verbs that name a value fine (`count`, `name`,
-# `value`, `order`, `state`...) and command verbs that act rather than produce
-# (`save`, `render`, `update`, `send`, `handle`, `process`...).
+# The verb list is curated, not taken from a lexicon: `get`/`find`/`build` are not dropped from any dictionary, but are
+# bad as method prefixes by code convention. Excluded on purpose: noun-verbs that name a value fine (`count`, `name`,
+# `value`, `order`, `state`...) and command verbs that act rather than produce (`save`, `render`, `update`, `send`,
+# `handle`, `process`...).
 #
-# We flag a producer-verb method only when it just *delivers* a value: it
-# changes no state, calls no mutator, does no I/O. A method that *does* something
-# earns its verb and is left alone, even named with a producer verb: `create_user`
-# that calls `save!`, an association `build` that mutates the collection.
-# Construction is delivery, not doing: `Foo.new(args)` only hands a value back, so
-# a pure factory is flagged.
+# We flag a producer-verb method only when it just *delivers* a value: it changes no state, calls no mutator, does no
+# I/O. A method that *does* something earns its verb and is left alone, even named with a producer verb: `create_user`
+# that calls `save!`, an association `build` that mutates the collection. Construction is delivery, not doing:
+# `Foo.new(args)` only hands a value back, so a pure factory is flagged.
 #
-# Two more cases are left alone, both signs the name is intentional rather than
-# careless. A method that delegates within its own verb family (`format_money`
-# calling `format_short`, `find_account_by_cookie` calling `find_by`) mirrors a
-# real operation of the same name, so renaming it would break the family. And a
-# method whose suggested noun already names a sibling (`build_prices` beside
-# `attr_reader :prices`, `lookup_key` beside `key`) is the separate-builder
-# pattern: the value already has its declarative name, this is its helper.
+# Two more cases are left alone, both signs the name is intentional rather than careless. A method that delegates within
+# its own verb family (`format_money` calling `format_short`, `find_account_by_cookie` calling `find_by`) mirrors a real
+# operation of the same name, so renaming it would break the family. And a method whose suggested noun already names a
+# sibling (`build_prices` beside `attr_reader :prices`, `lookup_key` beside `key`) is the separate-builder pattern: the
+# value already has its declarative name, this is its helper.
 #
-# Ruby divergence from the JS rule: JS can gate on "returns a value" because a
-# function can fall off the end returning `undefined`. In Ruby every method
-# returns its last expression, so "delivers" is the *absence of effects*, not the
-# presence of a return. Predicates (`valid?`), bang methods (`save!`), setters
-# (`foo=`), operators, and `initialize` stay exempt by Ruby convention.
+# Ruby divergence from the JS rule: JS can gate on "returns a value" because a function can fall off the end returning
+# `undefined`. In Ruby every method returns its last expression, so "delivers" is the *absence of effects*, not the
+# presence of a return. Predicates (`valid?`), bang methods (`save!`), setters (`foo=`), operators, and `initialize`
+# stay exempt by Ruby convention.
 #
 # @example
 #   # bad - imperative name for a value (no arguments): name it for the value
@@ -97,8 +88,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     resolve
   ].to_set.freeze
 
-  # An open class; this is the common core, enough to tell a relating name from
-  # a bare one.
+  # An open class; this is the common core, enough to tell a relating name from a bare one.
   CONNECTORS = %w[
     for of from at in on by with within without
     into onto over under above below beneath behind
@@ -107,8 +97,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     since against among around near beyond
   ].to_set.freeze
 
-  # A producer-verb method calling one is doing something, not delivering a
-  # value.
+  # A producer-verb method calling one is doing something, not delivering a value.
   MUTATORS = %i[
     save update create build destroy delete insert
     push pop shift unshift prepend concat append << store replace add clear
@@ -117,8 +106,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
     cp cp_r mv ln_s chmod chown
   ].to_set.freeze
 
-  # A producer-verb method whose noun matches one of these is that value's
-  # separate builder.
+  # A producer-verb method whose noun matches one of these is that value's separate builder.
   READER_MACROS = %i[attr_reader attr_accessor attr_writer].to_set.freeze
 
   IMPERATIVE_NAME = "Rename `%<name>s` to `%<suggestion>s`: name it for the value, not the action `%<verb>s`."
@@ -155,8 +143,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
             !node.operator_method? && !node.method?(:initialize)
         end
 
-        # A bare verb (`fetch`) and a verb glued to a connector (`load_for`) leave no
-        # noun to rename to.
+        # A bare verb (`fetch`) and a verb glued to a connector (`load_for`) leave no noun to rename to.
         def imperative_producer?
           PRODUCER_VERBS.include?(verb) && !noun.nil?
         end
@@ -169,8 +156,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           @segments ||= node.method_name.to_s.split("_")
         end
 
-        # Nil when the name leads with a connector, leaving a prepositional phrase
-        # that names nothing on its own (`find_in_block`).
+        # Nil when the name leads with a connector, leaving a prepositional phrase that names nothing on its own
+        # (`find_in_block`).
         def noun
           rest.join("_") if rest.any? && !CONNECTORS.include?(rest.first)
         end
@@ -179,8 +166,7 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           segments.drop(1)
         end
 
-        # Ruby always returns its last expression, so delivering is the absence of
-        # effects.
+        # Ruby always returns its last expression, so delivering is the absence of effects.
         def delivers_only?
           node.each_descendant(:ivasgn, :cvasgn, :gvasgn, :casgn, :send).none? { side_effect?(it) }
         end
@@ -223,8 +209,8 @@ class RuboCop::Cop::Callbacksystems::DeclarativeMethodNaming < RuboCop::Cop::Cal
           needs_relator? ? IMPERATIVE_NAME_RELATE : IMPERATIVE_NAME
         end
 
-        # A bare noun (`user(id)`) does not relate to its argument, unless the name
-        # already carries a connector (`user_by_id`).
+        # A bare noun (`user(id)`) does not relate to its argument, unless the name already carries a connector
+        # (`user_by_id`).
         def needs_relator?
           arguments? && !carries_connector?
         end

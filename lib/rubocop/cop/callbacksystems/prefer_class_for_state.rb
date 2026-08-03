@@ -1,20 +1,15 @@
-# Detects a single value threaded through many method calls. A parameter or a
-# local passed as an argument to several different receiverless methods, directly
-# or down a pipeline, is instance state in disguise: it reads better as the state
-# of a class, with the methods that receive it becoming instance methods that no
-# longer need the argument.
+# Detects a single value threaded through many method calls. A parameter or a local passed as an argument to several
+# different receiverless methods, directly or down a pipeline, is instance state in disguise: it reads better as the
+# state of a class, with the methods that receive it becoming instance methods that no longer need the argument.
 #
-# The value is followed by *data flow*: every receiverless method it is passed to
-# as an argument, then (through that callee's matching parameter) wherever it
-# flows next, transitively across the class. So a value handed from `rewrite` to
-# `process` to `decorate` reaches all three, even though no single method passes
-# it more than once. What is counted is the methods that *receive* the value, not
-# the one that first held it. The flow is not followed through a *recursive*
-# method: there the value is a moving cursor over a structure, not one value held
-# as state.
+# The value is followed by *data flow*: every receiverless method it is passed to as an argument, then (through that
+# callee's matching parameter) wherever it flows next, transitively across the class. So a value handed from `rewrite`
+# to `process` to `decorate` reaches all three, even though no single method passes it more than once. What is counted
+# is the methods that *receive* the value, not the one that first held it. The flow is not followed through a
+# *recursive* method: there the value is a moving cursor over a structure, not one value held as state.
 #
-# This complements DataClump, which catches *groups* of arguments shared across
-# method *signatures*. Here a *single* value threaded around is the smell.
+# This complements DataClump, which catches *groups* of arguments shared across method *signatures*. Here a *single*
+# value threaded around is the smell.
 #
 # @example
 #   # bad - `node` is passed to every helper
@@ -140,8 +135,7 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
         end
     end
 
-    # A value that cycles through mutually recursive helpers is a cursor over a
-    # structure, not state.
+    # A value that cycles through mutually recursive helpers is a cursor over a structure, not state.
     class Reach < Struct.new(:index)
       def initialize(index)
         super
@@ -237,8 +231,8 @@ class RuboCop::Cop::Callbacksystems::PreferClassForState < RuboCop::Cop::Callbac
           argument.lvar_type? && argument.children.first.to_s == name && !shadowed?(argument)
         end
 
-        # A block binding an argument of the same name introduces a different value.
-        # Numbered and `it` blocks bind `_1`/`it`, which never collide.
+        # A block binding an argument of the same name introduces a different value. Numbered and `it` blocks bind
+        # `_1`/`it`, which never collide.
         def shadowed?(argument)
           blocks_above(argument).any? { rebinds_name?(it) }
         end

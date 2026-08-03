@@ -1,13 +1,10 @@
-# Detects `@x = receiver.x` style assignments inside `initialize` that mirror
-# a method call. These eager assignments are better expressed as `delegate`
-# declarations: they read declaratively, avoid duplicating the name, and stop
-# inviting bigger refactors (the very anti-pattern flagged by
-# `NoRedundantWrapperMethod` and `NoAnemicDelegation`).
+# Detects `@x = receiver.x` style assignments inside `initialize` that mirror a method call. These eager assignments are
+# better expressed as `delegate` declarations: they read declaratively, avoid duplicating the name, and stop inviting
+# bigger refactors (the very anti-pattern flagged by `NoRedundantWrapperMethod` and `NoAnemicDelegation`).
 #
-# Only assignments where the ivar name matches the called method name are
-# flagged, and only when the receiver itself is also assigned to an ivar of
-# the same name in the same `initialize` (so the receiver is reachable via
-# `attr_reader` from the surrounding class).
+# Only assignments where the ivar name matches the called method name are flagged, and only when the receiver itself is
+# also assigned to an ivar of the same name in the same `initialize` (so the receiver is reachable via `attr_reader`
+# from the surrounding class).
 #
 # @example
 #   # bad - eager assignment that mirrors `node.body`

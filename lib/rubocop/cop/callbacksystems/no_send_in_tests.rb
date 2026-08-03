@@ -1,5 +1,4 @@
-# Prohibits using `send` or `__send__` inside test blocks.
-# Private methods are private for a reason; tests should verify
+# Prohibits using `send` or `__send__` inside test blocks. Private methods are private for a reason; tests should verify
 # behavior and outcomes, not call private methods directly.
 #
 # @example

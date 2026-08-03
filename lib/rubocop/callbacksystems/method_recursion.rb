@@ -1,8 +1,7 @@
-# A method asked which of its parameters its own recursion moves down the
-# parameter list. `walk(child, node)` inside `def walk(node, parent)` hands `node`
-# on as the next `parent`, so it is a different value at every step and cannot be
-# the shared state of a class. The derived value need not be written inline for
-# this to hold, which is what looking at one call in isolation misses.
+# A method asked which of its parameters its own recursion moves down the parameter list. `walk(child, node)` inside
+# `def walk(node, parent)` hands `node` on as the next `parent`, so it is a different value at every step and cannot be
+# the shared state of a class. The derived value need not be written inline for this to hold, which is what looking at
+# one call in isolation misses.
 class RuboCop::Callbacksystems::MethodRecursion
   def initialize(method_node)
     @method_node = method_node

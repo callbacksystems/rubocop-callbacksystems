@@ -1,4 +1,5 @@
-# Including cops must define `source_method` (:to_s / :to_sym) and `preferred_method` (:stringify_keys / :symbolize_keys).
+# Including cops must define `source_method` (:to_s / :to_sym) and `preferred_method` (:stringify_keys /
+# :symbolize_keys).
 #
 module RuboCop::Callbacksystems::KeyTransformDetection
   extend ActiveSupport::Concern

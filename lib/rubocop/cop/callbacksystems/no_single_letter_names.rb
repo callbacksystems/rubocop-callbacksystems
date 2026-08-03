@@ -1,5 +1,5 @@
-# Detects single-letter names for variables, block arguments, and method
-# parameters. Names should be descriptive, not single characters.
+# Detects single-letter names for variables, block arguments, and method parameters. Names should be descriptive, not
+# single characters.
 #
 # @example
 #   # bad

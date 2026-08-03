@@ -1,8 +1,8 @@
-# Forbids multiple classes or modules at the top level of a file.
-# Each file should contain only one top-level class or module.
+# Forbids multiple classes or modules at the top level of a file. Each file should contain only one top-level class or
+# module.
 #
-# This enforces the convention that each file defines a single
-# namespace, making code organization clearer and more predictable.
+# This enforces the convention that each file defines a single namespace, making code organization clearer and more
+# predictable.
 #
 # @example
 #   # bad - multiple top-level classes

@@ -1,6 +1,5 @@
-# Ensures tests are ordered following the method definition order in the source file.
-# When test names start with a method name, they should appear in the same order
-# as those methods are defined in the corresponding source file.
+# Ensures tests are ordered following the method definition order in the source file. When test names start with a
+# method name, they should appear in the same order as those methods are defined in the corresponding source file.
 #
 # This cop only runs on test files and requires the source file to exist.
 #
@@ -123,8 +122,8 @@ class RuboCop::Cop::Callbacksystems::TestMethodOrder < RuboCop::Cop::Callbacksys
         end
     end
 
-    # An executable class-body statement is a hard boundary, so a correction
-    # cannot move a test across setup or configuration.
+    # An executable class-body statement is a hard boundary, so a correction cannot move a test across setup or
+    # configuration.
     class Reorder
       include RuboCop::Cop::RangeHelp
       include RuboCop::Callbacksystems::Helpers

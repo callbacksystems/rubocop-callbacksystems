@@ -1,7 +1,7 @@
 # Ensures repeated `module:` options in routes are extracted to a scope block.
 #
-# Autocorrection consolidates the routes only when they are contiguous, so it
-# never reorders a route past another and changes matching precedence.
+# Autocorrection consolidates the routes only when they are contiguous, so it never reorders a route past another and
+# changes matching precedence.
 #
 # @example
 #   # bad - module: repeated multiple times

@@ -1,6 +1,5 @@
-# Detects private methods that only delegate to a newly created object.
-# Such methods add indirection without value and should be inlined or reconsidered.
-# Public methods and predicates are excluded as they often provide semantic value.
+# Detects private methods that only delegate to a newly created object. Such methods add indirection without value and
+# should be inlined or reconsidered. Public methods and predicates are excluded as they often provide semantic value.
 #
 # @example
 #   # bad - private method only creates object and calls single method

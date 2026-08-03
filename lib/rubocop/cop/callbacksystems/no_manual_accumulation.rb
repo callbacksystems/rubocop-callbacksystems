@@ -1,6 +1,5 @@
-# Detects manual accumulation patterns that should use declarative methods.
-# When you initialize an empty collection, iterate with each to fill it,
-# and return it, use map, select, index_by, or to_h instead.
+# Detects manual accumulation patterns that should use declarative methods. When you initialize an empty collection,
+# iterate with each to fill it, and return it, use map, select, index_by, or to_h instead.
 #
 # @example
 #   # bad - manual array accumulation
@@ -87,8 +86,7 @@ class RuboCop::Cop::Callbacksystems::NoManualAccumulation < RuboCop::Cop::Callba
           statements.any? { each_block?(it) && mutates_in_body?(it.body) }
         end
 
-        # Any extra statement means a declarative `map`/`select` would drop a side
-        # effect.
+        # Any extra statement means a declarative `map`/`select` would drop a side effect.
         def mutates_in_body?(body)
           mutates_variable?(body, variable_name) || guarded_mutation?(body)
         end

@@ -1,8 +1,6 @@
-# Counts only validation guards: leading `return`s that reject input by
-# returning nothing, `nil`, or `false`. Dispatch branches like
-# `return start_value if start?` are a lookup table written as control flow,
-# not validation, so they don't count. Many validations at the start of a
-# method usually means the checks belong in an extracted predicate.
+# Counts only validation guards: leading `return`s that reject input by returning nothing, `nil`, or `false`. Dispatch
+# branches like `return start_value if start?` are a lookup table written as control flow, not validation, so they don't
+# count. Many validations at the start of a method usually means the checks belong in an extracted predicate.
 #
 # @example MaxGuards: 2 (default)
 #   # bad - three leading validation guards

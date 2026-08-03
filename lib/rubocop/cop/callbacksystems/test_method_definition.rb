@@ -1,5 +1,4 @@
-# Enforces `test "description" do` over `def test_*`, and block syntax for
-# setup and teardown over method definitions.
+# Enforces `test "description" do` over `def test_*`, and block syntax for setup and teardown over method definitions.
 #
 # @example
 #   # bad

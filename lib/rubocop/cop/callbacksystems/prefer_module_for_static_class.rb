@@ -1,11 +1,9 @@
-# A class whose whole body is class-level code should be a module with
-# `extend self`. Classes are for making instances.
+# A class whose whole body is class-level code should be a module with `extend self`. Classes are for making instances.
 #
-# `Style/StaticClass` covers the plain case, but it abstains as soon as the
-# singleton section has a private part, because the `module_function` it
-# corrects to stops copying methods to the singleton once `private` switches
-# the mode, which breaks every call to them. `extend self` carries the
-# visibility over untouched, so that case is reported here instead.
+# `Style/StaticClass` covers the plain case, but it abstains as soon as the singleton section has a private part,
+# because the `module_function` it corrects to stops copying methods to the singleton once `private` switches the mode,
+# which breaks every call to them. `extend self` carries the visibility over untouched, so that case is reported here
+# instead.
 #
 # @example
 #   # bad - class methods only, with a private helper

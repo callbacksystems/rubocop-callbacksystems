@@ -1,9 +1,8 @@
-# A negative `return unless` guard followed by a happy path reads more naturally
-# as `if cond; ...; end`. The wrap adds one `if` block, so it is only applied when
-# the happy path's own nesting plus that extra level still fits inside RuboCop's
-# `Metrics/BlockNesting` (3 by default); anything past that would push the method
-# past the nesting limit. Method-length rules already cap how long a happy path
-# can be, so the only real cost of the wrap is the indent level it adds.
+# A negative `return unless` guard followed by a happy path reads more naturally as `if cond; ...; end`. The wrap adds
+# one `if` block, so it is only applied when the happy path's own nesting plus that extra level still fits inside
+# RuboCop's `Metrics/BlockNesting` (3 by default); anything past that would push the method past the nesting limit.
+# Method-length rules already cap how long a happy path can be, so the only real cost of the wrap is the indent level it
+# adds.
 #
 # @example
 #   # bad - leading negative guard
@@ -100,8 +99,7 @@ class RuboCop::Cop::Callbacksystems::PreferPositiveWrap < RuboCop::Cop::Callback
           body.source_range.source_buffer.source[happy_start...happy.last.source_range.end_pos]
         end
 
-        # A comment between the two was written about the happy path, so it
-        # travels into the wrap.
+        # A comment between the two was written about the happy path, so it travels into the wrap.
         def happy_start
           comment = first_comment_in(gap_after_guard, comments)
           comment ? comment.source_range.begin_pos : happy.first.source_range.begin_pos

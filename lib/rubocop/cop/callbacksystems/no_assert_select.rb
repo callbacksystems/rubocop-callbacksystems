@@ -1,8 +1,7 @@
 # Prohibits using assert_select in tests.
 #
-# Testing HTML content couples tests to markup implementation details.
-# Tests should verify behavior through response status, redirects, and
-# data changes, not by inspecting HTML structure.
+# Testing HTML content couples tests to markup implementation details. Tests should verify behavior through response
+# status, redirects, and data changes, not by inspecting HTML structure.
 #
 # @example
 #   # bad - testing HTML content

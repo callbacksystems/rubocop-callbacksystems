@@ -1,6 +1,5 @@
-# Detects unused private methods in private nested classes.
-# Since the nested class is private, no external code can inherit from it,
-# so we can detect unused private methods within the same file.
+# Detects unused private methods in private nested classes. Since the nested class is private, no external code can
+# inherit from it, so we can detect unused private methods within the same file.
 #
 # @example
 #   # bad - unused private method

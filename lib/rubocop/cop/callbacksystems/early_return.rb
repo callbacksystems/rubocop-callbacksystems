@@ -1,5 +1,5 @@
-# Prohibits early exits except for a single guard clause on the first line.
-# Applies to `return` in methods and `next`/`break` in blocks.
+# Prohibits early exits except for a single guard clause on the first line. Applies to `return` in methods and
+# `next`/`break` in blocks.
 #
 # @example
 #   # bad - return in the middle of method

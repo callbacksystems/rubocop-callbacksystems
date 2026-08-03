@@ -1,5 +1,4 @@
-# Prohibits using preload, eager_load, or includes directly in controllers.
-# Use a scope in the model instead.
+# Prohibits using preload, eager_load, or includes directly in controllers. Use a scope in the model instead.
 #
 # @example
 #   # bad - direct eager loading in controller

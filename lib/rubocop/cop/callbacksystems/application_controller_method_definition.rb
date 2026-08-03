@@ -1,8 +1,7 @@
 # Prohibits defining methods directly in ApplicationController.
 #
-# Methods in ApplicationController should be extracted into concerns
-# to keep the base controller clean and maintainable. Include concerns
-# instead of defining methods directly.
+# Methods in ApplicationController should be extracted into concerns to keep the base controller clean and maintainable.
+# Include concerns instead of defining methods directly.
 #
 # @example
 #   # bad - method defined directly

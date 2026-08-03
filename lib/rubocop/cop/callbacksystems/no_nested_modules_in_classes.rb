@@ -1,9 +1,8 @@
-# Forbids nested modules inside classes.
-# Modules should be defined at the top level or inside other modules,
-# not inside classes.
+# Forbids nested modules inside classes. Modules should be defined at the top level or inside other modules, not inside
+# classes.
 #
-# Nested modules in classes are often used to avoid creating proper
-# objects, leading to imperative rather than declarative code.
+# Nested modules in classes are often used to avoid creating proper objects, leading to imperative rather than
+# declarative code.
 #
 # @example
 #   # bad - nested module in class

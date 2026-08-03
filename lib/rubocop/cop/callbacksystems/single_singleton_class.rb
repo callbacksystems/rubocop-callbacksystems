@@ -1,6 +1,5 @@
-# A class declares its class-level methods in a single `class << self` section.
-# Splitting them across several blocks scatters the class API and hides which
-# part of it is private.
+# A class declares its class-level methods in a single `class << self` section. Splitting them across several blocks
+# scatters the class API and hides which part of it is private.
 #
 # @example
 #   # bad - two singleton sections

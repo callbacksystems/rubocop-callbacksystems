@@ -1,16 +1,13 @@
-# A hash of three or more keys, built in one place and read from several others,
-# is a data clump wearing braces. Every caller reaches past it to its keys
-# (`context[:account]`) because it has no methods of its own, so the same refactor
+# A hash of three or more keys, built in one place and read from several others, is a data clump wearing braces. Every
+# caller reaches past it to its keys (`context[:account]`) because it has no methods of its own, so the same refactor
 # applies: give it a class, and the methods reading its keys become its methods.
 #
-# The distinction that matters is whether the hash travels. One built and consumed
-# on the spot, an options argument or a payload handed straight to a call, is a
-# value, not a concept; only a hash that is named or returned, and whose keys are
-# then read from more than one method, is reported.
+# The distinction that matters is whether the hash travels. One built and consumed on the spot, an options argument or a
+# payload handed straight to a call, is a value, not a concept; only a hash that is named or returned, and whose keys
+# are then read from more than one method, is reported.
 #
-# DataClump sees the same smell spelled as parameter lists. Bagging a clump into a
-# hash silences that cop without changing anything, so this one closes the gap:
-# both spellings report, and the way out of either is the class.
+# DataClump sees the same smell spelled as parameter lists. Bagging a clump into a hash silences that cop without
+# changing anything, so this one closes the gap: both spellings report, and the way out of either is the class.
 #
 # @example
 #   # bad - built once, reached into from everywhere
@@ -72,8 +69,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
       private
         attr_reader :ast, :cop_config
 
-        # Best match first, so a narrow hash keeps its own reaches instead of being
-        # swallowed by a wider one that happens to contain its keys.
+        # Best match first, so a narrow hash keeps its own reaches instead of being swallowed by a wider one that
+        # happens to contain its keys.
         def records
           @records ||= candidates.each { it.claim(reaches_owned_by(it)) }
         end
@@ -168,8 +165,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           pair.pair_type? && pair.key.sym_type? && !pair.value.any_block_type?
         end
 
-        # A callable value makes it an object already; a double-splat means the shape
-        # is not this literal's to own.
+        # A callable value makes it an object already; a double-splat means the shape is not this literal's to own.
         def plain_record?
           fields.size >= limits.min_fields && node.children.all? { data_pair?(it) }
         end
@@ -183,8 +179,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           named.parent&.assignment?
         end
 
-        # A record bound to a constant is usually frozen first, so `freeze` is the
-        # parent rather than the assignment.
+        # A record bound to a constant is usually frozen first, so `freeze` is the parent rather than the assignment.
         def named
           frozen? ? node.parent : node
         end
@@ -206,8 +201,7 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           node.each_ancestor(:any_def).first
         end
 
-        # Scattering is the symptom, so each consumer counts once however many keys
-        # it reaches for.
+        # Scattering is the symptom, so each consumer counts once however many keys it reaches for.
         def reader_count
           @reader_count ||= key_reaches.map(&:reader).uniq.size
         end
@@ -239,8 +233,8 @@ class RuboCop::Cop::Callbacksystems::NoAnemicRecord < RuboCop::Cop::Callbacksyst
           node.arguments.one? && node.first_argument.sym_type? && base_name.present?
         end
 
-        # A bare call names the hash too: the Ruby way to build one here and read it
-        # there is a memoized method, not a binding.
+        # A bare call names the hash too: the Ruby way to build one here and read it there is a memoized method, not a
+        # binding.
         def base_name
           @base_name ||= named_base_of(node.receiver)
         end

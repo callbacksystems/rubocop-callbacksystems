@@ -1,8 +1,7 @@
 module RuboCop::Callbacksystems::Helpers::Ranges
   include RuboCop::Cop::RangeHelp
 
-  # Takes one adjacent blank line too, so removing a statement leaves no stray
-  # blank where it sat.
+  # Takes one adjacent blank line too, so removing a statement leaves no stray blank where it sat.
   def statement_removal_range_for(node)
     range = line_removal_range_for(node)
     blank_line_above(range) || blank_line_below(range) || range

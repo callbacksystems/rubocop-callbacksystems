@@ -1,7 +1,7 @@
 # Detects imperative collection building that could be written declaratively.
 #
-# Ruby favors declarative code that reads like prose. Instead of building
-# collections imperatively with each/<<, use map, select, filter_map, etc.
+# Ruby favors declarative code that reads like prose. Instead of building collections imperatively with each/<<, use
+# map, select, filter_map, etc.
 #
 # @example
 #   # bad - imperative with mutation

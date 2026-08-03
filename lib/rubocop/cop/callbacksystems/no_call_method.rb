@@ -1,5 +1,4 @@
-# Prohibits defining methods named `call`.
-# This pattern is associated with service objects which we avoid.
+# Prohibits defining methods named `call`. This pattern is associated with service objects which we avoid.
 #
 # @example
 #   # bad

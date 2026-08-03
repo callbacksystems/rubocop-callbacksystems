@@ -1,5 +1,5 @@
-# Prohibits bang methods (ending with `!`) unless a non-bang counterpart exists.
-# The `!` suffix should only be used when there's a "safer" version without the bang.
+# Prohibits bang methods (ending with `!`) unless a non-bang counterpart exists. The `!` suffix should only be used when
+# there's a "safer" version without the bang.
 #
 # @example
 #   # bad - no non-bang counterpart

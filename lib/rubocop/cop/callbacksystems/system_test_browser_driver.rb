@@ -1,7 +1,5 @@
-# Keeps system tests on a real browser driver.
-# `rack_test` skips JavaScript entirely, so a Hotwire application under it
-# exercises pages that never behave like production. Integration tests
-# already cover the fast no-browser path.
+# Keeps system tests on a real browser driver. `rack_test` skips JavaScript entirely, so a Hotwire application under it
+# exercises pages that never behave like production. Integration tests already cover the fast no-browser path.
 #
 # @example
 #   # bad - system tests without a browser

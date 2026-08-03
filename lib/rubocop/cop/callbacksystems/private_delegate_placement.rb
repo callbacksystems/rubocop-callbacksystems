@@ -1,7 +1,6 @@
-# `delegate ... private: true` declares private methods, so it belongs in the
-# private section next to the other private declarations. Left above, it hides
-# private methods among the public API; left below the section's methods, it
-# hides a declaration among behavior.
+# `delegate ... private: true` declares private methods, so it belongs in the private section next to the other private
+# declarations. Left above, it hides private methods among the public API; left below the section's methods, it hides a
+# declaration among behavior.
 #
 # @example
 #   # bad
@@ -145,8 +144,7 @@ class RuboCop::Cop::Callbacksystems::PrivateDelegatePlacement < RuboCop::Cop::Ca
           "\n#{section_indentation}#{node.source}"
         end
 
-        # Members sit one step deeper than `private`, so an existing one says how
-        # deep.
+        # Members sit one step deeper than `private`, so an existing one says how deep.
         def section_indentation
           statements_after_private_modifier.first&.then { indentation_of(it) } || "#{body_indentation}#{indentation_step}"
         end

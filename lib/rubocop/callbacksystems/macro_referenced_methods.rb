@@ -15,8 +15,7 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     Set.new(ordered)
   end
 
-  # In source order, so a caller can order these methods the way the macros
-  # mention them.
+  # In source order, so a caller can order these methods the way the macros mention them.
   def ordered
     collect(body).uniq
   end
@@ -36,12 +35,11 @@ class RuboCop::Callbacksystems::MacroReferencedMethods
     class Node
       include RuboCop::Callbacksystems::Helpers
 
-      # Options whose symbol names a method: a callback guard, a `rescue_from`
-      # handler.
+      # Options whose symbol names a method: a callback guard, a `rescue_from` handler.
       METHOD_OPTIONS = %i[if unless with].freeze
 
-      # Their leading symbol names what they declare, not a method the class calls:
-      # an accessor, an association, a queue, a token purpose.
+      # Their leading symbol names what they declare, not a method the class calls: an accessor, an association, a
+      # queue, a token purpose.
       DECLARING_MACROS = %i[
         attr_reader attr_writer attr_accessor
         mattr_reader mattr_writer mattr_accessor

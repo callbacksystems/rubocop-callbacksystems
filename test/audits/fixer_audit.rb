@@ -1,7 +1,6 @@
-# Runs every autocorrecting cop over the shapes its own tests declare, with a
-# comment inserted before each line in turn, and reports the ones whose fixer
-# drops the comment or leaves the source unparseable. Each cop's suite proves
-# the fix it means to make; this proves it takes nothing else with it.
+# Runs every autocorrecting cop over the shapes its own tests declare, with a comment inserted before each line in turn,
+# and reports the ones whose fixer drops the comment or leaves the source unparseable. Each cop's suite proves the fix
+# it means to make; this proves it takes nothing else with it.
 class FixerAudit
   MARKER = "# fixer-safety-marker"
   DEFAULT_FILE = "test/example_test.rb"
@@ -192,8 +191,7 @@ class FixerAudit
       private
         attr_reader :path
 
-        # Through the registry, so a test file naming a cop that no longer exists is
-        # skipped instead of raising.
+        # Through the registry, so a test file naming a cop that no longer exists is skipped instead of raising.
         def cop_class
           @cop_class ||= RuboCop::Cop::Registry.global.cops.find { it.name == declared_cop_name }
         end

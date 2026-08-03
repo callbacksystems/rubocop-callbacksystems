@@ -1,5 +1,5 @@
-# Detects public methods in private nested classes that are never called from outside.
-# If a method in a private nested class is only used internally, it should be private.
+# Detects public methods in private nested classes that are never called from outside. If a method in a private nested
+# class is only used internally, it should be private.
 #
 # @example
 #   # bad - unused_method is public but never called from outside
@@ -47,8 +47,7 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
     class VisibilityCheck
       include RuboCop::Callbacksystems::Helpers
 
-      # Called structurally by Ruby itself, so their names never appear near an
-      # instance.
+      # Called structurally by Ruby itself, so their names never appear near an instance.
       PROTOCOL_METHODS = %i[
         to_hash to_h to_str to_s to_ary to_a to_proc to_int to_i to_path
         == eql? hash <=> === each call inspect as_json to_json
@@ -109,8 +108,8 @@ class RuboCop::Cop::Callbacksystems::PrivateNestedClassMethodVisibility < RuboCo
           public_methods_in(nested_class).reject { mentioned_outside?(it.method_name) }
         end
 
-        # One file cannot follow an instance out, so any mention of the name counts
-        # and only a name nobody says at all is reported.
+        # One file cannot follow an instance out, so any mention of the name counts and only a name nobody says at all
+        # is reported.
         def mentioned_outside?(method_name)
           external_names.include?(method_name)
         end

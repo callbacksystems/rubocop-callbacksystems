@@ -11,8 +11,7 @@ module RuboCop::Callbacksystems::Helpers::Comments
     comments.select { range.contains?(it.source_range) }
   end
 
-  # For a deletion whose surviving code is below, so the comment reads as
-  # written about it.
+  # For a deletion whose surviving code is below, so the comment reads as written about it.
   def range_ending_at_first_comment(range, comments)
     comment = first_comment_in(range, comments)
     comment ? range.with(end_pos: comment.source_range.begin_pos) : range

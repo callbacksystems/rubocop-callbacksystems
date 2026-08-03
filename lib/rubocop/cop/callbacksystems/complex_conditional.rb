@@ -1,5 +1,5 @@
-# Detects complex conditionals with too many boolean operators.
-# Complex conditions should be extracted to predicate methods.
+# Detects complex conditionals with too many boolean operators. Complex conditions should be extracted to predicate
+# methods.
 #
 # @example MaxOperators: 1 (default)
 #   # bad - too many operators
@@ -37,8 +37,7 @@ class RuboCop::Cop::Callbacksystems::ComplexConditional < RuboCop::Cop::Callback
       add_offense(condition, message: format(MESSAGE, count: count, max: max_operators)) if count > max_operators
     end
 
-    # An `and`/`or` buried in a sub-expression is that expression's complexity,
-    # not the predicate's.
+    # An `and`/`or` buried in a sub-expression is that expression's complexity, not the predicate's.
     def operator_count_in(node)
       if node&.type?(:and, :or)
         1 + node.children.sum { operator_count_in(it) }

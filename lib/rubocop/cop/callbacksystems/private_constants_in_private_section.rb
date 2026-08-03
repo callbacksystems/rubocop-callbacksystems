@@ -1,11 +1,9 @@
-# A constant that only serves the implementation belongs in the private
-# section, where every other implementation detail already lives. Marking it
-# with `private_constant` from the top of the class says the same thing twice
-# and leaves the declaration among the public ones.
+# A constant that only serves the implementation belongs in the private section, where every other implementation detail
+# already lives. Marking it with `private_constant` from the top of the class says the same thing twice and leaves the
+# declaration among the public ones.
 #
-# The marker earns its place when class-level code above the private section
-# reads the constant, since the declaration cannot move below the code that
-# reads it. Class-level code inside the section moves down with it.
+# The marker earns its place when class-level code above the private section reads the constant, since the declaration
+# cannot move below the code that reads it. Class-level code inside the section moves down with it.
 #
 # @example
 #   # bad - only method bodies read it
@@ -140,8 +138,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
         end
     end
 
-    # Read by class-level code above the section, so the declaration cannot move
-    # below it.
+    # Read by class-level code above the section, so the declaration cannot move below it.
     class ConstantRead
       include RuboCop::Callbacksystems::Helpers
 
@@ -169,8 +166,7 @@ class RuboCop::Cop::Callbacksystems::PrivateConstantsInPrivateSection < RuboCop:
           !runs_later? && !definition_identifier?(node)
         end
 
-        # Both run after the class body, so what they read can be declared
-        # anywhere in it.
+        # Both run after the class body, so what they read can be declared anywhere in it.
         def runs_later?
           node.each_ancestor(:any_def).any? || inside_deferred_block?
         end

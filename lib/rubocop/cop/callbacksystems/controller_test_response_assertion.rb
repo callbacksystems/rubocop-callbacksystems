@@ -1,6 +1,5 @@
-# In controller tests, every test that makes an HTTP request must assert the response.
-# Testing only side effects without verifying the response status or redirect
-# leaves the controller's behavior unverified.
+# In controller tests, every test that makes an HTTP request must assert the response. Testing only side effects without
+# verifying the response status or redirect leaves the controller's behavior unverified.
 #
 # @example
 #   # bad - no response assertion

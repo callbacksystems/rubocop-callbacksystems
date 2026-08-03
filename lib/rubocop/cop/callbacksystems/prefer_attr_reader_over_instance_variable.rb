@@ -1,8 +1,8 @@
-# Detects direct use of instance variables that were assigned in initialize.
-# If an instance variable is set in initialize, access it via attr_reader instead.
+# Detects direct use of instance variables that were assigned in initialize. If an instance variable is set in
+# initialize, access it via attr_reader instead.
 #
-# This cop only applies to instance variables assigned in the constructor.
-# Instance variables assigned elsewhere (like in controllers) are not flagged.
+# This cop only applies to instance variables assigned in the constructor. Instance variables assigned elsewhere (like
+# in controllers) are not flagged.
 #
 # @example
 #   # bad - using @node directly when it was set in initialize

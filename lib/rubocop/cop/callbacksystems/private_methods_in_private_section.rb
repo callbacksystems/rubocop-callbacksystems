@@ -1,9 +1,8 @@
-# A method you define goes in the private section, not above it with a
-# `private :name` afterwards. The section already says what the marker repeats.
+# A method you define goes in the private section, not above it with a `private :name` afterwards. The section already
+# says what the marker repeats.
 #
-# The marker earns its place when the method is not defined here, since a
-# section cannot reach a method that arrives from a superclass or a macro.
-# `Data.define` generating readers you would rather hide is the usual case.
+# The marker earns its place when the method is not defined here, since a section cannot reach a method that arrives
+# from a superclass or a macro. `Data.define` generating readers you would rather hide is the usual case.
 #
 # @example
 #   # bad

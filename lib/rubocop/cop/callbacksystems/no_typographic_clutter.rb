@@ -1,8 +1,6 @@
-# Keeps typographic characters out of source: smart quotes, en/em dashes,
-# ellipses, arrows, bullets, zero-width spaces. They arrive by pasting from
-# formatted text or from an AI agent, and they are invisible noise to the
-# toolchain, break grep, and signal sloppy review. Decorative line-drawing characters are
-# left to a divider-comment cop.
+# Keeps typographic characters out of source: smart quotes, en/em dashes, ellipses, arrows, bullets, zero-width spaces.
+# They arrive by pasting from formatted text or from an AI agent, and they are invisible noise to the toolchain, break
+# grep, and signal sloppy review. Decorative line-drawing characters are left to a divider-comment cop.
 #
 # @example
 #   # bad - a smart quote, em/en dash, ellipsis, arrow, or bullet in a comment or
@@ -23,8 +21,8 @@ class RuboCop::Cop::Callbacksystems::NoTypographicClutter < RuboCop::Cop::Callba
   ].freeze
   # Clutter ranges: zero-width space/joiner, smart quotes, the arrows block.
   CLUTTER_RANGES = [ 0x200B..0x200D, 0x2018..0x201F, 0x2190..0x21FF ].freeze
-  # Only these have one unambiguous ASCII spelling, so only these autocorrect.
-  # Written as escapes so this file stays ASCII-clean under its own cop.
+  # Only these have one unambiguous ASCII spelling, so only these autocorrect. Written as escapes so this file stays
+  # ASCII-clean under its own cop.
   ASCII_EQUIVALENT = {
     "\u2018" => "'", "\u2019" => "'",
     "\u201C" => "\"", "\u201D" => "\"",
@@ -56,8 +54,7 @@ class RuboCop::Cop::Callbacksystems::NoTypographicClutter < RuboCop::Cop::Callba
       processed_source.ast&.each_node(:str) || []
     end
 
-    # The fix runs only when the ASCII form is unambiguous and will not close the
-    # string.
+    # The fix runs only when the ASCII form is unambiguous and will not close the string.
     class Clutter
       def initialize(node, text)
         @node = node

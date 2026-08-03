@@ -1,5 +1,5 @@
-# Do not use explicit `public` modifier. Public methods should be at the beginning
-# of the class/module, before any `private` or `protected` sections.
+# Do not use explicit `public` modifier. Public methods should be at the beginning of the class/module, before any
+# `private` or `protected` sections.
 #
 # @example
 #   # bad - using explicit public modifier
@@ -49,8 +49,8 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
         bare_send?(node) && node.method?(:public) && !inside_nested_class?
       end
 
-      # A bare `public` reopening visibility after `private` would make the methods
-      # below it private, so that case is left for a human to reorder.
+      # A bare `public` reopening visibility after `private` would make the methods below it private, so that case is
+      # left for a human to reorder.
       def correct(corrector)
         corrector.remove(removal_range) if redundant?
       end
@@ -70,8 +70,7 @@ class RuboCop::Cop::Callbacksystems::NoExplicitPublicModifier < RuboCop::Cop::Ca
           (node.parent&.children || []).take_while { it != node }
         end
 
-        # `public attr_reader :token` also declares something, and taking its line
-        # would take the reader too.
+        # `public attr_reader :token` also declares something, and taking its line would take the reader too.
         def removal_range
           visibility_only? ? line_removal_range_for(node) : keyword_range
         end

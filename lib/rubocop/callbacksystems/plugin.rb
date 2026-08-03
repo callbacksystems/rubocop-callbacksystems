@@ -1,6 +1,5 @@
-# The entry point RuboCop asks for when a project lists this gem under
-# `plugins:`. It hands back the cop defaults, and the version RuboCop needs in
-# order to resolve pending cops and name the plugin when reporting versions.
+# The entry point RuboCop asks for when a project lists this gem under `plugins:`. It hands back the cop defaults, and
+# the version RuboCop needs in order to resolve pending cops and name the plugin when reporting versions.
 class RuboCop::Callbacksystems::Plugin < LintRoller::Plugin
   def about
     LintRoller::About.new \
