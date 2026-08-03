@@ -11,6 +11,17 @@ require "minitest/autorun"
 
 class CopTestCase < ActiveSupport::TestCase
   DEFAULT_FILE = "test/example_test.rb"
+  DEFAULT_CONFIG_PATH = File.expand_path("../config/default.yml", __dir__)
+
+  # The cops read their thresholds from config/default.yml, which RuboCop merges
+  # in through the plugin when it resolves a project's configuration. The bare
+  # Commissioner used here does no resolving, so the defaults are loaded once and
+  # handed to every cop under test.
+  def self.default_config
+    @default_config ||= RuboCop::ConfigLoader.merge_with_default(
+      RuboCop::ConfigLoader.load_file(DEFAULT_CONFIG_PATH), DEFAULT_CONFIG_PATH
+    )
+  end
 
   class << self
     attr_accessor :cop_class
@@ -62,7 +73,7 @@ class CopTestCase < ActiveSupport::TestCase
         end
 
         def commissioner
-          RuboCop::Cop::Commissioner.new([ cop_class.new ], [], raise_error: true)
+          RuboCop::Cop::Commissioner.new([ cop_class.new(CopTestCase.default_config) ], [], raise_error: true)
         end
 
         def processed_source

@@ -162,10 +162,19 @@ class RuboCop::Cop::Callbacksystems::PreferDelegate < RuboCop::Cop::Callbacksyst
 
         def write(corrector)
           if sibling_delegate
-            corrector.insert_before(sibling_delegate.first_option, ":#{node.method_name}, ")
+            merge_into_sibling(corrector)
           else
             corrector.insert_after(anchor, "\n#{indentation_of(node)}#{macro_source}")
           end
+        end
+
+        # Corrections run in a loop, and another cop moving this method can bring
+        # it past here a second time. A name the sibling already delegates is not
+        # added again: `delegate :about, :about` defines the method twice.
+        def merge_into_sibling(corrector)
+          return if sibling_delegate.method_names.include?(node.method_name)
+
+          corrector.insert_before(sibling_delegate.first_option, ":#{node.method_name}, ")
         end
 
         def macro_source

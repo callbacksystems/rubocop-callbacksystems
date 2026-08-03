@@ -2,10 +2,8 @@
 
 inherit_from: rubocop.yml
 
-require:
-  - ./lib/rubocop-callbacksystems.rb
-
 plugins:
+  - rubocop-callbacksystems
   - rubocop-internal_affairs
 
 Callbacksystems/PublicMethodsMustHaveTests:

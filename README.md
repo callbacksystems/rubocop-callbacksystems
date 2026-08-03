@@ -21,9 +21,17 @@ inherit_gem:
   rubocop-callbacksystems: rubocop.yml
 ```
 
-That is enough. The plugin auto-loads, enables every Callbacksystems cop, and
-configures sensible defaults for the RuboCop core cops, Minitest, Performance,
-and Rails plugins.
+That is enough. The bundled config declares this gem under `plugins:`, so
+RuboCop loads it, enables every Callbacksystems cop, and configures the core
+cops along with the Minitest, Performance and Rails plugins.
+
+To take the cops without the style guide, declare the plugin yourself and
+configure the cops as you like:
+
+```yaml
+plugins:
+  - rubocop-callbacksystems
+```
 
 ## Usage
 

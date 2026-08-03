@@ -17,6 +17,11 @@ class RuboCop::Callbacksystems::DelegateMacro
     value_of(:private)&.true_type? || false
   end
 
+  # The methods the macro delegates: every symbol before the options hash.
+  def method_names
+    node.arguments.take_while(&:sym_type?).map(&:value)
+  end
+
   def first_option
     options.pairs.first
   end

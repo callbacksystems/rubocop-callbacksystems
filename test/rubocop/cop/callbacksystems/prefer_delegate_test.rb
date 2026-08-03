@@ -251,4 +251,19 @@ class RuboCop::Cop::Callbacksystems::PreferDelegateTest < CopTestCase
         end
       RUBY
   end
+
+  test "does not add a name the sibling delegate already carries" do
+    code = <<~RUBY
+      class Order
+        private
+          delegate :about, to: :plugin, private: true
+
+          def plugin
+            Plugin.new
+          end
+      end
+    RUBY
+
+    assert_correction code, code
+  end
 end

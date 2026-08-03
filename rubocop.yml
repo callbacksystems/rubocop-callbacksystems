@@ -1,9 +1,7 @@
 # Callbacksystems Ruby Style
 
-require:
-  - rubocop-callbacksystems
-
 plugins:
+  - rubocop-callbacksystems
   - rubocop-minitest
   - rubocop-performance
   - rubocop-rails

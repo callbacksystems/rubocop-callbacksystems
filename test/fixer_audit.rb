@@ -102,7 +102,8 @@ class FixerAudit
         end
 
         def offenses_in(processed)
-          RuboCop::Cop::Commissioner.new([ cop_class.new ], [], raise_error: true).investigate(processed).offenses
+          RuboCop::Cop::Commissioner.new([ cop_class.new(CopTestCase.default_config) ], [], raise_error: true)
+            .investigate(processed).offenses
         end
 
         def variants

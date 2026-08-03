@@ -37,6 +37,14 @@ class RuboCop::Callbacksystems::DelegateMacroTest < ActiveSupport::TestCase
     assert_not macro_for("delegate :size, to: :node").private?
   end
 
+  test "method_names lists the symbols the macro delegates" do
+    assert_equal %i[name email], macro_for("delegate :name, :email, to: :user, private: true").method_names
+  end
+
+  test "method_names is empty for a macro delegating nothing" do
+    assert_empty macro_for("delegate to: :user").method_names
+  end
+
   test "first_option returns the leading option pair" do
     assert_equal "to: :node", macro_for("delegate :size, to: :node, private: true").first_option.source
   end

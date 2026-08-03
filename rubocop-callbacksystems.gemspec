@@ -15,15 +15,16 @@ Gem::Specification.new do |spec|
 
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
-  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["documentation_uri"] = "#{spec.homepage}#readme"
   spec.metadata["rubygems_mfa_required"] = "true"
+  spec.metadata["default_lint_roller_plugin"] = "RuboCop::Callbacksystems::Plugin"
 
-  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "CHANGELOG.md", "LICENSE"]
+  spec.files = Dir["lib/**/*", "config/**/*", "rubocop.yml", "README.md", "LICENSE"]
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "activesupport"
-  spec.add_dependency "rubocop", ">= 1.72"
+  spec.add_dependency "lint_roller", "~> 1.1"
+  spec.add_dependency "rubocop", ">= 1.72", "< 2.0"
   spec.add_dependency "rubocop-minitest", ">= 0.36"
   spec.add_dependency "rubocop-performance", ">= 1.24"
   spec.add_dependency "rubocop-rails", ">= 2.29"

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    name: Tests and self-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bin/test
+      - run: bin/rubocop
+
+  # The suite runs against whatever the lockfile pins. This checks the floor the
+  # gemspec claims and the newest release separately, since a cop reaching into
+  # RuboCop's internals can break either way.
+  rubocop-versions:
+    name: RuboCop ${{ matrix.rubocop }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rubocop: [ "1.72", "latest" ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+      - name: Pin RuboCop
+        run: |
+          if [ "${{ matrix.rubocop }}" = "latest" ]; then
+            echo 'gem "rubocop"' >> Gemfile
+          else
+            echo 'gem "rubocop", "~> ${{ matrix.rubocop }}.0"' >> Gemfile
+          fi
+      - run: bundle install
+      - run: bundle exec bin/test
+
+  # Everything the packaging promises: that the gem builds, installs from the
+  # built artifact, and registers its cops when a project loads it the way the
+  # README says to.
+  package:
+    name: Build and load as a plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: gem build rubocop-callbacksystems.gemspec
+      - run: gem install --no-document --local rubocop-callbacksystems-*.gem
+      - name: Load the installed gem as a plugin
+        run: |
+          mkdir -p /tmp/consumer && cd /tmp/consumer
+          printf 'inherit_gem:\n  rubocop-callbacksystems: rubocop.yml\n' > .rubocop.yml
+          printf 'class Order\n  def call\n  end\nend\n' > order.rb
+          rubocop --show-cops | grep -q '^Callbacksystems/NoCallMethod'
+          rubocop --raise-cop-error --format simple order.rb && exit 1 || true
+          rubocop --raise-cop-error --format simple order.rb | grep -q 'Callbacksystems/NoCallMethod'

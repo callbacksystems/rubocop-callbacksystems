@@ -31,3 +31,9 @@ Uses Zeitwerk for autoloading.
 bin/rubocop    # Run RuboCop with custom cops
 bin/test       # Run all tests
 ```
+
+The gem loads through RuboCop's plugin API: `RuboCop::Callbacksystems::Plugin`
+is named in the gemspec metadata and hands back `config/default.yml`. A cop's
+defaults therefore reach it through config resolution, which the bare
+`Commissioner` in the tests does not do, so `CopTestCase.default_config` loads
+them and every cop under test is built with it.
