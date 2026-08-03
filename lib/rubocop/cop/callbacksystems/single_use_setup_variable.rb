@@ -326,8 +326,7 @@ class RuboCop::Cop::Callbacksystems::SingleUseSetupVariable < RuboCop::Cop::Call
         end
     end
 
-    # How one offending assignment rewrites away. A heredoc value travels in two pieces: its marker moves, its body
-    # follows.
+    # A heredoc value travels in two pieces: its marker moves, its body follows.
     class Rewrite
       def initialize(assignment, inline_target, removal_range)
         @assignment = assignment
