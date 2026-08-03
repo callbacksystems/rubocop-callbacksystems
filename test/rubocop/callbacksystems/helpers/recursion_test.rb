@@ -32,6 +32,28 @@ class RuboCop::Callbacksystems::Helpers::RecursionTest < HelpersTestCase
     assert_equal Set["node", "scope"], Helpers.recursion_subject_names_in(ast)
   end
 
+  test "recursion_subject_names_in collects a subject that only moves down the parameter list" do
+    ast = processed_source(<<~RUBY).ast
+      class Scan
+        def walk(node, parent)
+          children_of(node).each { walk(it, node) }
+        end
+      end
+    RUBY
+
+    assert_equal Set["node"], Helpers.recursion_subject_names_in(ast)
+  end
+
+  test "derived_subject_names_in collects names passed both directly and as a derived receiver" do
+    ast = processed_source(<<~RUBY).ast
+      def walk(node)
+        walk(node.child, node)
+      end
+    RUBY
+
+    assert_equal [ "node" ], Helpers.derived_subject_names_in(ast)
+  end
+
   test "recursion_subjects_in returns names passed both directly and as a derived receiver" do
     call = send_node("walk(node.child, node)")
 
@@ -82,6 +104,16 @@ class RuboCop::Callbacksystems::Helpers::RecursionTest < HelpersTestCase
     call = send_node("walk(Const, child.value)")
 
     assert_empty Helpers.direct_argument_names_in(call)
+  end
+
+  test "shifted_subject_names_in collects a parameter the recursion hands on at another position" do
+    ast = processed_source(<<~RUBY).ast
+      def walk(node, parent)
+        children_of(node).each { walk(it, node) }
+      end
+    RUBY
+
+    assert_equal [ "node" ], Helpers.shifted_subject_names_in(ast)
   end
 
   private

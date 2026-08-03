@@ -163,6 +163,22 @@ class RuboCop::Cop::Callbacksystems::DataClumpTest < CopTestCase
     RUBY
   end
 
+  test "exempts a recursion subject handed on at a different parameter position" do
+    assert_no_offense <<~RUBY
+      class Scan
+        private
+          def walk(node, parent)
+            found << node if reference?(node, parent)
+            children_of(node).each { walk(it, node) }
+          end
+
+          def reference?(node, parent)
+            !node.nil? && !parent.nil?
+          end
+      end
+    RUBY
+  end
+
   test "still flags a threaded parameter that is not the recursion subject" do
     offenses = assert_offense <<~RUBY
       class Walker

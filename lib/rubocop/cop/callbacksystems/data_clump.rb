@@ -16,9 +16,8 @@
 # Only methods carrying two or more of the names count toward a set: one name is
 # a value arriving, not a concept being passed, and counting those bystanders
 # would let a lone name clear the set threshold instead of its own higher one.
-# The recursion subject is exempt: a name passed both as itself and as a
-# derivative of itself in the same call (`walk(node.child, node)`) changes at
-# every step and cannot become shared state.
+# What a recursion moves is exempt too, since it is a different value at every
+# step: see the Recursion helper for the two shapes that say so.
 #
 # How far a set has to reach depends on how much its shape already tells us. A
 # signature repeated verbatim counts from two methods: nothing in those

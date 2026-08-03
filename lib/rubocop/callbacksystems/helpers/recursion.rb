@@ -1,9 +1,16 @@
 module RuboCop::Callbacksystems::Helpers::Recursion
-  # A name passed both directly and as the receiver of a derived value in the
-  # same call (`walk(node.child, node)`) is a recursion subject: it mutates
-  # every step, so it cannot be the shared state of a class.
+  # The parameters a recursion moves. A value that is a different value at every
+  # step cannot be the shared state of a class, so the cops that would otherwise
+  # advise turning it into a field leave it alone. Two shapes say a parameter is
+  # moving, and neither needs flow analysis to see.
   def recursion_subject_names_in(node)
-    node.each_node(:send).flat_map { recursion_subjects_in(it) }.to_set
+    (derived_subject_names_in(node) + shifted_subject_names_in(node)).to_set
+  end
+
+  # `walk(node.child, node)`: a name passed both directly and as the receiver of
+  # a value derived from it, in the same call.
+  def derived_subject_names_in(node)
+    node.each_node(:send).flat_map { recursion_subjects_in(it) }
   end
 
   def recursion_subjects_in(call)
@@ -21,5 +28,11 @@ module RuboCop::Callbacksystems::Helpers::Recursion
 
   def direct_argument_names_in(call)
     call.arguments.filter_map { local_variable_name_of(it) }
+  end
+
+  # `walk(child, node)` inside `def walk(node, parent)`: the subject moves down
+  # the parameter list instead of being derived in place.
+  def shifted_subject_names_in(node)
+    node.each_node(:def, :defs).flat_map { RuboCop::Callbacksystems::MethodRecursion.new(it).shifted_names }
   end
 end
