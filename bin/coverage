@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require "coverage"
+Coverage.start(lines: true, branches: true, methods: true)
+
+require "bundler/setup"
+
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift File.expand_path("../test", __dir__)
+
+require "test_helper"
+
+Dir.glob(File.expand_path("../test/**/*_test.rb", __dir__)).each { require it }
+
+Minitest.after_run do
+  report = CoverageReport.new(Coverage.result, File.expand_path("../lib", __dir__))
+  puts "", report.text
+  exit 1 unless report.met?
+end

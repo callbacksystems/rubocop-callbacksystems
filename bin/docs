@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
+require "rubocop-callbacksystems"
+require "rubocop/callbacksystems/cops_document"
+
+RuboCop::Callbacksystems::CopsDocument.new.save

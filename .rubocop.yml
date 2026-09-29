@@ -1,0 +1,19 @@
+# RuboCop config for the rubocop-callbacksystems gem itself
+
+inherit_from: rubocop.yml
+
+plugins:
+  - rubocop-internal_affairs
+
+Callbacksystems/PublicMethodsMustHaveTests:
+  Exclude:
+    - "lib/rubocop/cop/**/*"
+
+Naming/FileName:
+  Exclude:
+    - "lib/rubocop-callbacksystems.rb"
+
+# Module#< returns nil for unrelated modules, so the `>=` inversion breaks the wiring.
+Style/InvertibleUnlessCondition:
+  Exclude:
+    - "lib/rubocop/callbacksystems/helpers.rb"

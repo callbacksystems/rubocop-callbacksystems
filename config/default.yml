@@ -1,0 +1,590 @@
+inherit_mode:
+  merge:
+    - Exclude
+    - Include
+
+AllCops:
+  ActiveSupportExtensionsEnabled: true
+  UseProjectIndex: true
+
+Callbacksystems/ApplicationControllerMethodDefinition:
+  Description: "Prohibits defining methods directly in ApplicationController."
+  Enabled: true
+  Include:
+    - "app/controllers/application_controller.rb"
+
+Callbacksystems/AssertWithExpectedArgument:
+  Description: "Flags a two-argument `assert` whose second argument is not a failure message."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/BodyOrder:
+  Description: "Orders a class body: mixins, constants, class declarations, state declarations, associations, delegates, macros, methods, nested classes."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/BuilderMethodParentheses:
+  Description: "Requires parentheses on builder method calls that take arguments."
+  Enabled: true
+  SafeAutoCorrect: true
+  Exclude:
+    - "app/helpers/**/*"
+
+Callbacksystems/CollapseMultilineExpression:
+  Description: "Collapses multiline expressions that fit on a single line."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/CommentBlockLength:
+  Description: "Limits how many lines a comment block takes."
+  Enabled: true
+  Max: 2
+  HeaderMax: 4
+
+Callbacksystems/ComplexConditional:
+  Description: "Limits boolean operators in a conditional, so predicates get extracted."
+  Enabled: true
+  MaxOperators: 1
+
+Callbacksystems/ControllerTestResponseAssertion:
+  Description: "Requires every controller test that makes a request to assert the response."
+  Enabled: true
+  Safe: false
+  Include:
+    - "test/controllers/**/*"
+
+Callbacksystems/ControllerTestResponseFirstAssertion:
+  Description: "Requires the response assertion to come first after a request in controller tests."
+  Enabled: true
+  Safe: false
+  Include:
+    - "test/controllers/**/*"
+
+Callbacksystems/DataClump:
+  Description: "Detects parameter names that travel together across private methods and belong in an object of their own."
+  Enabled: true
+  Safe: false
+  MinMethods: 3
+  MinMethodsForRepeatedSignature: 2
+  MinMethodsForSingleParam: 6
+
+Callbacksystems/DeclarativeMethodNaming:
+  Description: "Requires a value-returning method to be named for the value, not the action."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/DelegateRequiresPrivateOption:
+  Description: "Requires `private: true` on a `delegate` that stands in the private section."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/EagerLoadingScopeNaming:
+  Description: "Reserves `with_*` for eager loading scopes and requires specific association names."
+  Enabled: true
+  Include:
+    - "app/models/**/*"
+
+Callbacksystems/EarlyReturn:
+  Description: "Allows a single guard clause on the first line as the only early exit."
+  Enabled: true
+
+Callbacksystems/EmptyLineBeforeMethod:
+  Description: "Requires an empty line before a method definition."
+  Enabled: true
+  SafeAutoCorrect: true
+  DescribingMacros:
+    - desc
+    - long_desc
+    - method_option
+    - method_options
+    - option
+
+Callbacksystems/EmptyLineBetweenSections:
+  Description: "Requires a blank line between two adjacent statements of different sections of a class body."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/EmptyPrivateSection:
+  Description: "Flags a `private` keyword that declares an empty section."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/ExpandedEmptyClassOrModule:
+  Description: "Requires an empty class or module to keep its `end` on a line of its own."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/InlineMemoizedComputation:
+  Description: "Requires the computation to be inlined in the method that memoizes it."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/JobEnqueueMethods:
+  Description: "Requires a method that enqueues a job to carry the `_later` suffix."
+  Enabled: true
+  Safe: false
+  Include:
+    - "app/models/**/*"
+
+Callbacksystems/MaxSafeNavigationDepth:
+  Description: "Limits the depth of a chain of safe navigation calls."
+  Enabled: true
+  MaxDepth: 3
+
+Callbacksystems/MethodInvocationOrder:
+  Description: "Requires methods to be ordered by invocation, each caller before its callees."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/NestedClassOrder:
+  Description: "Requires nested classes to be ordered by reference, each before the ones it names."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/NoAbbreviations:
+  Description: "Requires full words in declared names, including CamelCase, while preserving Ruby and Rails vocabulary."
+  Enabled: true
+
+Callbacksystems/NoAnemicDelegation:
+  Description: "Flags a private method that only delegates to a freshly built object."
+  Enabled: true
+
+Callbacksystems/NoAnemicRecord:
+  Description: "Detects a hash literal of several fields read across methods, which reads better as a class."
+  Enabled: true
+  Safe: false
+  MinFields: 3
+  MinReaders: 2
+
+Callbacksystems/NoAssertSelect:
+  Description: "Prohibits `assert_select` in tests."
+  Enabled: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/NoBangMethodWithoutCounterpart:
+  Description: "Prohibits a bang method without a non-bang counterpart."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoCallMethod:
+  Description: "Prohibits defining a method named `call`, except for Rack middleware endpoints."
+  Enabled: true
+
+Callbacksystems/NoCommentsInTestClassBody:
+  Description: "Prohibits comments in the direct body of a test class."
+  Enabled: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/NoConsecutiveAppends:
+  Description: "Collapses consecutive appends to one collection into a single `push`."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/NoCustomRouteActions:
+  Description: "Keeps routes on the standard resource actions."
+  Enabled: true
+  Include:
+    - "config/routes.rb"
+    - "config/routes/**/*"
+
+Callbacksystems/NoDirectEagerLoading:
+  Description: "Keeps `preload`, `eager_load`, and `includes` inside `app/models` behind named scopes."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoEachWithEarlyReturn:
+  Description: "Prefers `find` over an `each` block with a conditional early return."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoExplicitPublicModifier:
+  Description: "Prohibits the explicit `public` modifier."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/NoHashWithDefaultBlock:
+  Description: "Prefers declarative grouping over `Hash.new` with a default block."
+  Enabled: true
+
+Callbacksystems/NoLocalVariableReturn:
+  Description: "Prohibits returning a local variable as the last statement of a method."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/NoManualAccumulation:
+  Description: "Prefers declarative collection methods over filling an empty array or hash inside `each`."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoMixedMemoization:
+  Description: "Prohibits mixing memoization with other statements in the same method."
+  Enabled: true
+
+Callbacksystems/NoNestedModulesInClasses:
+  Description: "Prohibits a module nested inside a class."
+  Enabled: true
+
+Callbacksystems/NoNilAtEndOfMethod:
+  Description: "Prohibits a trailing `nil` at the end of a method."
+  Enabled: true
+
+Callbacksystems/NoRedundantValidationName:
+  Description: "Requires a validation callback to name its condition without repeating `valid` or `validate`."
+  Enabled: true
+
+Callbacksystems/NoRedundantWrapperMethod:
+  Description: "Flags a private method that only forwards to another call."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoSectionDividerComments:
+  Description: "Prohibits ASCII-art section divider comments."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/NoSendInTests:
+  Description: "Prohibits `send` and `__send__` in tests."
+  Enabled: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/NoServiceObjects:
+  Description: "Prohibits service object directories under `app/`."
+  Enabled: true
+  Include:
+    - "app/**/*"
+
+Callbacksystems/NoSingleLetterNames:
+  Description: "Prohibits single-letter variable, block argument, and parameter names."
+  Enabled: true
+
+Callbacksystems/NoSingletonClassInModules:
+  Description: "Prefers `extend self` over `class << self` in a module."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoTapCollectionBuilding:
+  Description: "Prohibits building a collection imperatively with `tap`."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/NoTurboStreamInControllers:
+  Description: "Keeps Turbo Stream markup out of controllers."
+  Enabled: true
+  Include:
+    - "app/controllers/**/*"
+
+Callbacksystems/NoTypographicClutter:
+  Description: "Prohibits typographic punctuation and double-hyphen dashes in comments, and invisible characters in comments and strings."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/NoWritesInGetActions:
+  Description: "Keeps GET actions free of writes and enqueued side effects."
+  Enabled: true
+  Safe: false
+  Include:
+    - "app/controllers/**/*"
+
+Callbacksystems/OrderedMixinArguments:
+  Description: "Requires mixin arguments to be sorted alphabetically."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PluralControllerNames:
+  Description: "Requires controller names to be plural."
+  Enabled: true
+  IgnoredNames:
+    - Application
+    - Base
+  Include:
+    - "app/controllers/**/*"
+
+Callbacksystems/PreferAttrReaderOverInstanceVariable:
+  Description: "Prefers an `attr_reader` over reading an instance variable assigned in `initialize`."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PreferBackslashContinuation:
+  Description: "Prefers backslash continuation over parentheses for a multiline call that cannot fit on one line."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferClassForState:
+  Description: "Detects a value threaded through many methods that reads better as class state."
+  Enabled: true
+  Safe: false
+  MinMethods: 4
+
+Callbacksystems/PreferClassNewForEmptyNestedClass:
+  Description: "Prefers a `Class.new` constant over a nested class with no body."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferClassOverBuilderBlock:
+  Description: "Prefers a class over a `Data.define`, `Struct.new`, or `Class.new` given a block."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferDefaultArgument:
+  Description: "Prefers a default in the signature over a fallback assigned at the top of the method."
+  Enabled: true
+
+Callbacksystems/PreferDelegate:
+  Description: "Prefers `delegate` over a method that only forwards to a same-named method."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferDelegateOverInstanceVariableAssignment:
+  Description: "Prefers `delegate` over an `initialize` assignment that mirrors a method call."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PreferExcluding:
+  Description: "Prefers `excluding` for collection subtraction and suggests it for record-ID exclusions."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferExtractAssociated:
+  Description: "Prefers `extract_associated` over preloading and collecting the same association in a model."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+  Include:
+    - "app/models/**/*.rb"
+
+Callbacksystems/PreferItBlockParameter:
+  Description: "Prefers `it` over a single named parameter in a single-line block."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferMany:
+  Description: "Prefers `many?` over comparing `size` with one."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferMethodOverLambda:
+  Description: "Prefers a method over a lambda or proc held in a local that captures nothing from its method."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PreferMethodOverVariable:
+  Description: "Prefers a method over a local variable that repeats the name it calls."
+  Enabled: true
+  Safe: false
+  Exclude:
+    - "test/**/*"
+
+Callbacksystems/PreferModuleForStaticClass:
+  Description: "Prefers a module with `extend self` over a class holding only class-level code."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PreferOrdinalArrayAccess:
+  Description: "Prefers an ordinal method such as `first` over a numeric array index."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferPositiveWrap:
+  Description: "Prefers wrapping the happy path in `if` over a leading negative guard."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/PreferSquish:
+  Description: "Prefers `squish` over stripping and collapsing whitespace by hand."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferStringifyKeys:
+  Description: "Prefers `stringify_keys` over `transform_keys(&:to_s)`."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferSymbolizeKeys:
+  Description: "Prefers `symbolize_keys` over `transform_keys(&:to_sym)`."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/PreferTurboPageRefreshBroadcasts:
+  Description: "Prefers Turbo page refreshes over targeted stream broadcasts."
+  Enabled: true
+  Safe: false
+  Include:
+    - "app/**/*"
+
+Callbacksystems/PrivateConstantsInPrivateSection:
+  Description: "Requires a constant that serves the implementation to live in the private section."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PrivateDelegatePlacement:
+  Description: "Requires a `delegate ... private: true` to sit in the private section."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/PrivateMethodsInPrivateSection:
+  Description: "Requires a private method to be defined in the private section, not marked afterwards."
+  Enabled: true
+
+Callbacksystems/PrivateNestedClassMethodVisibility:
+  Description: "Requires a method in a nested class placed below `private` to be private when nothing outside calls it."
+  Enabled: true
+  Safe: false
+
+Callbacksystems/PrivateNestedClasses:
+  Description: "Requires a nested class to be declared in the private section."
+  Enabled: true
+
+Callbacksystems/PublicMethodsMustHaveTests:
+  Description: "Requires every public method to have a test."
+  Enabled: true
+  Safe: false
+  Include:
+    - "app/**/*"
+    - "lib/**/*"
+  Exclude:
+    - "app/controllers/concerns/**/*"
+    - "app/helpers/**/*"
+
+Callbacksystems/RedundantConcernExtend:
+  Description: "Flags an unnecessary `extend ActiveSupport::Concern`."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/RedundantConstantFreeze:
+  Description: "Flags a `freeze` on a constant assignment."
+  Enabled: true
+  SafeAutoCorrect: false
+
+Callbacksystems/RedundantConstantNamespace:
+  Description: "Flags a constant reference that repeats the namespace it is written inside."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+
+Callbacksystems/ReflowComments:
+  Description: "Refills a comment block wrapped short of the maximum line length."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/RepeatedFixtureInTests:
+  Description: "Requires a fixture used by several tests to move to `setup`."
+  Enabled: true
+  Safe: false
+  Include:
+    - "test/**/*"
+
+Callbacksystems/RestrictedControllerActions:
+  Description: "Restricts a controller to the seven standard Rails actions."
+  Enabled: true
+  Include:
+    - "app/controllers/**/*"
+
+Callbacksystems/RoutesModuleScope:
+  Description: "Requires repeated `module:` options in routes to be extracted to a scope block."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+  Include:
+    - "config/routes.rb"
+    - "config/routes/**/*"
+
+Callbacksystems/SingleLineSetupBlock:
+  Description: "Requires braces for a single-line `setup` or `teardown` block."
+  Enabled: true
+  SafeAutoCorrect: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/SingleSingletonClass:
+  Description: "Requires class-level methods to live in a single `class << self` section."
+  Enabled: true
+
+Callbacksystems/SingleTopLevelClassOrModule:
+  Description: "Prohibits more than one top-level class or module per file."
+  Enabled: true
+
+Callbacksystems/SingleUseFixtureVariable:
+  Description: "Requires a fixture used once to be inlined."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+  Include:
+    - "test/**/*"
+
+Callbacksystems/SingleUseSetupVariable:
+  Description: "Requires a setup variable used by at most one test to be inlined."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+  Include:
+    - "test/**/*"
+
+Callbacksystems/SingularScopeNames:
+  Description: "Requires scope names to be singular unless they use a `with_` prefix."
+  Enabled: true
+  Include:
+    - "app/models/**/*"
+
+Callbacksystems/SpaceInsidePercentLiteral:
+  Description: "Requires a space inside the delimiters of a percent literal."
+  Enabled: true
+  SafeAutoCorrect: true
+
+Callbacksystems/SystemTestBrowserDriver:
+  Description: "Keeps system tests on a real browser driver."
+  Enabled: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/TestMethodDefinition:
+  Description: "Requires `test` and block syntax over `def test_*` and setup method definitions."
+  Enabled: true
+  Include:
+    - "test/**/*"
+
+Callbacksystems/TestMethodOrder:
+  Description: "Requires tests to follow the method order of the file they cover."
+  Enabled: true
+  SafeAutoCorrect: false
+  Include:
+    - "test/**/*"
+
+Callbacksystems/TooManyInstanceVariables:
+  Description: "Limits instance variable assignments in a private method."
+  Enabled: true
+  MaxAssignments: 2
+
+Callbacksystems/TooManyLocalVariables:
+  Description: "Limits local variable assignments in a method."
+  Enabled: true
+  MaxAssignments: 3
+
+Callbacksystems/TooManyValidationGuards:
+  Description: "Limits the validation guards standing at the start of a method."
+  Enabled: true
+  MaxGuards: 2
+
+Callbacksystems/UnnecessaryLocalVariable:
+  Description: "Flags a local variable that aliases a method call already reading as a name."
+  Enabled: true
+  Safe: false
+  SafeAutoCorrect: false
+  Exclude:
+    - "app/controllers/**/*"
+    - "test/**/*"
+
+Callbacksystems/UnusedPrivateMethodInNestedClass:
+  Description: "Flags an unused private method in a nested class placed below `private`."
+  Enabled: true
+  Safe: false
